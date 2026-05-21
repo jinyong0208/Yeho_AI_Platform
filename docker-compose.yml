@@ -1,0 +1,94 @@
+name: yeho-ai-platform
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: yeho-ai-postgres
+    environment:
+      POSTGRES_DB: yeho_ai_platform
+      POSTGRES_USER: yeho
+      POSTGRES_PASSWORD: yeho_pass
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yeho -d yeho_ai_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yeho-ai-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: yeho-ai-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: yeho_minio
+      MINIO_ROOT_PASSWORD: yeho_minio_pass
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  platform:
+    build:
+      context: ./apps/platform
+    container_name: yeho-ai-platform
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/yeho_ai_platform
+      SPRING_DATASOURCE_USERNAME: yeho
+      SPRING_DATASOURCE_PASSWORD: yeho_pass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      YEHO_SECURITY_DEFAULT_ADMIN_PASSWORD: Admin@123456
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  agent:
+    build:
+      context: ./apps/agent
+    container_name: yeho-ai-agent
+    environment:
+      YEHO_AGENT_ENV: docker
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ./apps/web
+    container_name: yeho-ai-web
+    ports:
+      - "5173:80"
+    depends_on:
+      - platform
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
