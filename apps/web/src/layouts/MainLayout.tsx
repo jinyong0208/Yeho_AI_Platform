@@ -1,13 +1,16 @@
 import {
   AppShell,
+  ActionIcon,
+  Badge,
+  Tooltip,
   Burger,
   Group,
   NavLink,
   ScrollArea,
   Text,
-  Button,
   Box,
   Stack,
+  Divider,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -29,17 +32,17 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 
 const navItems = [
-  { to: '/', labelKey: 'dashboard', icon: IconDashboard },
-  { to: '/tenants', labelKey: 'tenants', icon: IconBuilding },
-  { to: '/users', labelKey: 'users', icon: IconUsers },
-  { to: '/providers', labelKey: 'providers', icon: IconServerCog },
-  { to: '/models', labelKey: 'models', icon: IconBrandOpenai },
-  { to: '/api-keys', labelKey: 'apiKeys', icon: IconKey },
-  { to: '/wallet', labelKey: 'wallet', icon: IconCoins },
-  { to: '/wallet/transactions', labelKey: 'walletTransactions', icon: IconReceipt2 },
-  { to: '/usage-logs', labelKey: 'usageLogs', icon: IconActivity },
-  { to: '/token-stats', labelKey: 'tokenStats', icon: IconChartBar },
-  { to: '/workflow', labelKey: 'workflow', icon: IconRouteAltLeft },
+  { group: 'Workspace', to: '/', labelKey: 'dashboard', icon: IconDashboard },
+  { group: 'Workspace', to: '/tenants', labelKey: 'tenants', icon: IconBuilding },
+  { group: 'Workspace', to: '/users', labelKey: 'users', icon: IconUsers },
+  { group: 'Gateway', to: '/providers', labelKey: 'providers', icon: IconServerCog },
+  { group: 'Gateway', to: '/models', labelKey: 'models', icon: IconBrandOpenai },
+  { group: 'Gateway', to: '/api-keys', labelKey: 'apiKeys', icon: IconKey },
+  { group: 'Billing', to: '/wallet', labelKey: 'wallet', icon: IconCoins },
+  { group: 'Billing', to: '/wallet/transactions', labelKey: 'walletTransactions', icon: IconReceipt2 },
+  { group: 'Observability', to: '/usage-logs', labelKey: 'usageLogs', icon: IconActivity },
+  { group: 'Observability', to: '/token-stats', labelKey: 'tokenStats', icon: IconChartBar },
+  { group: 'Orchestration', to: '/workflow', labelKey: 'workflow', icon: IconRouteAltLeft },
 ];
 
 export default function MainLayout() {
@@ -49,60 +52,82 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const groups = Array.from(new Set(navItems.map((item) => item.group)));
 
   return (
     <AppShell
-      header={{ height: 60 }}
-      navbar={{ width: 260, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
+      header={{ height: 64 }}
+      navbar={{ width: 272, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+      padding="xl"
+      className="console-shell"
     >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
+      <AppShell.Header className="console-header">
+        <Group h="100%" px="xl" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Box className="brand-mark">Y</Box>
             <Box>
-              <Text fw={700}>{t('appName')}</Text>
-              <Text size="xs" c="dimmed">
+              <Text fw={700} size="sm">
+                {t('appName')}
+              </Text>
+              <Text size="xs" c="dimmed" lh={1.1}>
                 AI Gateway Console
               </Text>
             </Box>
           </Group>
-          <Group gap="sm">
+          <Group gap="xs">
+            <Badge variant="light" color="gray" radius="sm">
+              Phase 1
+            </Badge>
             <Text size="sm" c="dimmed">
               {user?.username}
             </Text>
-            <Button
-              variant="subtle"
-              leftSection={<IconLogout size={16} />}
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-            >
-              {t('logout')}
-            </Button>
+            <Tooltip label={t('logout')}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                aria-label={t('logout')}
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+              >
+                <IconLogout size={17} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="sm">
+      <AppShell.Navbar p="sm" className="console-sidebar">
         <AppShell.Section grow component={ScrollArea}>
-          <Stack gap={4}>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                label={t(item.labelKey)}
-                active={location.pathname === item.to}
-                leftSection={<item.icon size={18} />}
-                onClick={() => navigate(item.to)}
-              />
+          <Stack gap={2}>
+            {groups.map((group, index) => (
+              <Box key={group}>
+                {index > 0 && <Divider my={8} color="#eef1f4" />}
+                <Text className="nav-section-label">{group}</Text>
+                {navItems
+                  .filter((item) => item.group === group)
+                  .map((item) => (
+                    <NavLink
+                      key={item.to}
+                      label={t(item.labelKey)}
+                      active={location.pathname === item.to}
+                      leftSection={<item.icon size={17} stroke={1.8} />}
+                      onClick={() => navigate(item.to)}
+                      classNames={{ root: 'app-nav-link' }}
+                    />
+                  ))}
+              </Box>
             ))}
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main>
-        <Outlet />
+      <AppShell.Main className="console-main">
+        <Box className="page-frame">
+          <Outlet />
+        </Box>
       </AppShell.Main>
     </AppShell>
   );

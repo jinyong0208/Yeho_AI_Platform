@@ -12,7 +12,7 @@ export const tenantApi = {
     return response.data.data;
   },
 
-  async remove(id: number) {
+  async remove(id: string) {
     await apiClient.delete<ApiResponse<null>>(`/tenants/${id}`);
   },
 };

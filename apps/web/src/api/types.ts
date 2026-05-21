@@ -16,14 +16,14 @@ export interface LoginResponse {
   tokenType: string;
   accessToken: string;
   expiresInSeconds: number;
-  tenantId: number;
-  userId: number;
+  tenantId: string;
+  userId: string;
   username: string;
   roles: string[];
 }
 
 export interface Tenant {
-  id: number;
+  id: string;
   tenantCode: string;
   tenantName: string;
   status: string;
@@ -43,8 +43,8 @@ export interface TenantCreatePayload {
 }
 
 export interface TenantUser {
-  id: number;
-  tenantId: number;
+  id: string;
+  tenantId: string;
   username: string;
   displayName: string;
   email?: string;

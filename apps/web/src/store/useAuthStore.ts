@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface AuthUser {
-  tenantId: number;
-  userId: number;
+  tenantId: string;
+  userId: string;
   username: string;
   roles: string[];
 }
