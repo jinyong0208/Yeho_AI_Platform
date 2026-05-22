@@ -119,3 +119,4 @@ Updated table:
 - Provider API keys remain encrypted at rest.
 - Full provider API keys are never returned by these APIs.
 - Probe requests do not use tenant customer prompts or EDMS retrieval content.
+- `scripts/provider-e2e.ps1` can configure a provider, rotate the encrypted key, run the probe, and optionally verify `/v1/chat/completions`.

@@ -13,6 +13,55 @@ The test must go through the platform Provider Adapter and Model Router. Busines
 
 Do not paste provider API keys into chat, logs, screenshots, or bug reports.
 
+## Scripted Run
+
+Preferred MVP closeout command:
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode QWEN `
+  -ProviderApiKey "<QWEN_API_KEY>"
+```
+
+DeepSeek:
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode DEEPSEEK `
+  -ProviderApiKey "<DEEPSEEK_API_KEY>"
+```
+
+The script:
+
+- Logs in to the admin API.
+- Finds the provider by `providerCode`.
+- Sets the provider base URL to the known OpenAI-compatible default.
+- Updates the provider API key through the encrypted provider-key endpoint when `ProviderApiKey` is provided.
+- Runs `/api/providers/{providerId}/test`.
+- Creates a temporary tenant API key for gateway chat when `GatewayApiKey` is not provided.
+- Calls `/v1/chat/completions`.
+- Revokes the temporary gateway API key.
+- Does not print the provider API key.
+
+Diagnostic mode without a real provider key:
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode QWEN `
+  -SkipProviderKeyUpdate `
+  -SkipGatewayChat `
+  -AllowProviderFailure
+```
+
+Provider probe only:
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode DEEPSEEK `
+  -ProviderApiKey "<DEEPSEEK_API_KEY>" `
+  -SkipGatewayChat
+```
+
 ## Login
 
 ```powershell
@@ -184,3 +233,5 @@ Invoke-RestMethod `
 - `API key scope denied` means the tenant gateway key lacks `chat:completion` or `models:read`.
 - Circuit breaker failures should be visible from `/api/providers/health`.
 - Full customer prompts and provider keys must not be added to support logs.
+- If the provider probe succeeds but gateway chat fails, check model status, tenant wallet balance, API key scopes, and `ai_usage_log`.
+- If provider health remains `UNHEALTHY`, check `provider_test_log` for the latest request id and sanitized error.
