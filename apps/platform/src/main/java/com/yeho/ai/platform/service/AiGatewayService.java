@@ -84,7 +84,12 @@ public class AiGatewayService {
             rateLimitLease = rateLimitService.acquire(tenantApiKey, estimatedTokens, reservedCredits, requestId);
             aiWalletService.reserve(tenantId, reservedCredits, requestId);
 
-            adapterResponse = callProviderWithFallback(route, request, requestId);
+            ProviderCallResult providerCallResult = callProviderWithFallback(route, request, requestId);
+            route = providerCallResult.route();
+            providerCode = route.provider().getProviderCode();
+            modelCode = route.model().getModelCode();
+            model = route.model();
+            adapterResponse = providerCallResult.response();
 
             inputTokens = adapterResponse.inputTokens() == null
                 ? aiWalletService.estimatePromptTokens(request.getMessages())
@@ -170,7 +175,7 @@ public class AiGatewayService {
                 request,
                 tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
-            throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion failed");
+            throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion failed", ex);
         } finally {
             rateLimitService.releaseConcurrent(rateLimitLease);
         }
@@ -289,7 +294,7 @@ public class AiGatewayService {
                 request,
                 tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
-            throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion stream failed");
+            throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion stream failed", ex);
         }
     }
 
@@ -516,9 +521,9 @@ public class AiGatewayService {
         private String finishReason = "stop";
     }
 
-    private AdapterChatResponse callProviderWithFallback(ModelRoute route, ChatCompletionRequest request, String requestId) {
+    private ProviderCallResult callProviderWithFallback(ModelRoute route, ChatCompletionRequest request, String requestId) {
         try {
-            return providerCircuitBreakerService.execute(route.provider(), () -> route.adapter().chat(new AdapterChatRequest(
+            AdapterChatResponse response = providerCircuitBreakerService.execute(route.provider(), () -> route.adapter().chat(new AdapterChatRequest(
                 route.provider().getBaseUrl(),
                 route.decryptedApiKey(),
                 request.getModel(),
@@ -526,12 +531,13 @@ public class AiGatewayService {
                 request.getTemperature(),
                 request.getMaxTokens()
             )));
+            return new ProviderCallResult(route, response);
         } catch (GatewayException ex) {
             if (!StringUtils.hasText(route.provider().getFallbackModelCode())) {
                 throw ex;
             }
             ModelRoute fallbackRoute = modelRouter.route(route.provider().getFallbackModelCode());
-            return providerCircuitBreakerService.execute(fallbackRoute.provider(), () -> fallbackRoute.adapter().chat(new AdapterChatRequest(
+            AdapterChatResponse fallbackResponse = providerCircuitBreakerService.execute(fallbackRoute.provider(), () -> fallbackRoute.adapter().chat(new AdapterChatRequest(
                 fallbackRoute.provider().getBaseUrl(),
                 fallbackRoute.decryptedApiKey(),
                 fallbackRoute.model().getModelCode(),
@@ -539,7 +545,11 @@ public class AiGatewayService {
                 request.getTemperature(),
                 request.getMaxTokens()
             )));
+            return new ProviderCallResult(fallbackRoute, fallbackResponse);
         }
+    }
+
+    private record ProviderCallResult(ModelRoute route, AdapterChatResponse response) {
     }
 
     private void recordGatewayAudit(TenantApiKey apiKey, String requestId, String action, int statusCode, String message) {

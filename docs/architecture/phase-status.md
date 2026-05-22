@@ -82,6 +82,8 @@ The platform manages capabilities, not customer knowledge data:
 - Lightweight finance reconciliation exports for recharge orders and wallet ledger rows.
 - Backend regression tests for API key scopes, tenant isolation rules, OpenAI-compatible error envelope, and wallet credit accounting.
 - Rate limit service regression tests for Redis counter rollback, audit logging, and daily/concurrent release behavior.
+- Provider circuit breaker regression tests for retry, cooldown rejection, failure threshold opening, and success recovery.
+- Gateway fallback regression test verifies actual fallback provider/model are used for response, usage log, and billing.
 - OpenAI-compatible gateway error regression script for models, chat completions, embeddings, invalid keys, and scope denial.
 - Provider E2E script for DeepSeek/Qwen/OpenAI-compatible probe and optional gateway chat verification without printing provider secrets.
 
@@ -99,7 +101,7 @@ The platform manages capabilities, not customer knowledge data:
 ### P0 Hardening
 
 - End-to-end success smoke test with a real Qwen embedding provider key.
-- Provider resilience behavior needs richer automated tests.
+- Provider resilience behavior has service-level retry/circuit/fallback coverage; endpoint-level resilience tests are still pending.
 - Provider connection test script is ready; actual real DeepSeek/Qwen success still requires external provider keys.
 - Provider base URL and resilience configuration need final console polish.
 - Recharge-order reconciliation exports are lightweight MVP files; formal finance reconciliation workflow remains future work.
@@ -122,5 +124,5 @@ The platform manages capabilities, not customer knowledge data:
 
 1. Run real DeepSeek and Qwen provider tests with production-like credentials.
 2. Add endpoint-level regression tests for rate limits, `/v1/chat/completions`, `/v1/embeddings`, and `/v1/models`.
-3. Add provider health and circuit breaker state regression tests.
+3. Add endpoint-level provider health and circuit breaker state regression tests.
 4. Add provider base URL/resilience configuration UX and formal finance reconciliation workflow.
