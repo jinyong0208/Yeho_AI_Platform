@@ -197,7 +197,7 @@ try {
     Assert-True ([long]$walletAfterChat.data.balanceCredits -lt [long]$walletBefore.data.balanceCredits) "wallet balance did not decrease after chat"
     Assert-True ([long]$walletAfterChat.data.totalUsedCredits -gt [long]$walletBefore.data.totalUsedCredits) "wallet total used did not increase after chat"
 
-    $walletLogs = Invoke-Api -Method Get -Url "$PlatformBaseUrl/api/v1/wallets/$tenantId/logs?limit=20" -Headers $adminHeaders
+    $walletLogs = Invoke-Api -Method Get -Url "$PlatformBaseUrl/api/v1/wallets/$tenantId/logs?limit=200" -Headers $adminHeaders
     $settleLog = @($walletLogs.data) | Where-Object { $_.bizId -eq $chatRequestId -and $_.direction -eq "SETTLE" } | Select-Object -First 1
     Assert-True ($null -ne $settleLog) "wallet SETTLE log not found by request_id"
 

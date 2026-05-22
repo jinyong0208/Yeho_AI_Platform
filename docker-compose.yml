@@ -58,6 +58,7 @@ services:
       context: ./apps/platform
     container_name: yeho-ai-platform
     environment:
+      TZ: Asia/Shanghai
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/yeho_ai_platform
       SPRING_DATASOURCE_USERNAME: yeho
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-yeho_pass}

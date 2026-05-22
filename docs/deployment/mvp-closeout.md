@@ -46,10 +46,21 @@ Invoke-RestMethod http://localhost:8080/api/v1/health
 Invoke-RestMethod http://localhost:8000/api/v1/health
 ```
 
+The platform container sets `TZ=Asia/Shanghai` so database timestamps, wallet logs, and smoke-test ordering stay consistent with local development runs.
+
 ## Build And Restart Platform
 
 ```powershell
 docker compose up -d --no-deps --build platform
+```
+
+If Maven dependency resolution inside Docker is blocked by the local network, build the JAR on the host and use the prebuilt-image override:
+
+```powershell
+cd apps/platform
+mvn -DskipTests package
+cd ../..
+docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d --no-deps --build platform
 ```
 
 Check Flyway migration result:

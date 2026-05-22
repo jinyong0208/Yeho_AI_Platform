@@ -57,7 +57,7 @@ public class OpenAiEmbeddingEndpointFilter extends OncePerRequestFilter {
                     ex.getReason()
             );
         } catch (Exception ex) {
-            log.warn("Embedding endpoint failed before provider call: {}: {}", ex.getClass().getSimpleName(), ex.getMessage());
+            log.warn("Embedding endpoint failed before provider call: {}", ex.getClass().getSimpleName());
             OpenAiErrorResponseWriter.write(objectMapper, request, response, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }

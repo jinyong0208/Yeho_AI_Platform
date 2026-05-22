@@ -1,0 +1,5 @@
+services:
+  platform:
+    build:
+      context: ./apps/platform
+      dockerfile: Dockerfile.prebuilt
