@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class AiModelAdminService {
     private final AiModelMapper aiModelMapper;
     private final AiProviderMapper aiProviderMapper;
+    private final AiModelPriceVersionService aiModelPriceVersionService;
 
     @Transactional
     public ModelResponse create(ModelCreateRequest request) {
@@ -45,6 +46,7 @@ public class AiModelAdminService {
         model.setCreatedAt(now);
         model.setUpdatedAt(now);
         aiModelMapper.insert(model);
+        aiModelPriceVersionService.createSnapshot(model, "Initial price version");
         return toResponse(model, provider.getProviderCode());
     }
 
@@ -70,6 +72,7 @@ public class AiModelAdminService {
     @Transactional
     public ModelResponse update(Long id, ModelUpdateRequest request) {
         AiModel model = requireModel(id);
+        boolean pricingChanged = false;
         AiProvider provider = request.getProviderId() == null
             ? requireProvider(model.getProviderId())
             : requireProvider(request.getProviderId());
@@ -81,18 +84,23 @@ public class AiModelAdminService {
         }
         if (request.getInputPrice() != null) {
             model.setInputPrice(request.getInputPrice());
+            pricingChanged = true;
         }
         if (request.getOutputPrice() != null) {
             model.setOutputPrice(request.getOutputPrice());
+            pricingChanged = true;
         }
         if (request.getInputCreditRate() != null) {
             model.setInputCreditRate(request.getInputCreditRate());
+            pricingChanged = true;
         }
         if (request.getOutputCreditRate() != null) {
             model.setOutputCreditRate(request.getOutputCreditRate());
+            pricingChanged = true;
         }
         if (request.getBillingMultiplier() != null) {
             model.setBillingMultiplier(request.getBillingMultiplier());
+            pricingChanged = true;
         }
         if (request.getSupportStream() != null) {
             model.setSupportStream(request.getSupportStream());
@@ -105,6 +113,9 @@ public class AiModelAdminService {
         }
         model.setUpdatedAt(LocalDateTime.now());
         aiModelMapper.updateById(model);
+        if (pricingChanged) {
+            aiModelPriceVersionService.createSnapshot(model, "Model price updated");
+        }
         return toResponse(model, provider.getProviderCode());
     }
 
@@ -144,6 +155,7 @@ public class AiModelAdminService {
             model.getInputCreditRate(),
             model.getOutputCreditRate(),
             model.getBillingMultiplier(),
+            model.getCurrentPriceVersionId(),
             model.getSupportStream(),
             model.getSupportToolCall(),
             model.getStatus(),

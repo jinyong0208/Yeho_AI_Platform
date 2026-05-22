@@ -86,6 +86,7 @@ public class AiUsageLogService {
         log.setModelCode(modelCode);
         log.setRequestId(requestId);
         log.setApiKeyScopes(apiKeyScopes);
+        log.setPriceVersionId(model == null ? null : model.getCurrentPriceVersionId());
         log.setInputTokens(inputTokens);
         log.setOutputTokens(outputTokens);
         log.setTotalTokens(totalTokens);

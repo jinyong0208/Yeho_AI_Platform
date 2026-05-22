@@ -20,6 +20,7 @@ public class AiUsageLog {
     private String modelCode;
     private String requestId;
     private String apiKeyScopes;
+    private Long priceVersionId;
     private Integer inputTokens;
     private Integer outputTokens;
     private Integer totalTokens;

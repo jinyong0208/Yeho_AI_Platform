@@ -66,6 +66,12 @@ The platform manages capabilities, not customer knowledge data:
 - Recharge order create, confirm, list, and close.
 - Low-balance alert query for wallet operations.
 
+### Cost Accuracy
+
+- Model price versions.
+- Current model price version pointer.
+- Usage logs record `price_version_id` for historical cost/profit traceability.
+
 ### Embeddings And EDMS Integration
 
 - OpenAI-compatible `POST /v1/embeddings` preview.
@@ -85,6 +91,7 @@ The platform manages capabilities, not customer knowledge data:
 - API key lifecycle should be wired into the console UI with confirmation dialogs.
 - Wallet operation APIs should be wired into the console with confirmation dialogs and low-balance cards.
 - Recharge orders need business reconciliation exports before formal finance rollout.
+- Price version APIs should be wired into the model console.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
 - OpenAI-compatible error body consistency should receive regression tests across chat, embeddings, and models.
 

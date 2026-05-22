@@ -3,21 +3,17 @@ package com.yeho.ai.platform.dto.gateway;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record ModelResponse(
+public record ModelPriceVersionResponse(
     Long id,
-    Long providerId,
-    String providerCode,
-    String modelCode,
-    String displayName,
+    Long modelId,
+    Integer versionNo,
     BigDecimal inputPrice,
     BigDecimal outputPrice,
     BigDecimal inputCreditRate,
     BigDecimal outputCreditRate,
     BigDecimal billingMultiplier,
-    Long currentPriceVersionId,
-    Boolean supportStream,
-    Boolean supportToolCall,
-    String status,
+    LocalDateTime effectiveAt,
+    String remark,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {

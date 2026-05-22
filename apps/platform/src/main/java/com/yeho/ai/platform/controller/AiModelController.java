@@ -2,9 +2,12 @@ package com.yeho.ai.platform.controller;
 
 import com.yeho.ai.platform.common.ApiResponse;
 import com.yeho.ai.platform.dto.gateway.ModelCreateRequest;
+import com.yeho.ai.platform.dto.gateway.ModelPriceVersionCreateRequest;
+import com.yeho.ai.platform.dto.gateway.ModelPriceVersionResponse;
 import com.yeho.ai.platform.dto.gateway.ModelResponse;
 import com.yeho.ai.platform.dto.gateway.ModelUpdateRequest;
 import com.yeho.ai.platform.service.AiModelAdminService;
+import com.yeho.ai.platform.service.AiModelPriceVersionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +28,7 @@ import java.util.List;
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AiModelController {
     private final AiModelAdminService aiModelAdminService;
+    private final AiModelPriceVersionService aiModelPriceVersionService;
 
     @PostMapping
     public ApiResponse<ModelResponse> create(@Valid @RequestBody ModelCreateRequest request) {
@@ -53,5 +57,18 @@ public class AiModelController {
     public ApiResponse<Void> disable(@PathVariable Long id) {
         aiModelAdminService.disable(id);
         return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/{id}/price-versions")
+    public ApiResponse<List<ModelPriceVersionResponse>> priceVersions(@PathVariable Long id) {
+        return ApiResponse.ok(aiModelPriceVersionService.list(id));
+    }
+
+    @PostMapping("/{id}/price-versions")
+    public ApiResponse<ModelPriceVersionResponse> createPriceVersion(
+        @PathVariable Long id,
+        @RequestBody ModelPriceVersionCreateRequest request
+    ) {
+        return ApiResponse.ok(aiModelPriceVersionService.create(id, request));
     }
 }

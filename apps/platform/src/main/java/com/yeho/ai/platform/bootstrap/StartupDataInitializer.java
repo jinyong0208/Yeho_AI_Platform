@@ -2,6 +2,7 @@ package com.yeho.ai.platform.bootstrap;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.yeho.ai.platform.entity.AiModel;
+import com.yeho.ai.platform.entity.AiModelPriceVersion;
 import com.yeho.ai.platform.entity.AiProvider;
 import com.yeho.ai.platform.entity.SysRole;
 import com.yeho.ai.platform.entity.SysUserRole;
@@ -10,6 +11,7 @@ import com.yeho.ai.platform.entity.TenantApiKey;
 import com.yeho.ai.platform.entity.TenantWallet;
 import com.yeho.ai.platform.entity.TenantUser;
 import com.yeho.ai.platform.mapper.AiModelMapper;
+import com.yeho.ai.platform.mapper.AiModelPriceVersionMapper;
 import com.yeho.ai.platform.mapper.AiProviderMapper;
 import com.yeho.ai.platform.mapper.SysRoleMapper;
 import com.yeho.ai.platform.mapper.SysUserRoleMapper;
@@ -49,6 +51,7 @@ public class StartupDataInitializer implements ApplicationRunner {
     private final TenantApiKeyMapper tenantApiKeyMapper;
     private final AiProviderMapper aiProviderMapper;
     private final AiModelMapper aiModelMapper;
+    private final AiModelPriceVersionMapper aiModelPriceVersionMapper;
     private final SecretCryptoService secretCryptoService;
     private final ApiKeyHashService apiKeyHashService;
     private final PasswordEncoder passwordEncoder;
@@ -270,20 +273,61 @@ public class StartupDataInitializer implements ApplicationRunner {
             model.setCreatedAt(now);
             model.setUpdatedAt(now);
             aiModelMapper.insert(model);
+            ensurePriceVersion(model, "Startup initial price version");
             return;
         }
 
         model.setProviderId(providerId);
         model.setDisplayName(displayName);
-        model.setInputPrice(java.math.BigDecimal.valueOf(inputPrice));
-        model.setOutputPrice(java.math.BigDecimal.valueOf(outputPrice));
-        model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
-        model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
-        model.setBillingMultiplier(java.math.BigDecimal.ONE);
+        if (model.getInputPrice() == null) {
+            model.setInputPrice(java.math.BigDecimal.valueOf(inputPrice));
+        }
+        if (model.getOutputPrice() == null) {
+            model.setOutputPrice(java.math.BigDecimal.valueOf(outputPrice));
+        }
+        if (model.getInputCreditRate() == null) {
+            model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
+        }
+        if (model.getOutputCreditRate() == null) {
+            model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
+        }
+        if (model.getBillingMultiplier() == null) {
+            model.setBillingMultiplier(java.math.BigDecimal.ONE);
+        }
         model.setSupportStream(Boolean.TRUE);
         model.setSupportToolCall(Boolean.FALSE);
         model.setStatus("ACTIVE");
         model.setUpdatedAt(now);
+        aiModelMapper.updateById(model);
+        ensurePriceVersion(model, "Startup initial price version");
+    }
+
+    private void ensurePriceVersion(AiModel model, String remark) {
+        if (model.getCurrentPriceVersionId() != null) {
+            return;
+        }
+        AiModelPriceVersion latest = aiModelPriceVersionMapper.selectOne(new LambdaQueryWrapper<AiModelPriceVersion>()
+            .eq(AiModelPriceVersion::getModelId, model.getId())
+            .orderByDesc(AiModelPriceVersion::getVersionNo)
+            .last("LIMIT 1"));
+        if (latest == null) {
+            LocalDateTime now = LocalDateTime.now();
+            latest = new AiModelPriceVersion();
+            latest.setModelId(model.getId());
+            latest.setVersionNo(1);
+            latest.setInputPrice(model.getInputPrice() == null ? java.math.BigDecimal.ZERO : model.getInputPrice());
+            latest.setOutputPrice(model.getOutputPrice() == null ? java.math.BigDecimal.ZERO : model.getOutputPrice());
+            latest.setInputCreditRate(model.getInputCreditRate() == null ? java.math.BigDecimal.ZERO : model.getInputCreditRate());
+            latest.setOutputCreditRate(model.getOutputCreditRate() == null ? java.math.BigDecimal.ZERO : model.getOutputCreditRate());
+            latest.setBillingMultiplier(model.getBillingMultiplier() == null ? java.math.BigDecimal.ONE : model.getBillingMultiplier());
+            latest.setEffectiveAt(now);
+            latest.setRemark(remark);
+            latest.setCreatedAt(now);
+            latest.setUpdatedAt(now);
+            aiModelPriceVersionMapper.insert(latest);
+        }
+        model.setCurrentPriceVersionId(latest.getId());
+        model.setUpdatedAt(LocalDateTime.now());
         aiModelMapper.updateById(model);
     }
 

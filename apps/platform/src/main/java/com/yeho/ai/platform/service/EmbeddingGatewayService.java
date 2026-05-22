@@ -148,6 +148,7 @@ public class EmbeddingGatewayService {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 select m.id as model_id,
                        m.model_code,
+                       m.current_price_version_id,
                        p.provider_code,
                        p.base_url,
                        p.api_key_encrypted,
@@ -166,6 +167,7 @@ public class EmbeddingGatewayService {
         return new ModelRoute(
                 asLong(row.get("model_id")),
                 String.valueOf(row.get("model_code")),
+                row.get("current_price_version_id") == null ? null : asLong(row.get("current_price_version_id")),
                 String.valueOf(row.get("provider_code")),
                 String.valueOf(row.get("base_url")),
                 String.valueOf(row.get("api_key_encrypted")),
@@ -241,10 +243,10 @@ public class EmbeddingGatewayService {
         long latencyMs = Math.max(0, System.currentTimeMillis() - startedAt);
         jdbcTemplate.update("""
                 insert into ai_usage_log (
-                    id, tenant_id, api_key_id, provider_code, model_code, request_id,
+                    id, tenant_id, api_key_id, provider_code, model_code, request_id, price_version_id,
                     input_tokens, output_tokens, total_tokens, real_cost, charge_credits, profit,
                     latency_ms, success, error_code, error_message, api_key_scopes, created_at
-                ) values (?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
                 """,
                 IdWorker.getId(),
                 apiKey.tenantId(),
@@ -252,6 +254,7 @@ public class EmbeddingGatewayService {
                 model.providerCode(),
                 model.modelCode(),
                 requestId,
+                model.priceVersionId(),
                 totalTokens,
                 totalTokens,
                 latencyMs,
@@ -326,6 +329,7 @@ public class EmbeddingGatewayService {
     private record ModelRoute(
             Long modelId,
             String modelCode,
+            Long priceVersionId,
             String providerCode,
             String baseUrl,
             String encryptedApiKey,
