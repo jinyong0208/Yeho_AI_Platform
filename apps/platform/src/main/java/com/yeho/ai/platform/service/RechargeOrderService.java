@@ -71,6 +71,25 @@ public class RechargeOrderService {
         return toResponse(order);
     }
 
+    @Transactional
+    public RechargeOrderResponse close(Long id) {
+        TenantRechargeOrder order = tenantRechargeOrderMapper.selectById(id);
+        if (order == null) {
+            throw new NotFoundException("Recharge order not found");
+        }
+        if ("CLOSED".equals(order.getStatus())) {
+            return toResponse(order);
+        }
+        if (!"CREATED".equals(order.getStatus())) {
+            throw new BusinessException("Recharge order cannot be closed");
+        }
+
+        order.setStatus("CLOSED");
+        order.setUpdatedAt(LocalDateTime.now());
+        tenantRechargeOrderMapper.updateById(order);
+        return toResponse(order);
+    }
+
     @Transactional(readOnly = true)
     public RechargeOrderResponse get(Long id) {
         TenantRechargeOrder order = tenantRechargeOrderMapper.selectById(id);

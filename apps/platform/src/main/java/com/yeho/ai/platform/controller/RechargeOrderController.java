@@ -46,6 +46,15 @@ public class RechargeOrderController {
         return ApiResponse.ok(rechargeOrderService.confirm(id));
     }
 
+    @PostMapping("/{id}/close")
+    public ApiResponse<RechargeOrderResponse> close(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @PathVariable Long id
+    ) {
+        tenantAccessService.assertTenantAccess(user, rechargeOrderService.get(id).tenantId());
+        return ApiResponse.ok(rechargeOrderService.close(id));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<RechargeOrderResponse> get(
         @AuthenticationPrincipal AuthenticatedUser user,

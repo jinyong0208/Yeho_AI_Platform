@@ -33,6 +33,8 @@ The platform manages capabilities, not customer knowledge data:
 - Request ID propagation baseline.
 - Token usage log and wallet deduction baseline.
 - Provider API key encrypted storage.
+- OpenAI-compatible `GET /v1/models`.
+- Shared OpenAI-compatible error response writer for `/v1/**` gateway errors.
 
 ### Governance And Resilience
 
@@ -57,6 +59,13 @@ The platform manages capabilities, not customer knowledge data:
 - Agent execute log and trace query baseline.
 - No multi-agent autonomy, tool calling runtime, or workflow engine yet.
 
+### Wallet Operations
+
+- Wallet balance query and wallet logs.
+- Manual recharge endpoint.
+- Recharge order create, confirm, list, and close.
+- Low-balance alert query for wallet operations.
+
 ### Embeddings And EDMS Integration
 
 - OpenAI-compatible `POST /v1/embeddings` preview.
@@ -74,6 +83,8 @@ The platform manages capabilities, not customer knowledge data:
 - Provider resilience behavior needs richer automated tests.
 - Provider connection test should be verified against real DeepSeek, Qwen, and OpenAI-compatible endpoints.
 - API key lifecycle should be wired into the console UI with confirmation dialogs.
+- Wallet operation APIs should be wired into the console with confirmation dialogs and low-balance cards.
+- Recharge orders need business reconciliation exports before formal finance rollout.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
 - OpenAI-compatible error body consistency should receive regression tests across chat, embeddings, and models.
 

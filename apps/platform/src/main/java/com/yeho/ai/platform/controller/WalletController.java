@@ -8,6 +8,7 @@ import com.yeho.ai.platform.entity.TenantWallet;
 import com.yeho.ai.platform.security.AuthenticatedUser;
 import com.yeho.ai.platform.service.AiWalletService;
 import com.yeho.ai.platform.service.TenantAccessService;
+import com.yeho.ai.platform.service.WalletAlertService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/wallets")
@@ -29,6 +31,7 @@ import java.util.List;
 public class WalletController {
     private final AiWalletService aiWalletService;
     private final TenantAccessService tenantAccessService;
+    private final WalletAlertService walletAlertService;
 
     @GetMapping("/{tenantId}")
     public ApiResponse<WalletResponse> get(
@@ -63,6 +66,18 @@ public class WalletController {
     ) {
         tenantAccessService.assertTenantAccess(user, tenantId);
         return ApiResponse.ok(aiWalletService.listLogs(tenantId, limit));
+    }
+
+    @GetMapping("/alerts/low-balance")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','FINANCE')")
+    public ApiResponse<List<Map<String, Object>>> lowBalanceAlerts(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @RequestParam(required = false) Long tenantId,
+        @RequestParam(required = false) Long thresholdCredits,
+        @RequestParam(required = false) Integer limit
+    ) {
+        Long scopedTenantId = tenantAccessService.scopeTenantId(user, tenantId);
+        return ApiResponse.ok(walletAlertService.listLowBalanceWallets(scopedTenantId, thresholdCredits, limit));
     }
 
     private WalletResponse toResponse(TenantWallet wallet) {
