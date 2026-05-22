@@ -36,6 +36,7 @@ The platform manages capabilities, not customer knowledge data:
 ### Governance And Resilience
 
 - Tenant/API key scoped permissions.
+- API key lifecycle APIs for disable, enable, and usage summary.
 - Tenant/API key rate limit baseline for RPM, TPM, daily credits, and max concurrency.
 - Redis-backed rate limit counters.
 - Provider timeout, retry, circuit breaker, fallback, and health visibility baseline.
@@ -71,6 +72,7 @@ The platform manages capabilities, not customer knowledge data:
 - End-to-end success smoke test with a real Qwen embedding provider key.
 - Provider resilience behavior needs richer automated tests.
 - Provider connection test should be verified against real DeepSeek, Qwen, and OpenAI-compatible endpoints.
+- API key lifecycle should be wired into the console UI with confirmation dialogs.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
 - OpenAI-compatible error body consistency should be reviewed across chat and embeddings.
 
