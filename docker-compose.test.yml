@@ -1,0 +1,8 @@
+name: yeho-ai-platform-test
+
+services:
+  platform-test:
+    build:
+      context: ./apps/platform
+      target: test
+      network: host

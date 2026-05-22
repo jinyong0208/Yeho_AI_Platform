@@ -80,6 +80,8 @@ The platform manages capabilities, not customer knowledge data:
 - Console entry points for API key enable/disable/usage summary, recharge order close/confirm, low-balance alerts, provider health, and model price versions.
 - Provider API key rotation console modal that does not expose stored secrets.
 - Lightweight finance reconciliation exports for recharge orders and wallet ledger rows.
+- Backend regression tests for API key scopes, tenant isolation rules, OpenAI-compatible error envelope, and wallet credit accounting.
+- OpenAI-compatible gateway error regression script for models, chat completions, embeddings, invalid keys, and scope denial.
 
 ### Embeddings And EDMS Integration
 
@@ -100,7 +102,7 @@ The platform manages capabilities, not customer knowledge data:
 - Provider base URL and resilience configuration need final console polish.
 - Recharge-order reconciliation exports are lightweight MVP files; formal finance reconciliation workflow remains future work.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
-- OpenAI-compatible error body consistency should receive regression tests across chat, embeddings, and models.
+- OpenAI-compatible error body consistency now has a script-level regression check; endpoint-level JUnit/MockMvc tests are still pending.
 
 ### P1 Hardening
 
@@ -117,6 +119,6 @@ The platform manages capabilities, not customer knowledge data:
 ## Next Recommended Work
 
 1. Run real DeepSeek and Qwen provider tests with production-like credentials.
-2. Add automated regression tests for API key scope, tenant limit, wallet deduction, and OpenAI-compatible errors.
+2. Add endpoint-level regression tests for rate limits, `/v1/chat/completions`, `/v1/embeddings`, and `/v1/models`.
 3. Add provider health and circuit breaker state regression tests.
 4. Add provider base URL/resilience configuration UX and formal finance reconciliation workflow.
