@@ -6,7 +6,7 @@ from app.core.config import settings
 app = FastAPI(
     title="Yeho AI Agent",
     version="0.1.0",
-    description="FastAPI skeleton for future Agent, RAG and Workflow orchestration.",
+    description="FastAPI service for Agent, RAG and Workflow orchestration.",
 )
 
 

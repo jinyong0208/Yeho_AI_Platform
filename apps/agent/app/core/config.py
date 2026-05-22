@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     service_name: str = "yeho-ai-agent"
     environment: str = "local"
+    demo_agent_code: str = "demo-router-agent"
 
     model_config = SettingsConfigDict(
         env_prefix="YEHO_AGENT_",
