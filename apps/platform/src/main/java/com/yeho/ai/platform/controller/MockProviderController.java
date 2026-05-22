@@ -1,23 +1,49 @@
 package com.yeho.ai.platform.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
+import com.yeho.ai.platform.dto.openai.ChatCompletionChunkResponse;
 import com.yeho.ai.platform.dto.openai.ChatCompletionResponse;
 import com.yeho.ai.platform.dto.openai.ChatMessage;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/mock-provider/v1")
+@RequiredArgsConstructor
 public class MockProviderController {
+    private final ObjectMapper objectMapper;
 
     @PostMapping("/chat/completions")
-    public ChatCompletionResponse chatCompletions(@RequestBody ChatCompletionRequest request) {
+    public StreamingResponseBody chatCompletions(
+        @RequestBody ChatCompletionRequest request,
+        HttpServletResponse response
+    ) {
+        if (Boolean.TRUE.equals(request.getStream())) {
+            response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+            response.setHeader("Cache-Control", "no-cache");
+            return outputStream -> writeStream(request, outputStream);
+        }
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ChatCompletionResponse chatResponse = buildResponse(request);
+        return outputStream -> objectMapper.writeValue(outputStream, chatResponse);
+    }
+
+    private ChatCompletionResponse buildResponse(ChatCompletionRequest request) {
         String assistantContent = buildAssistantContent(request);
         ChatMessage assistantMessage = new ChatMessage();
         assistantMessage.setRole("assistant");
@@ -34,6 +60,56 @@ public class MockProviderController {
             List.of(new ChatCompletionResponse.Choice(0, assistantMessage, "stop")),
             new ChatCompletionResponse.Usage(promptTokens, completionTokens, promptTokens + completionTokens)
         );
+    }
+
+    private void writeStream(ChatCompletionRequest request, OutputStream outputStream) throws IOException {
+        String assistantContent = buildAssistantContent(request);
+        String completionId = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "");
+        long created = Instant.now().getEpochSecond();
+        writeChunk(outputStream, completionId, created, request.getModel(), "assistant", null, null);
+        for (String part : streamParts(assistantContent)) {
+            writeChunk(outputStream, completionId, created, request.getModel(), null, part, null);
+        }
+        writeChunk(outputStream, completionId, created, request.getModel(), null, null, "stop");
+        outputStream.write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+        outputStream.flush();
+    }
+
+    private void writeChunk(
+        OutputStream outputStream,
+        String completionId,
+        long created,
+        String model,
+        String role,
+        String content,
+        String finishReason
+    ) throws IOException {
+        ChatCompletionChunkResponse chunk = new ChatCompletionChunkResponse(
+            completionId,
+            "chat.completion.chunk",
+            created,
+            model,
+            List.of(new ChatCompletionChunkResponse.Choice(
+                0,
+                new ChatCompletionChunkResponse.Delta(role, content),
+                finishReason
+            ))
+        );
+        outputStream.write(("data: " + objectMapper.writeValueAsString(chunk) + "\n\n").getBytes(StandardCharsets.UTF_8));
+        outputStream.flush();
+    }
+
+    private List<String> streamParts(String content) {
+        List<String> parts = new ArrayList<>();
+        if (content == null || content.isEmpty()) {
+            parts.add("");
+            return parts;
+        }
+        int chunkSize = 12;
+        for (int i = 0; i < content.length(); i += chunkSize) {
+            parts.add(content.substring(i, Math.min(content.length(), i + chunkSize)));
+        }
+        return parts;
     }
 
     private String buildAssistantContent(ChatCompletionRequest request) {

@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import com.yeho.ai.platform.dto.openai.OpenAiErrorResponse;
 import com.yeho.ai.platform.gateway.GatewayException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
@@ -31,7 +32,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GatewayException.class)
     public ResponseEntity<OpenAiErrorResponse> handleGateway(GatewayException ex) {
-        return ResponseEntity.status(ex.getStatus()).body(new OpenAiErrorResponse(
+        return ResponseEntity.status(ex.getStatus()).contentType(MediaType.APPLICATION_JSON).body(new OpenAiErrorResponse(
             new OpenAiErrorResponse.OpenAiError(
                 ex.getMessage(),
                 errorType(ex.getStatus()),

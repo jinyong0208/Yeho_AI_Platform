@@ -251,7 +251,7 @@ public class StartupDataInitializer implements ApplicationRunner {
             model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
             model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
             model.setBillingMultiplier(java.math.BigDecimal.ONE);
-            model.setSupportStream(Boolean.FALSE);
+            model.setSupportStream(Boolean.TRUE);
             model.setSupportToolCall(Boolean.FALSE);
             model.setStatus("ACTIVE");
             model.setCreatedAt(now);
@@ -267,7 +267,7 @@ public class StartupDataInitializer implements ApplicationRunner {
         model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
         model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
         model.setBillingMultiplier(java.math.BigDecimal.ONE);
-        model.setSupportStream(Boolean.FALSE);
+        model.setSupportStream(Boolean.TRUE);
         model.setSupportToolCall(Boolean.FALSE);
         model.setStatus("ACTIVE");
         model.setUpdatedAt(now);

@@ -88,6 +88,32 @@ $chat = Invoke-RestMethod -Uri "$PlatformBaseUrl/v1/chat/completions" `
     -ContentType "application/json" `
     -Body $chatBody
 
+$streamChatBody = @"
+{
+  "model": "deepseek-chat",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Phase stream smoke test"
+    }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 16,
+  "stream": true
+}
+"@
+
+$streamChat = Invoke-WebRequest -Uri "$PlatformBaseUrl/v1/chat/completions" `
+    -Method Post `
+    -Headers @{ Authorization = "Bearer $GatewayApiKey"; Accept = "text/event-stream" } `
+    -ContentType "application/json" `
+    -Body $streamChatBody `
+    -UseBasicParsing
+
+if ($streamChat.Content -notmatch "data: \[DONE\]") {
+    throw "stream chat did not return [DONE]"
+}
+
 $usageSummary = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/usage-stats/summary" -Method Get -Headers $headers
 
 $pythonAgentBody = @{
@@ -124,6 +150,7 @@ $javaAgent = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/agents/demo/run" `
     walletBalance = $wallet.data.balanceCredits
     chatModel = $chat.model
     chatTokens = $chat.usage.total_tokens
+    streamDone = $streamChat.Content -match "data: \[DONE\]"
     usageRequests = $usageSummary.data.requestCount
     pythonAgentIntent = $pythonAgent.intent
     javaAgentIntent = $javaAgent.data.intent

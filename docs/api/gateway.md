@@ -58,8 +58,24 @@ Content-Type: application/json
 - `temperature`
 - `max_tokens`
 - `stream=false`
+- `stream=true`
+
+### Streaming Response
+
+When `stream` is `true`, the endpoint returns `text/event-stream` using OpenAI-compatible chunks:
+
+```text
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1779415377,"model":"deepseek-chat","choices":[{"index":0,"delta":{"role":"assistant"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1779415377,"model":"deepseek-chat","choices":[{"index":0,"delta":{"content":"Hello"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1779415377,"model":"deepseek-chat","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+Streaming calls still reserve credits, settle actual credits after completion, and write `ai_usage_log`.
 
 ### Error Shape
 
 Errors use the OpenAI-compatible `error` envelope.
-
