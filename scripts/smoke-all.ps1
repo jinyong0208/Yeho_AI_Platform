@@ -69,6 +69,28 @@ $providers = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/providers" -Method 
 $models = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/models" -Method Get -Headers $headers
 $wallet = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/wallets/$($login.data.tenantId)" -Method Get -Headers $headers
 
+$invoiceBody = @{
+    tenantId = "$($login.data.tenantId)"
+    invoiceTitle = "Default Tenant Ltd."
+    taxNo = "91310000SMOKE00001"
+    amountCny = "100.00"
+    invoiceType = "SPECIAL_VAT"
+    email = "finance@example.com"
+    remark = "smoke-all invoice"
+} | ConvertTo-Json
+
+$invoice = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/invoice-applications" `
+    -Method Post `
+    -Headers $headers `
+    -ContentType "application/json" `
+    -Body $invoiceBody
+
+$invoiceIssued = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/invoice-applications/$($invoice.data.id)/issue" `
+    -Method Post `
+    -Headers $headers `
+    -ContentType "application/json" `
+    -Body (@{ remark = "smoke-all issued" } | ConvertTo-Json)
+
 $chatBody = @{
     model = "deepseek-chat"
     messages = @(
@@ -148,6 +170,7 @@ $javaAgent = Invoke-RestMethod -Uri "$PlatformBaseUrl/api/v1/agents/demo/run" `
     providers = $providers.data.Count
     models = $models.data.Count
     walletBalance = $wallet.data.balanceCredits
+    invoiceStatus = $invoiceIssued.data.status
     chatModel = $chat.model
     chatTokens = $chat.usage.total_tokens
     streamDone = $streamChat.Content -match "data: \[DONE\]"

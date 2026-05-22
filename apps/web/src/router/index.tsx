@@ -10,6 +10,7 @@ import ModelPage from '../pages/ModelPage';
 import ApiKeyPage from '../pages/ApiKeyPage';
 import WalletPage from '../pages/WalletPage';
 import WalletTransactionPage from '../pages/WalletTransactionPage';
+import InvoicePage from '../pages/InvoicePage';
 import UsageLogPage from '../pages/UsageLogPage';
 import TokenStatsPage from '../pages/TokenStatsPage';
 import AuditLogPage from '../pages/AuditLogPage';
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
       { path: 'api-keys', element: <ApiKeyPage /> },
       { path: 'wallet', element: <WalletPage /> },
       { path: 'wallet/transactions', element: <WalletTransactionPage /> },
+      { path: 'invoices', element: <InvoicePage /> },
       { path: 'usage-logs', element: <UsageLogPage /> },
       { path: 'token-stats', element: <TokenStatsPage /> },
       { path: 'audit-logs', element: <AuditLogPage /> },
