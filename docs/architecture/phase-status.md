@@ -38,6 +38,7 @@ The platform manages capabilities, not customer knowledge data:
 - Tenant/API key rate limit baseline for RPM, TPM, daily credits, and max concurrency.
 - Redis-backed rate limit counters.
 - Provider timeout, retry, circuit breaker, fallback, and health visibility baseline.
+- Provider connection test API, health details console, and provider test log.
 - Cost, revenue, profit, credits, and token statistics baseline.
 
 ### Console
@@ -68,6 +69,7 @@ The platform manages capabilities, not customer knowledge data:
 
 - End-to-end success smoke test with a real Qwen embedding provider key.
 - Provider resilience behavior needs richer automated tests.
+- Provider connection test should be verified against real DeepSeek, Qwen, and OpenAI-compatible endpoints.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
 - OpenAI-compatible error body consistency should be reviewed across chat and embeddings.
 
