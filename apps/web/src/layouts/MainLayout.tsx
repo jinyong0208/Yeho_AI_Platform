@@ -25,6 +25,7 @@ import {
   IconRouteAltLeft,
   IconServerCog,
   IconShieldCheck,
+  IconSparkles,
   IconUsers,
   IconBuilding,
 } from '@tabler/icons-react';
@@ -44,6 +45,7 @@ const navItems = [
   { group: 'Observability', to: '/usage-logs', labelKey: 'usageLogs', icon: IconActivity },
   { group: 'Observability', to: '/token-stats', labelKey: 'tokenStats', icon: IconChartBar },
   { group: 'Observability', to: '/audit-logs', labelKey: 'auditLogs', icon: IconShieldCheck },
+  { group: 'Orchestration', to: '/agent-debug', labelKey: 'agentDebug', icon: IconSparkles },
   { group: 'Orchestration', to: '/workflow', labelKey: 'workflow', icon: IconRouteAltLeft },
 ];
 

@@ -13,6 +13,7 @@ import WalletTransactionPage from '../pages/WalletTransactionPage';
 import UsageLogPage from '../pages/UsageLogPage';
 import TokenStatsPage from '../pages/TokenStatsPage';
 import AuditLogPage from '../pages/AuditLogPage';
+import AgentDebugPage from '../pages/AgentDebugPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
       { path: 'usage-logs', element: <UsageLogPage /> },
       { path: 'token-stats', element: <TokenStatsPage /> },
       { path: 'audit-logs', element: <AuditLogPage /> },
+      { path: 'agent-debug', element: <AgentDebugPage /> },
       { path: 'workflow', element: <PlaceholderPage kind="workflow" /> },
     ],
   },
