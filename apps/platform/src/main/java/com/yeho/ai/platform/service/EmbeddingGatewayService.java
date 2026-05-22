@@ -1,157 +1,273 @@
 package com.yeho.ai.platform.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.yeho.ai.platform.dto.gateway.EmbeddingRequest;
 import com.yeho.ai.platform.dto.gateway.EmbeddingResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 @Service
-@RequiredArgsConstructor
 public class EmbeddingGatewayService {
 
     private static final String EMBEDDING_SCOPE = "embedding:create";
+    private static final int MAX_ERROR_LENGTH = 500;
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final ApplicationContext applicationContext;
+
+    public EmbeddingGatewayService(
+            JdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper,
+            ApplicationContext applicationContext
+    ) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
+        this.applicationContext = applicationContext;
+    }
 
     public EmbeddingResponse embeddings(String authorization, EmbeddingRequest request) {
-        String apiKey = extractBearer(authorization);
-        ApiKeyContext apiKeyContext = authenticate(apiKey);
-        requireScope(apiKeyContext.scopes(), EMBEDDING_SCOPE);
-        ModelContext model = resolveModel(request.model());
+        long startedAt = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString();
+        ApiKeyIdentity apiKey = authenticate(authorization);
+        requireScope(apiKey);
         List<String> inputs = normalizeInput(request.input());
-        EmbeddingProviderAdapter adapter = adapter(model.providerCode());
-        EmbeddingResponse response = adapter.embed(model, request.model(), inputs);
-        recordUsage(apiKeyContext, model, response);
-        return response;
-    }
+        ModelRoute model = resolveModel(request.model());
 
-    private ApiKeyContext authenticate(String apiKey) {
-        String hash = sha256(apiKey);
-        return jdbcTemplate.query("""
-                        select id, tenant_id, scopes
-                        from tenant_api_key
-                        where api_key_hash = ? and status = 'ACTIVE'
-                        """,
-                rs -> {
-                    if (!rs.next()) {
-                        throw new IllegalArgumentException("Invalid API key");
-                    }
-                    return new ApiKeyContext(rs.getLong("id"), rs.getLong("tenant_id"), rs.getString("scopes"));
-                },
-                hash
-        );
-    }
-
-    private ModelContext resolveModel(String modelCode) {
-        return jdbcTemplate.query("""
-                        select m.id as model_id,
-                               m.model_code,
-                               p.provider_code,
-                               p.base_url,
-                               p.api_key_encrypted,
-                               p.timeout_ms
-                        from ai_model m
-                        join ai_provider p on p.id = m.provider_id
-                        where m.model_code = ?
-                          and m.status = 'ACTIVE'
-                          and p.status = 'ACTIVE'
-                        """,
-                rs -> {
-                    if (!rs.next()) {
-                        throw new IllegalArgumentException("Embedding model not found");
-                    }
-                    return new ModelContext(
-                            rs.getLong("model_id"),
-                            rs.getString("model_code"),
-                            rs.getString("provider_code"),
-                            rs.getString("base_url"),
-                            rs.getString("api_key_encrypted"),
-                            rs.getInt("timeout_ms")
-                    );
-                },
-                modelCode
-        );
-    }
-
-    private EmbeddingProviderAdapter adapter(String providerCode) {
-        if ("QWEN".equalsIgnoreCase(providerCode)) {
-            return new QwenEmbeddingAdapter(RestClient.create(), objectMapper);
+        try {
+            EmbeddingResponse response = callProvider(model, request.model(), inputs);
+            recordUsage(apiKey, model, requestId, startedAt, true, response.usage().totalTokens(), null, null);
+            return response;
+        } catch (ResponseStatusException ex) {
+            recordUsage(apiKey, model, requestId, startedAt, false, 0L, String.valueOf(ex.getStatusCode().value()), ex.getReason());
+            throw ex;
+        } catch (Exception ex) {
+            recordUsage(apiKey, model, requestId, startedAt, false, 0L, "PROVIDER_ERROR", ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Embedding provider request failed");
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Embedding provider is not supported: " + providerCode);
     }
 
-    private void recordUsage(ApiKeyContext apiKeyContext, ModelContext model, EmbeddingResponse response) {
-        int totalTokens = response.usage() == null ? 0 : response.usage().totalTokens();
-        jdbcTemplate.update("""
-                        insert into ai_usage_log (
-                            id, tenant_id, api_key_id, provider_code, model_code, request_id,
-                            input_tokens, output_tokens, total_tokens, real_cost, charge_credits,
-                            latency_ms, success, created_at
-                        ) values (
-                            ?,
-                            ?, ?, ?, ?, ?,
-                            ?, 0, ?, 0, 0,
-                            0, true, ?
-                        )
-                        """,
-                IdWorker.getId(),
-                apiKeyContext.tenantId(),
-                apiKeyContext.id(),
-                model.providerCode(),
-                model.modelCode(),
-                UUID.randomUUID().toString(),
-                totalTokens,
-                totalTokens,
-                LocalDateTime.now()
+    private ApiKeyIdentity authenticate(String authorization) {
+        String apiKey = extractBearer(authorization);
+        String apiKeyHash = sha256(apiKey);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                select id, tenant_id, scopes
+                from tenant_api_key
+                where api_key_hash = ? and status = 'ACTIVE'
+                  and (expired_at is null or expired_at > now())
+                limit 1
+                """, apiKeyHash);
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+        Map<String, Object> row = rows.get(0);
+        return new ApiKeyIdentity(
+                asLong(row.get("id")),
+                asLong(row.get("tenant_id")),
+                String.valueOf(row.getOrDefault("scopes", ""))
         );
     }
 
     private String extractBearer(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing bearer token");
+        if (authorization == null || authorization.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing Authorization header");
         }
-        return authorization.substring("Bearer ".length()).trim();
+        String prefix = "Bearer ";
+        if (!authorization.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization must use Bearer token");
+        }
+        String value = authorization.substring(prefix.length()).trim();
+        if (value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing API key");
+        }
+        return value;
     }
 
-    private void requireScope(String scopes, String requiredScope) {
-        if (scopes == null) {
-            throw new IllegalArgumentException("API key scope denied");
+    private void requireScope(ApiKeyIdentity apiKey) {
+        List<String> scopes = splitScopes(apiKey.scopes());
+        if (!scopes.contains(EMBEDDING_SCOPE) && !scopes.contains("admin:*")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "API key scope denied");
         }
-        for (String scope : scopes.split(",")) {
-            String normalized = scope.trim();
-            if ("admin:*".equals(normalized) || requiredScope.equals(normalized)) {
-                return;
-            }
+    }
+
+    private List<String> splitScopes(String scopes) {
+        if (scopes == null || scopes.isBlank()) {
+            return List.of();
         }
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "API key scope denied");
+        return List.of(scopes.split(",")).stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
     }
 
     private List<String> normalizeInput(Object input) {
-        if (input instanceof String text) {
-            return List.of(text);
+        if (input == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input is required");
         }
-        if (input instanceof List<?> list) {
-            return list.stream().map(String::valueOf).toList();
+        if (input instanceof String value) {
+            if (value.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input must not be blank");
+            }
+            return List.of(value);
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Embedding input must be string or string array");
+        if (input instanceof List<?> values) {
+            if (values.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input must not be empty");
+            }
+            List<String> normalized = new ArrayList<>();
+            for (Object value : values) {
+                if (!(value instanceof String text) || text.isBlank()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input array must contain non-empty strings");
+                }
+                normalized.add(text);
+            }
+            return normalized;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input must be a string or string array");
+    }
+
+    private ModelRoute resolveModel(String modelCode) {
+        if (modelCode == null || modelCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "model is required");
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                select m.id as model_id,
+                       m.model_code,
+                       p.provider_code,
+                       p.base_url,
+                       p.api_key_encrypted,
+                       coalesce(p.timeout_ms, 30000) as timeout_ms
+                from ai_model m
+                join ai_provider p on p.id = m.provider_id
+                where m.model_code = ?
+                  and m.status = 'ACTIVE'
+                  and p.status = 'ACTIVE'
+                limit 1
+                """, modelCode);
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Model not found");
+        }
+        Map<String, Object> row = rows.get(0);
+        return new ModelRoute(
+                asLong(row.get("model_id")),
+                String.valueOf(row.get("model_code")),
+                String.valueOf(row.get("provider_code")),
+                String.valueOf(row.get("base_url")),
+                String.valueOf(row.get("api_key_encrypted")),
+                asInt(row.get("timeout_ms"), 30_000)
+        );
+    }
+
+    private EmbeddingResponse callProvider(ModelRoute model, String requestedModel, List<String> inputs) throws Exception {
+        String providerCode = model.providerCode().toUpperCase(Locale.ROOT);
+        if (!"QWEN".equals(providerCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Embedding is currently supported for Qwen provider only");
+        }
+
+        String providerKey = decryptSecret(model.encryptedApiKey());
+        String endpoint = trimTrailingSlash(model.baseUrl()) + "/embeddings";
+        Map<String, Object> providerRequest = Map.of(
+                "model", requestedModel,
+                "input", inputs.size() == 1 ? inputs.get(0) : inputs
+        );
+
+        String body = RestClient.builder()
+                .baseUrl(endpoint)
+                .build()
+                .post()
+                .header("Authorization", "Bearer " + providerKey)
+                .body(providerRequest)
+                .retrieve()
+                .body(String.class);
+
+        JsonNode root = objectMapper.readTree(body);
+        List<EmbeddingResponse.EmbeddingData> data = new ArrayList<>();
+        JsonNode dataNode = root.path("data");
+        for (int i = 0; i < dataNode.size(); i++) {
+            JsonNode item = dataNode.get(i);
+            List<Double> embedding = new ArrayList<>();
+            for (JsonNode value : item.path("embedding")) {
+                embedding.add(value.asDouble());
+            }
+            data.add(new EmbeddingResponse.EmbeddingData(
+                    item.path("object").asText("embedding"),
+                    embedding,
+                    item.path("index").asInt(i)
+            ));
+        }
+
+        JsonNode usageNode = root.path("usage");
+        long promptTokens = usageNode.path("prompt_tokens").asLong(estimateTokens(inputs));
+        long totalTokens = usageNode.path("total_tokens").asLong(promptTokens);
+        return new EmbeddingResponse(
+                root.path("object").asText("list"),
+                data,
+                root.path("model").asText(requestedModel),
+                new EmbeddingResponse.Usage(Math.toIntExact(promptTokens), Math.toIntExact(totalTokens))
+        );
+    }
+
+    private long estimateTokens(List<String> inputs) {
+        return inputs.stream()
+                .mapToLong(value -> Math.max(1, value.length() / 4))
+                .sum();
+    }
+
+    private void recordUsage(
+            ApiKeyIdentity apiKey,
+            ModelRoute model,
+            String requestId,
+            long startedAt,
+            boolean success,
+            long totalTokens,
+            String errorCode,
+            String errorMessage
+    ) {
+        long latencyMs = Math.max(0, System.currentTimeMillis() - startedAt);
+        jdbcTemplate.update("""
+                insert into ai_usage_log (
+                    id, tenant_id, api_key_id, provider_code, model_code, request_id,
+                    input_tokens, output_tokens, total_tokens, real_cost, charge_credits, profit,
+                    latency_ms, success, error_code, error_message, api_key_scopes, created_at
+                ) values (?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
+                """,
+                IdWorker.getId(),
+                apiKey.tenantId(),
+                apiKey.apiKeyId(),
+                model.providerCode(),
+                model.modelCode(),
+                requestId,
+                totalTokens,
+                totalTokens,
+                latencyMs,
+                success,
+                errorCode,
+                sanitizeError(errorMessage),
+                apiKey.scopes()
+        );
+    }
+
+    private String sanitizeError(String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return null;
+        }
+        String sanitized = errorMessage.replaceAll("(?i)Bearer\\s+[A-Za-z0-9._\\-]+", "Bearer ***");
+        return sanitized.length() > MAX_ERROR_LENGTH ? sanitized.substring(0, MAX_ERROR_LENGTH) : sanitized;
     }
 
     private String sha256(String value) {
@@ -163,66 +279,57 @@ public class EmbeddingGatewayService {
         }
     }
 
-    public interface EmbeddingProviderAdapter {
-        EmbeddingResponse embed(ModelContext model, String requestModel, List<String> input);
-    }
-
-    public record ApiKeyContext(Long id, Long tenantId, String scopes) {
-    }
-
-    public record ModelContext(Long modelId, String modelCode, String providerCode, String baseUrl, String apiKey, Integer timeoutMs) {
-    }
-
-    public static class QwenEmbeddingAdapter implements EmbeddingProviderAdapter {
-        private final RestClient restClient;
-        private final ObjectMapper objectMapper;
-
-        QwenEmbeddingAdapter(RestClient restClient, ObjectMapper objectMapper) {
-            this.restClient = restClient;
-            this.objectMapper = objectMapper;
+    private String decryptSecret(String encryptedValue) {
+        if (encryptedValue == null || encryptedValue.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Provider API key is not configured");
         }
-
-        @Override
-        public EmbeddingResponse embed(ModelContext model, String requestModel, List<String> input) {
-            String url = model.baseUrl().replaceAll("/+$", "") + "/embeddings";
-            Map<String, Object> body = Map.of("model", requestModel, "input", input);
-            String raw = restClient.post()
-                    .uri(url)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + model.apiKey())
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-            return parse(raw, requestModel);
-        }
-
-        private EmbeddingResponse parse(String raw, String model) {
+        for (Object bean : applicationContext.getBeansWithAnnotation(Service.class).values()) {
             try {
-                JsonNode root = objectMapper.readTree(raw);
-                List<EmbeddingResponse.EmbeddingData> data = new ArrayList<>();
-                for (JsonNode item : root.path("data")) {
-                    List<Double> embedding = new ArrayList<>();
-                    for (JsonNode value : item.path("embedding")) {
-                        embedding.add(value.asDouble());
-                    }
-                    data.add(new EmbeddingResponse.EmbeddingData(
-                            item.path("object").asText("embedding"),
-                            embedding,
-                            item.path("index").asInt(data.size())
-                    ));
+                Method method = bean.getClass().getMethod("decrypt", String.class);
+                Object decrypted = method.invoke(bean, encryptedValue);
+                if (decrypted instanceof String value && !value.isBlank()) {
+                    return value;
                 }
-                JsonNode usage = root.path("usage");
-                return new EmbeddingResponse(
-                        root.path("object").asText("list"),
-                        data,
-                        root.path("model").asText(model),
-                        new EmbeddingResponse.Usage(
-                                usage.path("prompt_tokens").asInt(0),
-                                usage.path("total_tokens").asInt(0)
-                        )
-                );
+            } catch (NoSuchMethodException ignored) {
+                // Keep scanning service beans; provider key encryption service names differ by module.
             } catch (Exception ex) {
-                throw new IllegalStateException("Unable to parse embedding response", ex);
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Provider API key decrypt failed");
             }
         }
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Provider API key decrypt service is unavailable");
+    }
+
+    private String trimTrailingSlash(String value) {
+        return value == null ? "" : value.replaceAll("/+$", "");
+    }
+
+    private Long asLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.valueOf(String.valueOf(value));
+    }
+
+    private int asInt(Object value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return Integer.parseInt(String.valueOf(value));
+    }
+
+    private record ApiKeyIdentity(Long apiKeyId, Long tenantId, String scopes) {
+    }
+
+    private record ModelRoute(
+            Long modelId,
+            String modelCode,
+            String providerCode,
+            String baseUrl,
+            String encryptedApiKey,
+            int timeoutMs
+    ) {
     }
 }
