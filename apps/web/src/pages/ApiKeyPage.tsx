@@ -35,6 +35,7 @@ type TenantLite = {
 const scopeOptions = [
   { value: 'chat:completion', label: 'chat:completion' },
   { value: 'embedding:create', label: 'embedding:create' },
+  { value: 'models:read', label: 'models:read' },
   { value: 'billing:read', label: 'billing:read' },
   { value: 'usage:read', label: 'usage:read' },
   { value: 'provider:test', label: 'provider:test' },

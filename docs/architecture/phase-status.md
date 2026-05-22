@@ -23,6 +23,7 @@ The platform manages capabilities, not customer knowledge data:
 ### AI Gateway
 
 - OpenAI-compatible `POST /v1/chat/completions`.
+- OpenAI-compatible `GET /v1/models`.
 - Provider adapter abstraction.
 - OpenAI, DeepSeek, and Qwen adapter baseline.
 - Model router by `model_code`.
