@@ -52,3 +52,5 @@ yeho:
     crypto-secret: ${YEHO_SECURITY_CRYPTO_SECRET:change-me-in-production}
   billing:
     default-wallet-credits: ${YEHO_BILLING_DEFAULT_WALLET_CREDITS:100000}
+  agent:
+    base-url: ${YEHO_AGENT_BASE_URL:http://localhost:8000}
