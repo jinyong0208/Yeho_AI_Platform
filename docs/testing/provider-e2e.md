@@ -43,15 +43,18 @@ The script:
 - Revokes the temporary gateway API key.
 - Does not print the provider API key.
 
-Diagnostic mode without a real provider key:
+No-mutation diagnostic mode without a real provider key:
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
   -ProviderCode QWEN `
+  -SkipProviderUpdate `
   -SkipProviderKeyUpdate `
   -SkipGatewayChat `
   -AllowProviderFailure
 ```
+
+Use this mode to verify login, provider lookup, provider-health recording, and script wiring without overwriting a local mock-provider configuration. It is not a real Qwen or DeepSeek end-to-end validation.
 
 Provider probe only:
 
@@ -61,6 +64,22 @@ Provider probe only:
   -ProviderApiKey "<DEEPSEEK_API_KEY>" `
   -SkipGatewayChat
 ```
+
+## Environment Variable Helper
+
+When running locally, keep real provider keys in the shell environment and pass them to the script without printing them:
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode QWEN `
+  -ProviderApiKey $env:QWEN_API_KEY
+
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode DEEPSEEK `
+  -ProviderApiKey $env:DEEPSEEK_API_KEY
+```
+
+The validation is only considered complete when `/api/providers/{providerId}/test` succeeds against the real provider endpoint and `/v1/chat/completions` succeeds through the gateway with wallet deduction and usage-log records.
 
 ## Login
 

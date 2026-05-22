@@ -142,4 +142,19 @@ Windows PowerShell 烟测脚本：
 .\scripts\smoke-agent.ps1
 ```
 
+MVP closeout validation:
+
+```powershell
+.\scripts\smoke-mvp-closeout.ps1
+.\scripts\smoke-gateway-integration.ps1
+.\scripts\regression-openai-errors.ps1
+```
+
+Real provider validation requires shell environment keys and must not print key values:
+
+```powershell
+.\scripts\provider-e2e.ps1 -ProviderCode QWEN -ProviderApiKey $env:QWEN_API_KEY
+.\scripts\provider-e2e.ps1 -ProviderCode DEEPSEEK -ProviderApiKey $env:DEEPSEEK_API_KEY
+```
+
 更多说明见 `docs/`。

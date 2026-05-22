@@ -32,3 +32,26 @@ Run the local gateway integration smoke after the platform is up:
 ```
 
 This smoke uses the local mock provider and verifies chat completions, embeddings, usage logs, wallet deduction, request ids, and API-key RPM limiting.
+
+Run real-provider validation only when the shell has a real provider key. Do not paste keys into logs, docs, screenshots, or chat.
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode QWEN `
+  -ProviderApiKey $env:QWEN_API_KEY
+
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode DEEPSEEK `
+  -ProviderApiKey $env:DEEPSEEK_API_KEY
+```
+
+If no real key is available, use no-mutation diagnostic mode instead. This confirms script wiring and health-state recording, but it does not complete real-provider acceptance.
+
+```powershell
+.\scripts\provider-e2e.ps1 `
+  -ProviderCode QWEN `
+  -SkipProviderUpdate `
+  -SkipProviderKeyUpdate `
+  -SkipGatewayChat `
+  -AllowProviderFailure
+```
