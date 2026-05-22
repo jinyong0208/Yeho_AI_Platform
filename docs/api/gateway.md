@@ -79,3 +79,45 @@ Streaming calls still reserve credits, settle actual credits after completion, a
 ### Error Shape
 
 Errors use the OpenAI-compatible `error` envelope.
+
+## Provider Management
+
+Provider management APIs are console APIs under `/api/v1/providers` and require `SUPER_ADMIN`.
+
+### PUT /api/v1/providers/{id}/api-key
+
+Updates the provider API key without returning plaintext secrets.
+
+```json
+{
+  "apiKey": "sk-xxxxxxxx"
+}
+```
+
+Response uses the normal provider shape and only returns `hasApiKey`.
+
+### POST /api/v1/providers/{id}/test
+
+Runs a lightweight non-streaming chat request through the configured `AiProviderAdapter`. Business code must not call provider SDKs directly.
+
+```json
+{
+  "model": "deepseek-chat",
+  "message": "ping"
+}
+```
+
+Both fields are optional. When `model` is omitted, the backend picks the first active model under the provider.
+
+```json
+{
+  "providerId": 1,
+  "providerCode": "DEEPSEEK",
+  "modelCode": "deepseek-chat",
+  "success": true,
+  "code": "ok",
+  "message": "Provider connection succeeded",
+  "latencyMs": 120,
+  "testedAt": "2026-05-22T14:20:00"
+}
+```

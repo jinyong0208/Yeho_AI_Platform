@@ -12,22 +12,31 @@ import {
   TextInput,
   ThemeIcon,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconPlus, IconServerCog, IconTrash } from '@tabler/icons-react';
+import { IconKey, IconPlugConnected, IconPlus, IconServerCog, IconTrash } from '@tabler/icons-react';
+import { useState } from 'react';
 import { gatewayApi } from '../api/gateway';
 
 export default function ProviderPage() {
   const [opened, { open, close }] = useDisclosure(false);
+  const [keyOpened, { open: openKey, close: closeKey }] = useDisclosure(false);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const queryClient = useQueryClient();
   const form = useForm({
     initialValues: {
       providerCode: '',
       providerName: '',
       baseUrl: '',
+      apiKey: '',
+    },
+  });
+  const keyForm = useForm({
+    initialValues: {
       apiKey: '',
     },
   });
@@ -41,11 +50,43 @@ export default function ProviderPage() {
       close();
     },
   });
+  const updateKeyMutation = useMutation({
+    mutationFn: ({ id, apiKey }: { id: string; apiKey: string }) => gatewayApi.updateProviderApiKey(id, { apiKey }),
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: '密钥已更新', message: 'Provider API Key 已加密保存。' });
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+      keyForm.reset();
+      closeKey();
+      setSelectedProvider(null);
+    },
+  });
+  const testMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) => gatewayApi.testProvider(id),
+    onSuccess: (result: any) => {
+      notifications.show({
+        color: result.success ? 'teal' : 'red',
+        title: result.success ? '连接正常' : '连接失败',
+        message: `${result.providerCode}${result.modelCode ? ` / ${result.modelCode}` : ''}: ${result.message}`,
+      });
+    },
+  });
   const disableMutation = useMutation({
     mutationFn: gatewayApi.disableProvider,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['providers'] }),
   });
   const providers = providersQuery.data ?? [];
+
+  const handleOpenKeyModal = (provider: any) => {
+    setSelectedProvider(provider);
+    keyForm.reset();
+    openKey();
+  };
+
+  const handleCloseKeyModal = () => {
+    keyForm.reset();
+    setSelectedProvider(null);
+    closeKey();
+  };
 
   return (
     <Stack gap="lg">
@@ -95,15 +136,40 @@ export default function ProviderPage() {
                   </Text>
                 </Box>
               </Group>
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                aria-label="Disable provider"
-                loading={disableMutation.isPending}
-                onClick={() => disableMutation.mutate(provider.id)}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
+              <Group gap="xs" wrap="nowrap">
+                <Tooltip label="测试连接">
+                  <ActionIcon
+                    variant="subtle"
+                    color="teal"
+                    aria-label="Test provider connection"
+                    loading={testMutation.isPending && testMutation.variables?.id === provider.id}
+                    onClick={() => testMutation.mutate({ id: provider.id })}
+                  >
+                    <IconPlugConnected size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="更新密钥">
+                  <ActionIcon
+                    variant="subtle"
+                    color="blue"
+                    aria-label="Update provider API key"
+                    onClick={() => handleOpenKeyModal(provider)}
+                  >
+                    <IconKey size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="禁用">
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    aria-label="Disable provider"
+                    loading={disableMutation.isPending && disableMutation.variables === provider.id}
+                    onClick={() => disableMutation.mutate(provider.id)}
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
             </Group>
           ))}
           {providers.length === 0 && (
@@ -123,6 +189,32 @@ export default function ProviderPage() {
             <PasswordInput label="Provider API Key" {...form.getInputProps('apiKey')} />
             <Button color="dark" type="submit" loading={createMutation.isPending}>
               保存
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal
+        opened={keyOpened}
+        onClose={handleCloseKeyModal}
+        title={`更新密钥${selectedProvider ? ` · ${selectedProvider.providerName}` : ''}`}
+        centered
+      >
+        <form
+          onSubmit={keyForm.onSubmit((values) => {
+            if (!selectedProvider) {
+              return;
+            }
+            updateKeyMutation.mutate({ id: selectedProvider.id, apiKey: values.apiKey });
+          })}
+        >
+          <Stack>
+            <Text size="sm" c="dimmed">
+              完整密钥只会在提交时进入后端加密保存，控制台不会回显已保存的明文。
+            </Text>
+            <PasswordInput label="Provider API Key" required {...keyForm.getInputProps('apiKey')} />
+            <Button color="dark" type="submit" loading={updateKeyMutation.isPending} disabled={!selectedProvider}>
+              保存密钥
             </Button>
           </Stack>
         </form>

@@ -1,8 +1,11 @@
 package com.yeho.ai.platform.controller;
 
 import com.yeho.ai.platform.common.ApiResponse;
+import com.yeho.ai.platform.dto.gateway.ProviderApiKeyUpdateRequest;
 import com.yeho.ai.platform.dto.gateway.ProviderCreateRequest;
 import com.yeho.ai.platform.dto.gateway.ProviderResponse;
+import com.yeho.ai.platform.dto.gateway.ProviderTestRequest;
+import com.yeho.ai.platform.dto.gateway.ProviderTestResponse;
 import com.yeho.ai.platform.dto.gateway.ProviderUpdateRequest;
 import com.yeho.ai.platform.service.AiProviderAdminService;
 import jakarta.validation.Valid;
@@ -47,6 +50,22 @@ public class AiProviderController {
         @RequestBody ProviderUpdateRequest request
     ) {
         return ApiResponse.ok(aiProviderAdminService.update(id, request));
+    }
+
+    @PutMapping("/{id}/api-key")
+    public ApiResponse<ProviderResponse> updateApiKey(
+        @PathVariable Long id,
+        @Valid @RequestBody ProviderApiKeyUpdateRequest request
+    ) {
+        return ApiResponse.ok(aiProviderAdminService.updateApiKey(id, request));
+    }
+
+    @PostMapping("/{id}/test")
+    public ApiResponse<ProviderTestResponse> testConnection(
+        @PathVariable Long id,
+        @RequestBody(required = false) ProviderTestRequest request
+    ) {
+        return ApiResponse.ok(aiProviderAdminService.testConnection(id, request));
     }
 
     @DeleteMapping("/{id}")

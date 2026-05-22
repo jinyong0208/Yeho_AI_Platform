@@ -1,7 +1,15 @@
-import { apiClient, unwrap } from './client';
+import { apiClient } from './client';
 
-export type Provider = {
-  id: string;
+type Id = string;
+
+type ApiEnvelope<T> = {
+  data: {
+    data: T;
+  };
+};
+
+export type ProviderResponse = {
+  id: Id;
   providerCode: string;
   providerName: string;
   baseUrl: string;
@@ -11,18 +19,21 @@ export type Provider = {
   updatedAt: string;
 };
 
-export type ProviderCreateRequest = {
+export type ProviderTestResponse = {
+  providerId: Id;
   providerCode: string;
-  providerName: string;
-  baseUrl: string;
-  apiKey?: string;
-  status?: string;
+  modelCode?: string;
+  success: boolean;
+  code: string;
+  message: string;
+  latencyMs: number;
+  testedAt: string;
 };
 
-export type ModelConfig = {
-  id: string;
-  providerId: string;
-  providerCode: string;
+export type ModelResponse = {
+  id: Id;
+  providerId: Id;
+  providerCode?: string;
   modelCode: string;
   displayName: string;
   inputPrice: number;
@@ -33,56 +44,44 @@ export type ModelConfig = {
   supportStream: boolean;
   supportToolCall: boolean;
   status: string;
-  createdAt: string;
-  updatedAt: string;
 };
 
-export type ModelCreateRequest = {
-  providerId: string;
-  modelCode: string;
-  displayName: string;
-  inputPrice: number;
-  outputPrice: number;
-  inputCreditRate: number;
-  outputCreditRate: number;
-  billingMultiplier: number;
-  supportStream: boolean;
-  supportToolCall: boolean;
-  status?: string;
-};
-
-export type TenantApiKey = {
-  id: string;
-  tenantId: string;
-  apiKeyPrefix: string;
+export type TenantApiKeyResponse = {
+  id: Id;
   name: string;
+  apiKeyPrefix: string;
   status: string;
   expiredAt?: string | null;
-  createdAt: string;
+  createdAt?: string;
   lastUsedAt?: string | null;
 };
 
-export type TenantApiKeyCreated = TenantApiKey & {
+export type TenantApiKeyCreated = TenantApiKeyResponse & {
   apiKey: string;
 };
 
+const unwrapData = <T>(response: ApiEnvelope<T>) => response.data.data;
+
 export const gatewayApi = {
-  providers: async () => unwrap<Provider[]>(await apiClient.get('/providers')),
-  createProvider: async (payload: ProviderCreateRequest) =>
-    unwrap<Provider>(await apiClient.post('/providers', payload)),
-  disableProvider: async (id: string) => {
+  providers: async (): Promise<ProviderResponse[]> => unwrapData(await apiClient.get('/providers')),
+  createProvider: async (payload: unknown): Promise<ProviderResponse> => unwrapData(await apiClient.post('/providers', payload)),
+  updateProviderApiKey: async (id: Id, payload: { apiKey: string }): Promise<ProviderResponse> =>
+    unwrapData(await apiClient.put(`/providers/${id}/api-key`, payload)),
+  testProvider: async (id: Id, payload?: { model?: string; message?: string }): Promise<ProviderTestResponse> =>
+    unwrapData(await apiClient.post(`/providers/${id}/test`, payload ?? {})),
+  disableProvider: async (id: Id) => {
     await apiClient.delete(`/providers/${id}`);
   },
-  models: async () => unwrap<ModelConfig[]>(await apiClient.get('/models')),
-  createModel: async (payload: ModelCreateRequest) => unwrap<ModelConfig>(await apiClient.post('/models', payload)),
-  disableModel: async (id: string) => {
+  models: async (): Promise<ModelResponse[]> => unwrapData(await apiClient.get('/models')),
+  createModel: async (payload: unknown): Promise<ModelResponse> => unwrapData(await apiClient.post('/models', payload)),
+  disableModel: async (id: Id) => {
     await apiClient.delete(`/models/${id}`);
   },
-  apiKeys: async (tenantId: string) =>
-    unwrap<TenantApiKey[]>(await apiClient.get(`/tenants/${tenantId}/api-keys`)),
-  createApiKey: async (tenantId: string, payload: { name: string }) =>
-    unwrap<TenantApiKeyCreated>(await apiClient.post(`/tenants/${tenantId}/api-keys`, payload)),
-  revokeApiKey: async (tenantId: string, id: string) => {
-    await apiClient.delete(`/tenants/${tenantId}/api-keys/${id}`);
+  apiKeys: async (tenantId: Id): Promise<TenantApiKeyResponse[]> =>
+    unwrapData(await apiClient.get(`/tenants/${tenantId}/api-keys`)),
+  createApiKey: async (tenantId: Id, payload: { name: string }): Promise<TenantApiKeyCreated> =>
+    unwrapData(await apiClient.post(`/tenants/${tenantId}/api-keys`, payload)),
+  revokeApiKey: async (tenantId: Id, keyId: Id) => {
+    await apiClient.delete(`/tenants/${tenantId}/api-keys/${keyId}`);
   },
 };
