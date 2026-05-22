@@ -1,8 +1,8 @@
 # Yeho AI Platform
 
-企业级 AI 中台 / AI Gateway / Agent Platform 的 Phase 0 + Phase 1 项目骨架。
+企业级 AI 中台 / AI Gateway / Agent Platform。
 
-当前阶段只包含 monorepo、Java 主平台基础、React 管理后台骨架、FastAPI Agent 服务骨架、PostgreSQL、Redis、Flyway、MinIO 与 Docker Compose。复杂 AI、Agent、RAG、Workflow、支付、发票正式对接均未实现。
+当前已完成第一阶段 MVP 主链路：多租户、登录、AI Gateway、模型供应商/模型配置、API Key、钱包/充值/扣费、Usage Log、React 控制台、Python LangGraph Demo Agent、Docker Compose 一键启动。
 
 ## 目录结构
 
@@ -10,7 +10,7 @@
 apps/
   platform/  Spring Boot 3 主平台
   web/       React + Vite + TypeScript + Mantine 管理后台
-  agent/     FastAPI AI 服务骨架
+  agent/     FastAPI + LangGraph AI 服务
 docs/
   architecture/
   api/
@@ -31,6 +31,12 @@ docker compose up -d postgres redis minio
 
 ```bash
 docker compose up -d
+```
+
+重建并启动全部服务：
+
+```bash
+docker compose up -d --build
 ```
 
 服务端口：
@@ -79,7 +85,7 @@ uvicorn main:app --reload
 
 ```bash
 curl http://localhost:8080/api/v1/health
-curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/health
 ```
 
 登录接口：
@@ -97,9 +103,27 @@ curl http://localhost:8080/api/v1/tenants \
   -H "Authorization: Bearer <token>"
 ```
 
+OpenAI-compatible API：
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer yh_sk_demo_default_key" \
+  -d "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello gateway\"}],\"temperature\":0.2,\"max_tokens\":16,\"stream\":false}"
+```
+
+Python Agent Demo：
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/demo/run \
+  -H "Content-Type: application/json" \
+  -d "{\"input\":\"check wallet credits\",\"tenantId\":\"1\",\"userId\":\"1\"}"
+```
+
 Windows PowerShell 烟测脚本：
 
 ```powershell
+.\scripts\smoke-all.ps1
 .\scripts\smoke-phase1.ps1
 .\scripts\smoke-agent.ps1
 ```
