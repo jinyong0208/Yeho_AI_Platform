@@ -4,7 +4,7 @@
 
 本项目为 **Yeho AI Platform**。
 
-定位为企业级 AI 中台 / AI Gateway / Agent Platform。
+定位为企业级 AI Gateway / Billing / Audit / Agent Orchestration Platform。
 
 本平台不是单一聊天机器人，也不是养老院专用系统，而是公司未来所有 AI 能力的统一平台，包括但不限于：
 
@@ -12,7 +12,7 @@
 - EQMS
 - 养老机器人平台
 - AI 客服
-- 文档知识库
+- EDMS 文档 AI 能力接入
 - 大屏系统
 - IoT 系统
 - 工业 AI 场景
@@ -24,8 +24,18 @@
 - 支持多租户
 - 支持 Token 计费
 - 支持钱包 / 充值 / 发票
-- 支持 Agent / RAG / Workflow
+- 支持 Prompt / Agent / Workflow 编排
+- 预留 Embedding API / RAG 编排接口
 - 支持 SaaS 与私有化部署
+
+最新产品边界：
+
+- Yeho AI Platform 不集中保存客户完整文档。
+- Yeho AI Platform 不集中保存文档切片。
+- Yeho AI Platform 不集中保存向量索引。
+- EDMS 私有化环境负责文档原文、文档切片、向量索引、RAG 检索和权限过滤。
+- Yeho AI Platform 只管理模型调用、模型路由、API Key、租户、钱包/额度、Token 统计、调用审计、Prompt/Agent 编排和 Provider Adapter。
+- 总原则：**EDMS 管数据，Yeho AI Platform 管能力**。
 
 ---
 
@@ -76,6 +86,22 @@
 - 不要低代码化
 - 不要过度封装
 
+UI 风格参考：
+
+- OpenWebUI
+- LangSmith
+- Vercel Dashboard
+- Cursor Dashboard
+- Dify Console
+
+避免：
+
+- 传统 ERP 风格
+- 传统 OA 风格
+- 重边框
+- 重表格
+- 老式后台布局
+
 推荐依赖版本：
 
 ```json
@@ -88,7 +114,6 @@
   "@mantine/hooks": "^8.3.11",
   "@mantine/modals": "^8.3.11",
   "@mantine/notifications": "^8.3.11",
-  "@onlyoffice/document-editor-react": "^2.1.1",
   "@tabler/icons-react": "^3.36.1",
   "@tanstack/react-query": "^5.90.16",
   "axios": "^1.13.2",
@@ -148,7 +173,7 @@ apps/web/
 
 LogicFlow 主要用于后续 Agent Workflow / 流程编排，第一阶段只安装依赖并预留页面，不需要复杂实现。
 
-OnlyOffice 依赖主要为后续 EDMS 文档 AI 场景预留，第一阶段不要实现复杂文档编辑能力。
+不要引入 OnlyOffice 文档编辑器依赖。EDMS 文档编辑、原文存储、切片和检索由 EDMS 私有化环境负责。
 
 ---
 
@@ -190,12 +215,14 @@ Python 作为 AI 编排层。
 负责：
 
 - Agent
-- RAG
-- Embedding
+- Embedding API 预留
+- RAG 编排接口预留
 - Tool Calling
 - LangGraph
 - Workflow
 - 模型适配
+
+Python AI 服务不得集中保存客户完整文档、文档切片或向量索引。需要 RAG 时，由 EDMS 私有化环境完成检索和权限过滤，平台只接收检索结果或编排请求。
 
 技术：
 
@@ -215,7 +242,8 @@ Python 作为 AI 编排层。
 
 向量：
 
-- pgvector，第一阶段预留
+- pgvector 不作为 Yeho AI Platform 中心化存储组件
+- pgvector 可用于 EDMS 私有化环境，或后续私有知识库组件
 
 缓存：
 
@@ -223,7 +251,8 @@ Python 作为 AI 编排层。
 
 文件：
 
-- MinIO
+- MinIO 为可选组件，不作为第一阶段核心依赖
+- Yeho AI Platform 不集中保存客户完整文档
 
 ---
 
@@ -245,7 +274,9 @@ Python 作为 AI 编排层。
 业务系统 / 第三方系统
 EDMS / EQMS / 养老机器人 / 客服 / 外部开发者
         ↓
-Yeho AI Gateway
+EDMS 私有化环境负责文档原文 / 切片 / 向量索引 / RAG 检索 / 权限过滤
+        ↓
+Yeho AI Gateway / Billing / Audit / Agent Orchestration
         ↓
 鉴权 / 租户 / 限流 / 余额检查 / 审计
         ↓
@@ -291,9 +322,10 @@ Token 统计 / 成本核算 / 扣费 / 日志
 3. 正式支付网关
 4. 发票正式税控对接
 5. Kubernetes
-6. 高级 RAG
-7. 复杂 OnlyOffice 文档编辑
-8. 复杂 LogicFlow 工作流编排
+6. 中心化 RAG
+7. 中心化向量知识库闭环
+8. 客户完整文档或文档切片集中存储
+9. 复杂 LogicFlow 工作流编排
 
 ---
 
@@ -375,7 +407,7 @@ Token 统计 / 成本核算 / 扣费 / 日志
 - 一键启动
 - postgres
 - redis
-- minio
+- minio 可选
 - java
 - python
 - web
@@ -401,7 +433,7 @@ redis
   Redis 缓存
 
 minio
-  文件存储
+  可选文件存储组件，不作为第一阶段核心依赖
 ```
 
 第一阶段不要过早微服务化。
@@ -803,6 +835,10 @@ output_tokens * output_credit_rate
 - 跨租户查询
 - Python 管理账务
 - 前端直接调模型 API
+- 平台集中保存客户完整文档
+- 平台集中保存文档切片
+- 平台集中保存客户向量索引
+- 将 EDMS 的文档权限过滤迁移到平台中心化处理
 - 一开始引入 Kubernetes
 - 一开始拆大量微服务
 - 使用 Ant Design Pro
@@ -1083,7 +1119,13 @@ dayjs
 完成 Phase 0 + Phase 1 后，README 中至少提供：
 
 ```bash
-docker compose up -d postgres redis minio
+docker compose up -d postgres redis
+```
+
+可选文件存储组件：
+
+```bash
+docker compose --profile optional-storage up -d minio
 ```
 
 Java：

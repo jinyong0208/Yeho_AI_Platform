@@ -13,6 +13,12 @@ Phase 5 开始引入 Python Agent 服务的第一个可验证闭环。
 - Provider Adapter 抽象契约
 - LangGraph Demo Agent
 
+## Data Boundary
+
+Agent orchestration can reserve Embedding API and RAG orchestration interfaces, but Yeho AI Platform must not centrally store customer original documents, document chunks, or vector indexes.
+
+For EDMS scenarios, EDMS private deployments own document storage, chunking, vector indexes, RAG retrieval, and permission filtering. The Agent service can call EDMS retrieval APIs and use the permission-filtered context transiently during prompt/model orchestration.
+
 Demo Agent 当前是规则型 LangGraph 流程，不调用外部模型。它用于验证：
 
 - Java 主平台可以调用 Python Agent 服务
@@ -23,7 +29,8 @@ Demo Agent 当前是规则型 LangGraph 流程，不调用外部模型。它用�
 暂未实现：
 
 - 多 Agent 自治
-- RAG
+- 中心化 RAG
+- 平台内向量知识库闭环
 - Tool Calling
 - 真实模型调用
 - Workflow 可视化编排

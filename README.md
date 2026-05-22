@@ -1,8 +1,16 @@
 # Yeho AI Platform
 
-企业级 AI 中台 / AI Gateway / Agent Platform。
+企业级 AI Gateway / Billing / Audit / Agent Orchestration 平台。
 
 当前已完成第一阶段 MVP 主链路：多租户、登录、AI Gateway、模型供应商/模型配置、API Key、钱包/充值/扣费、Usage Log、React 控制台、Python LangGraph Demo Agent、Docker Compose 一键启动。
+
+## 产品边界
+
+Yeho AI Platform 管 AI 能力，不做客户知识数据的中心化存储。
+
+- EDMS 管数据：文档原文、文档切片、向量索引、RAG 检索和权限过滤由 EDMS 私有化环境负责。
+- Yeho AI Platform 管能力：模型调用、模型路由、API Key、租户、钱包/额度、Token 统计、调用审计、Prompt/Agent 编排和 Provider Adapter。
+- 平台可预留 Embedding API / RAG 编排接口，但不集中保存客户完整文档、文档切片或向量索引。
 
 ## 目录结构
 
@@ -21,19 +29,25 @@ docs/
 
 ## Docker 启动
 
-先启动基础设施：
+先启动核心基础设施：
 
 ```bash
-docker compose up -d postgres redis minio
+docker compose up -d postgres redis
 ```
 
-一键启动全部服务：
+MinIO 是可选组件，不作为第一阶段核心依赖：
+
+```bash
+docker compose --profile optional-storage up -d minio
+```
+
+一键启动全部核心服务：
 
 ```bash
 docker compose up -d
 ```
 
-重建并启动全部服务：
+重建并启动全部核心服务：
 
 ```bash
 docker compose up -d --build
@@ -44,7 +58,7 @@ docker compose up -d --build
 - Java 平台：http://localhost:8080
 - Web 控制台：http://localhost:5173
 - Python Agent：http://localhost:8000
-- MinIO 控制台：http://localhost:9001
+- MinIO 控制台：http://localhost:9001（可选）
 
 ## 本地运行
 

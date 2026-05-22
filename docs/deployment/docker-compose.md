@@ -2,19 +2,25 @@
 
 Phase 6 目标是保证整套 MVP 可以一键启动、健康检查、烟测验证。
 
-启动基础设施：
+启动核心基础设施：
 
 ```bash
-docker compose up -d postgres redis minio
+docker compose up -d postgres redis
 ```
 
-启动全部服务：
+启动可选 MinIO：
+
+```bash
+docker compose --profile optional-storage up -d minio
+```
+
+启动全部核心服务：
 
 ```bash
 docker compose up -d
 ```
 
-重建并启动全部服务：
+重建并启动全部核心服务：
 
 ```bash
 docker compose up -d --build
@@ -35,8 +41,8 @@ docker compose ps
 | agent | `8000` |
 | postgres | `5432` |
 | redis | `6379` |
-| minio | `9000` |
-| minio console | `9001` |
+| minio | `9000` optional |
+| minio console | `9001` optional |
 
 Java 平台通过环境变量连接 Compose 网络内的 `postgres` 和 `redis`。
 
@@ -48,7 +54,7 @@ Compose 已为核心服务配置健康检查：
 
 - `postgres`: `pg_isready`
 - `redis`: `redis-cli ping`
-- `minio`: `mc ready local`
+- `minio`: `mc ready local`，仅在启用 `optional-storage` profile 时运行
 - `agent`: `GET /api/v1/health`
 - `platform`: `GET /actuator/health`
 - `web`: `GET /`
