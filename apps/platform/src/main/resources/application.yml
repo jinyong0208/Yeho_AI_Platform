@@ -49,3 +49,6 @@ yeho:
   security:
     token-ttl-hours: ${YEHO_SECURITY_TOKEN_TTL_HOURS:12}
     default-admin-password: ${YEHO_SECURITY_DEFAULT_ADMIN_PASSWORD:Admin@123456}
+    crypto-secret: ${YEHO_SECURITY_CRYPTO_SECRET:change-me-in-production}
+  billing:
+    default-wallet-credits: ${YEHO_BILLING_DEFAULT_WALLET_CREDITS:100000}

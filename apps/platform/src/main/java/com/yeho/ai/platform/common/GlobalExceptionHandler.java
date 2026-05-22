@@ -1,6 +1,8 @@
 package com.yeho.ai.platform.common;
 
 import jakarta.validation.ConstraintViolationException;
+import com.yeho.ai.platform.dto.openai.OpenAiErrorResponse;
+import com.yeho.ai.platform.gateway.GatewayException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -21,6 +23,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(400, ex.getMessage()));
     }
 
+    @ExceptionHandler(GatewayException.class)
+    public ResponseEntity<OpenAiErrorResponse> handleGateway(GatewayException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(new OpenAiErrorResponse(
+            new OpenAiErrorResponse.OpenAiError(
+                ex.getMessage(),
+                errorType(ex.getStatus()),
+                ex.getCode()
+            )
+        ));
+    }
+
     @ExceptionHandler({
         MethodArgumentNotValidException.class,
         ConstraintViolationException.class,
@@ -34,5 +47,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ApiResponse.error(500, "Internal server error"));
+    }
+
+    private String errorType(HttpStatus status) {
+        if (status == HttpStatus.UNAUTHORIZED) {
+            return "authentication_error";
+        }
+        if (status == HttpStatus.PAYMENT_REQUIRED) {
+            return "insufficient_quota";
+        }
+        if (status.is4xxClientError()) {
+            return "invalid_request_error";
+        }
+        return "server_error";
     }
 }
