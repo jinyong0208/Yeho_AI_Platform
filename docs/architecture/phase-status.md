@@ -81,6 +81,7 @@ The platform manages capabilities, not customer knowledge data:
 - Provider API key rotation console modal that does not expose stored secrets.
 - Lightweight finance reconciliation exports for recharge orders and wallet ledger rows.
 - Backend regression tests for API key scopes, tenant isolation rules, OpenAI-compatible error envelope, and wallet credit accounting.
+- Rate limit service regression tests for Redis counter rollback, audit logging, and daily/concurrent release behavior.
 - OpenAI-compatible gateway error regression script for models, chat completions, embeddings, invalid keys, and scope denial.
 - Provider E2E script for DeepSeek/Qwen/OpenAI-compatible probe and optional gateway chat verification without printing provider secrets.
 
@@ -102,7 +103,7 @@ The platform manages capabilities, not customer knowledge data:
 - Provider connection test script is ready; actual real DeepSeek/Qwen success still requires external provider keys.
 - Provider base URL and resilience configuration need final console polish.
 - Recharge-order reconciliation exports are lightweight MVP files; formal finance reconciliation workflow remains future work.
-- Rate limit concurrency and TPM behavior needs automated integration tests.
+- Rate limit concurrency and TPM behavior has service-level regression coverage; endpoint-level integration tests are still pending.
 - OpenAI-compatible error body consistency now has a script-level regression check; endpoint-level JUnit/MockMvc tests are still pending.
 
 ### P1 Hardening

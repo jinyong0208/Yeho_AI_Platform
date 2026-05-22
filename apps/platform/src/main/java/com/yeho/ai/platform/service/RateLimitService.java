@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,11 +36,13 @@ public class RateLimitService {
     public RateLimitLease acquire(TenantApiKey apiKey, int estimatedTokens, long reservedCredits, String requestId) {
         LimitConfig tenantLimit = activeTenantLimit(apiKey.getTenantId());
         LimitConfig apiKeyLimit = activeApiKeyLimit(apiKey.getId());
+        List<CounterReservation> reservations = new ArrayList<>();
         try {
-            checkBucket("tenant", String.valueOf(apiKey.getTenantId()), tenantLimit, estimatedTokens, reservedCredits);
-            checkBucket("api-key", String.valueOf(apiKey.getId()), apiKeyLimit, estimatedTokens, reservedCredits);
+            checkBucket("tenant", String.valueOf(apiKey.getTenantId()), tenantLimit, estimatedTokens, reservedCredits, reservations);
+            checkBucket("api-key", String.valueOf(apiKey.getId()), apiKeyLimit, estimatedTokens, reservedCredits, reservations);
             return new RateLimitLease(apiKey.getTenantId(), apiKey.getId(), estimatedTokens, reservedCredits);
         } catch (GatewayException ex) {
+            rollbackReservations(reservations);
             recordLimitAudit(apiKey, requestId, ex.getCode(), ex.getMessage());
             throw ex;
         }
@@ -60,17 +64,31 @@ public class RateLimitService {
         decrementBy(dailyCreditsKey("api-key", String.valueOf(lease.apiKeyId())), credits);
     }
 
-    private void checkBucket(String type, String id, LimitConfig limit, int tokens, long credits) {
+    private void checkBucket(
+        String type,
+        String id,
+        LimitConfig limit,
+        int tokens,
+        long credits,
+        List<CounterReservation> reservations
+    ) {
         if (limit == null) {
             return;
         }
-        checkCounter(minuteKey(type, id, "rpm"), limit.rpmLimit(), 1, MINUTE_TTL, "rate_limit_rpm_exceeded");
-        checkCounter(minuteKey(type, id, "tpm"), limit.tpmLimit(), Math.max(tokens, 0), MINUTE_TTL, "rate_limit_tpm_exceeded");
-        checkCounter(dailyCreditsKey(type, id), limit.dailyCreditsLimit(), Math.max(credits, 0), DAY_TTL, "daily_credits_limit_exceeded");
-        checkConcurrent(type, id, limit.maxConcurrent());
+        checkCounter(minuteKey(type, id, "rpm"), limit.rpmLimit(), 1, MINUTE_TTL, "rate_limit_rpm_exceeded", reservations);
+        checkCounter(minuteKey(type, id, "tpm"), limit.tpmLimit(), Math.max(tokens, 0), MINUTE_TTL, "rate_limit_tpm_exceeded", reservations);
+        checkCounter(dailyCreditsKey(type, id), limit.dailyCreditsLimit(), Math.max(credits, 0), DAY_TTL, "daily_credits_limit_exceeded", reservations);
+        checkConcurrent(type, id, limit.maxConcurrent(), reservations);
     }
 
-    private void checkCounter(String key, Number limit, long increment, Duration ttl, String code) {
+    private void checkCounter(
+        String key,
+        Number limit,
+        long increment,
+        Duration ttl,
+        String code,
+        List<CounterReservation> reservations
+    ) {
         if (limit == null || limit.longValue() <= 0 || increment <= 0) {
             return;
         }
@@ -82,9 +100,10 @@ public class RateLimitService {
             decrementBy(key, increment);
             throw new GatewayException(HttpStatus.TOO_MANY_REQUESTS, code, "Rate limit exceeded");
         }
+        reservations.add(new CounterReservation(key, increment));
     }
 
-    private void checkConcurrent(String type, String id, Integer maxConcurrent) {
+    private void checkConcurrent(String type, String id, Integer maxConcurrent, List<CounterReservation> reservations) {
         if (maxConcurrent == null || maxConcurrent <= 0) {
             return;
         }
@@ -96,6 +115,14 @@ public class RateLimitService {
         if (value != null && value > maxConcurrent) {
             decrement(key);
             throw new GatewayException(HttpStatus.TOO_MANY_REQUESTS, "rate_limit_concurrent_exceeded", "Max concurrent limit exceeded");
+        }
+        reservations.add(new CounterReservation(key, 1L));
+    }
+
+    private void rollbackReservations(List<CounterReservation> reservations) {
+        for (int i = reservations.size() - 1; i >= 0; i--) {
+            CounterReservation reservation = reservations.get(i);
+            decrementBy(reservation.key(), reservation.amount());
         }
     }
 
@@ -168,6 +195,9 @@ public class RateLimitService {
     }
 
     private record LimitConfig(Integer rpmLimit, Integer tpmLimit, Long dailyCreditsLimit, Integer maxConcurrent) {
+    }
+
+    private record CounterReservation(String key, long amount) {
     }
 
     public record RateLimitLease(Long tenantId, Long apiKeyId, int estimatedTokens, long reservedCredits) {
