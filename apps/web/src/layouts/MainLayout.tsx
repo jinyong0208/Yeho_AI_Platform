@@ -24,6 +24,7 @@ import {
   IconReceipt2,
   IconRouteAltLeft,
   IconServerCog,
+  IconShieldCheck,
   IconUsers,
   IconBuilding,
 } from '@tabler/icons-react';
@@ -42,6 +43,7 @@ const navItems = [
   { group: 'Billing', to: '/wallet/transactions', labelKey: 'walletTransactions', icon: IconReceipt2 },
   { group: 'Observability', to: '/usage-logs', labelKey: 'usageLogs', icon: IconActivity },
   { group: 'Observability', to: '/token-stats', labelKey: 'tokenStats', icon: IconChartBar },
+  { group: 'Observability', to: '/audit-logs', labelKey: 'auditLogs', icon: IconShieldCheck },
   { group: 'Orchestration', to: '/workflow', labelKey: 'workflow', icon: IconRouteAltLeft },
 ];
 
@@ -77,7 +79,7 @@ export default function MainLayout() {
           </Group>
           <Group gap="xs">
             <Badge variant="light" color="gray" radius="sm">
-              Phase 4
+              Security
             </Badge>
             <Text size="sm" c="dimmed">
               {user?.username}

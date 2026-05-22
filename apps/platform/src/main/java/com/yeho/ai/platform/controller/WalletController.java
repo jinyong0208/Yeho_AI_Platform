@@ -5,9 +5,13 @@ import com.yeho.ai.platform.dto.gateway.WalletLogResponse;
 import com.yeho.ai.platform.dto.gateway.WalletRechargeRequest;
 import com.yeho.ai.platform.dto.gateway.WalletResponse;
 import com.yeho.ai.platform.entity.TenantWallet;
+import com.yeho.ai.platform.security.AuthenticatedUser;
 import com.yeho.ai.platform.service.AiWalletService;
+import com.yeho.ai.platform.service.TenantAccessService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,19 +25,28 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/wallets")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','FINANCE','DEVELOPER')")
 public class WalletController {
     private final AiWalletService aiWalletService;
+    private final TenantAccessService tenantAccessService;
 
     @GetMapping("/{tenantId}")
-    public ApiResponse<WalletResponse> get(@PathVariable Long tenantId) {
+    public ApiResponse<WalletResponse> get(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @PathVariable Long tenantId
+    ) {
+        tenantAccessService.assertTenantAccess(user, tenantId);
         return ApiResponse.ok(toResponse(aiWalletService.ensureWallet(tenantId)));
     }
 
     @PostMapping("/{tenantId}/recharge")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','FINANCE')")
     public ApiResponse<WalletResponse> recharge(
+        @AuthenticationPrincipal AuthenticatedUser user,
         @PathVariable Long tenantId,
         @Valid @RequestBody WalletRechargeRequest request
     ) {
+        tenantAccessService.assertTenantAccess(user, tenantId);
         return ApiResponse.ok(toResponse(aiWalletService.recharge(
             tenantId,
             request.getAmountCredits(),
@@ -44,9 +57,11 @@ public class WalletController {
 
     @GetMapping("/{tenantId}/logs")
     public ApiResponse<List<WalletLogResponse>> logs(
+        @AuthenticationPrincipal AuthenticatedUser user,
         @PathVariable Long tenantId,
         @RequestParam(required = false) Integer limit
     ) {
+        tenantAccessService.assertTenantAccess(user, tenantId);
         return ApiResponse.ok(aiWalletService.listLogs(tenantId, limit));
     }
 
