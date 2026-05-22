@@ -96,7 +96,7 @@ public class AiUsageLogService {
         log.setLatencyMs(latencyMs);
         log.setSuccess(success);
         log.setErrorCode(errorCode);
-        log.setErrorMessage(errorMessage);
+        log.setErrorMessage(truncate(errorMessage, 512));
         log.setPromptSummary(aiWalletService.summarizePrompt(request.getMessages()));
         log.setCreatedAt(LocalDateTime.ofInstant(Instant.now(), java.time.ZoneId.systemDefault()));
         aiUsageLogMapper.insert(log);
@@ -107,5 +107,12 @@ public class AiUsageLogService {
             return BigDecimal.ZERO;
         }
         return aiWalletService.calculateRealCost(model, inputTokens, outputTokens);
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }

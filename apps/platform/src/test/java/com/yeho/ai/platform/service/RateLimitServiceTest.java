@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -119,6 +120,26 @@ class RateLimitServiceTest {
         verify(valueOperations).decrement(keyContaining("tenant:7:concurrent"), eq(1L));
         verify(valueOperations).decrement(keyContaining("tenant:7:daily_credits"), eq(5L));
         verify(valueOperations).decrement(keyContaining("tenant:7:tpm"), eq(10L));
+        verify(valueOperations).decrement(keyContaining("tenant:7:rpm"), eq(1L));
+    }
+
+    @Test
+    void auditFailureDoesNotSuppressRateLimitRejection() {
+        TenantApiKey apiKey = apiKey(7L, 11L);
+        when(tenantRateLimitMapper.selectOne(any())).thenReturn(tenantLimit(7L, 1, null, null, null));
+        when(apiKeyRateLimitMapper.selectOne(any())).thenReturn(null);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment(keyContaining("tenant:7:rpm"), eq(1L))).thenReturn(2L);
+        when(valueOperations.decrement(anyString(), anyLong())).thenReturn(1L);
+        doThrow(new IllegalStateException("audit table unavailable"))
+            .when(auditLogService).record(any(SysAuditLog.class));
+
+        assertThatThrownBy(() -> service.acquire(apiKey, 10, 5L, "req-audit-fails"))
+            .isInstanceOfSatisfying(GatewayException.class, ex -> {
+                assertThat(ex.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+                assertThat(ex.getCode()).isEqualTo("rate_limit_rpm_exceeded");
+            });
+
         verify(valueOperations).decrement(keyContaining("tenant:7:rpm"), eq(1L));
     }
 

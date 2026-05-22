@@ -14,7 +14,7 @@ public class OpenAiCompatibleFilterConfig {
     public FilterRegistrationBean<OpenAiCompatiblePreflightFilter> openAiCompatiblePreflightFilter(ObjectMapper objectMapper) {
         FilterRegistrationBean<OpenAiCompatiblePreflightFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new OpenAiCompatiblePreflightFilter(objectMapper));
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
         registration.addUrlPatterns("/v1/*");
         registration.setName("openAiCompatiblePreflightFilter");
         return registration;

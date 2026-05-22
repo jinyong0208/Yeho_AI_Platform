@@ -10,6 +10,8 @@ import com.yeho.ai.platform.gateway.GatewayException;
 import com.yeho.ai.platform.mapper.ApiKeyRateLimitMapper;
 import com.yeho.ai.platform.mapper.TenantRateLimitMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RateLimitService {
+    private static final Logger log = LoggerFactory.getLogger(RateLimitService.class);
     private static final Duration MINUTE_TTL = Duration.ofMinutes(2);
     private static final Duration DAY_TTL = Duration.ofDays(2);
 
@@ -177,21 +180,32 @@ public class RateLimitService {
     }
 
     private void recordLimitAudit(TenantApiKey apiKey, String requestId, String code, String message) {
-        SysAuditLog log = new SysAuditLog();
-        log.setTenantId(apiKey.getTenantId());
-        log.setRequestId(requestId != null ? requestId : RequestContext.getRequestId());
-        log.setAction("RATE_LIMIT");
-        log.setResourceType("ai_gateway");
-        log.setResourceId(String.valueOf(apiKey.getId()));
-        log.setMethod("POST");
-        log.setPath("/v1/chat/completions");
-        log.setStatusCode(429);
-        log.setSuccess(false);
-        log.setLatencyMs(0L);
-        log.setQueryString(code + ":" + message);
-        log.setCreatedAt(LocalDateTime.now());
-        log.setUpdatedAt(LocalDateTime.now());
-        auditLogService.record(log);
+        try {
+            SysAuditLog auditLog = new SysAuditLog();
+            auditLog.setTenantId(apiKey.getTenantId());
+            auditLog.setRequestId(requestId != null ? requestId : RequestContext.getRequestId());
+            auditLog.setAction("RATE_LIMIT");
+            auditLog.setResourceType("ai_gateway");
+            auditLog.setResourceId(String.valueOf(apiKey.getId()));
+            auditLog.setMethod("POST");
+            auditLog.setPath("/v1/chat/completions");
+            auditLog.setStatusCode(429);
+            auditLog.setSuccess(false);
+            auditLog.setLatencyMs(0L);
+            auditLog.setQueryString(truncate(code + ":" + message, 1024));
+            auditLog.setCreatedAt(LocalDateTime.now());
+            auditLog.setUpdatedAt(LocalDateTime.now());
+            auditLogService.record(auditLog);
+        } catch (Exception ex) {
+            log.warn("Failed to record rate limit audit for request {}: {}", requestId, ex.getClass().getSimpleName());
+        }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     private record LimitConfig(Integer rpmLimit, Integer tpmLimit, Long dailyCreditsLimit, Integer maxConcurrent) {

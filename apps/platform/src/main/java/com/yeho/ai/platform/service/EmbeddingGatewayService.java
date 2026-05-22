@@ -3,6 +3,7 @@ package com.yeho.ai.platform.service;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeho.ai.platform.common.RequestContext;
 import com.yeho.ai.platform.dto.gateway.EmbeddingRequest;
 import com.yeho.ai.platform.dto.gateway.EmbeddingResponse;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -43,7 +45,9 @@ public class EmbeddingGatewayService {
 
     public EmbeddingResponse embeddings(String authorization, EmbeddingRequest request) {
         long startedAt = System.currentTimeMillis();
-        String requestId = UUID.randomUUID().toString();
+        String requestId = StringUtils.hasText(RequestContext.getRequestId())
+                ? RequestContext.getRequestId()
+                : UUID.randomUUID().toString();
         ApiKeyIdentity apiKey = authenticate(authorization);
         requireScope(apiKey);
         List<String> inputs = normalizeInput(request.input());

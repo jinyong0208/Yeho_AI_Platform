@@ -6,7 +6,7 @@ The platform boots with a default tenant and demo gateway data for local testing
 
 - default tenant: `default`
 - demo API key: `yh_sk_demo_default_key`
-- mock provider base URL: `http://localhost:8080/mock-provider`
+- mock provider base URL: `http://localhost:8080/mock-provider/v1`
 
 ## DeepSeek / Qwen Configuration
 
@@ -25,3 +25,10 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Hello gateway"}],"temperature":0.7,"max_tokens":64,"stream":false}'
 ```
 
+Run the local gateway integration smoke after the platform is up:
+
+```powershell
+.\scripts\smoke-gateway-integration.ps1
+```
+
+This smoke uses the local mock provider and verifies chat completions, embeddings, usage logs, wallet deduction, request ids, and API-key RPM limiting.

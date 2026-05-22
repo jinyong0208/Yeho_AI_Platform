@@ -14,7 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.server.ResponseStatusException;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@Order(Ordered.HIGHEST_PRECEDENCE + 2)
 public class OpenAiCompatibleErrorFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper;

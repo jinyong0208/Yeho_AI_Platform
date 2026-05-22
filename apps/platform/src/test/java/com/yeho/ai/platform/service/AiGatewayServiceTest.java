@@ -26,11 +26,13 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -149,6 +151,68 @@ class AiGatewayServiceTest {
             isNull(),
             isNull(),
             eq(request)
+        );
+    }
+
+    @Test
+    void chatCompletionsDoesNotReleaseWalletWhenRateLimitRejectsBeforeReserve() {
+        RequestContext.setRequestId("req-rate-limit");
+        AiGatewayService service = new AiGatewayService(
+            aiApiKeyService,
+            apiKeyScopeService,
+            rateLimitService,
+            auditLogService,
+            providerCircuitBreakerService,
+            aiWalletService,
+            aiUsageLogService,
+            modelRouter,
+            new ObjectMapper()
+        );
+
+        TenantApiKey apiKey = new TenantApiKey();
+        apiKey.setId(10L);
+        apiKey.setTenantId(1L);
+        apiKey.setScopes("chat:completion");
+
+        AiProvider provider = provider(100L, "DEEPSEEK", null);
+        AiModel model = model(200L, 100L, "deepseek-chat", 1001L);
+        ModelRoute route = new ModelRoute(provider, model, primaryAdapter, "provider-secret");
+        ChatCompletionRequest request = chatRequest("deepseek-chat");
+        GatewayException rateLimit = new GatewayException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "rate_limit_rpm_exceeded",
+            "Rate limit exceeded"
+        );
+
+        when(aiApiKeyService.authenticate("Bearer yh_test")).thenReturn(apiKey);
+        when(modelRouter.route("deepseek-chat")).thenReturn(route);
+        when(aiWalletService.estimateChargeCredits(model, request)).thenReturn(100L);
+        when(aiWalletService.estimatePromptTokens(request.getMessages())).thenReturn(2);
+        when(rateLimitService.acquire(apiKey, 18, 100L, "req-rate-limit")).thenThrow(rateLimit);
+
+        assertThatThrownBy(() -> service.chatCompletions(request, "Bearer yh_test"))
+            .isSameAs(rateLimit);
+
+        verify(aiWalletService, never()).reserve(anyLong(), anyLong(), any());
+        verify(aiWalletService, never()).release(anyLong(), anyLong(), any(), any());
+        verify(aiUsageLogService).record(
+            eq(1L),
+            isNull(),
+            eq(10L),
+            eq("DEEPSEEK"),
+            eq("deepseek-chat"),
+            eq("req-rate-limit"),
+            eq(0),
+            eq(0),
+            eq(0),
+            eq(0L),
+            eq(model),
+            anyLong(),
+            eq(false),
+            eq("rate_limit_rpm_exceeded"),
+            eq("Rate limit exceeded"),
+            eq(request),
+            eq("chat:completion")
         );
     }
 

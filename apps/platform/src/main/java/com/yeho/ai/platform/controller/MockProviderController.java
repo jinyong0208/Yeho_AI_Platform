@@ -19,7 +19,9 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -41,6 +43,31 @@ public class MockProviderController {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ChatCompletionResponse chatResponse = buildResponse(request);
         return outputStream -> objectMapper.writeValue(outputStream, chatResponse);
+    }
+
+    @PostMapping("/embeddings")
+    public Map<String, Object> embeddings(@RequestBody Map<String, Object> request) {
+        Object input = request.get("input");
+        List<String> inputs = normalizeEmbeddingInputs(input);
+        List<Map<String, Object>> data = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("object", "embedding");
+            item.put("embedding", mockEmbedding(inputs.get(i)));
+            item.put("index", i);
+            data.add(item);
+        }
+        int promptTokens = inputs.stream().mapToInt(value -> Math.max(1, value.length() / 4)).sum();
+        Map<String, Object> usage = new LinkedHashMap<>();
+        usage.put("prompt_tokens", promptTokens);
+        usage.put("total_tokens", promptTokens);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("object", "list");
+        response.put("data", data);
+        response.put("model", String.valueOf(request.getOrDefault("model", "mock-embedding")));
+        response.put("usage", usage);
+        return response;
     }
 
     private ChatCompletionResponse buildResponse(ChatCompletionRequest request) {
@@ -110,6 +137,24 @@ public class MockProviderController {
             parts.add(content.substring(i, Math.min(content.length(), i + chunkSize)));
         }
         return parts;
+    }
+
+    private List<String> normalizeEmbeddingInputs(Object input) {
+        if (input instanceof List<?> values) {
+            return values.stream()
+                .map(value -> value == null ? "" : String.valueOf(value))
+                .toList();
+        }
+        return List.of(input == null ? "" : String.valueOf(input));
+    }
+
+    private List<Double> mockEmbedding(String input) {
+        int hash = input == null ? 0 : input.hashCode();
+        return List.of(
+            ((hash & 0xff) / 255.0),
+            (((hash >> 8) & 0xff) / 255.0),
+            (((hash >> 16) & 0xff) / 255.0)
+        );
     }
 
     private String buildAssistantContent(ChatCompletionRequest request) {

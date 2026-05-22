@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 3)
 public class OpenAiEmbeddingEndpointFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiEmbeddingEndpointFilter.class);

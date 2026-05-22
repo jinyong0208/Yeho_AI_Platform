@@ -6,6 +6,8 @@ The MVP closeout backend tests focus on rules that must not regress:
 - Tenant access boundaries.
 - OpenAI-compatible error envelope.
 - Wallet credit reservation, settlement, and insufficient-balance handling.
+- Provider retry, circuit breaker, fallback, and rate-limit rollback behavior.
+- OpenAI-compatible endpoint filters for chat preflight, models, and embeddings.
 
 Run from `apps/platform`:
 
@@ -16,7 +18,7 @@ mvn test
 Run only the closeout regression set:
 
 ```powershell
-mvn "-Dtest=ApiKeyScopeServiceTest,TenantAccessServiceTest,OpenAiErrorResponseWriterTest,AiWalletServiceTest" test
+mvn "-Dtest=ApiKeyScopeServiceTest,TenantAccessServiceTest,OpenAiErrorResponseWriterTest,OpenAiEndpointFilterTest,AiWalletServiceTest,AiGatewayServiceTest,ProviderCircuitBreakerServiceTest,RateLimitServiceTest" test
 ```
 
 Run through Docker Compose when local Java or Maven is unavailable:
@@ -32,8 +34,18 @@ The broader Compose smoke tests remain:
 ```powershell
 .\scripts\smoke-all.ps1
 .\scripts\smoke-mvp-closeout.ps1
+.\scripts\smoke-gateway-integration.ps1
 .\scripts\regression-openai-errors.ps1
 ```
+
+`smoke-gateway-integration.ps1` is the local black-box gateway integration check. It configures DeepSeek and Qwen to the local mock provider, creates temporary tenant API keys, and verifies:
+
+- `/v1/chat/completions` success path.
+- Wallet balance decreases and wallet `SETTLE` log uses the same `request_id`.
+- `ai_usage_log` records chat success with token usage and charge credits.
+- `/v1/embeddings` rejects keys without `embedding:create`.
+- `/v1/embeddings` success path records usage with the caller `X-Request-Id`.
+- API-key RPM limit returns OpenAI-compatible `429 rate_limit_rpm_exceeded`.
 
 `regression-openai-errors.ps1` checks OpenAI-compatible error envelopes and `X-Request-Id` for:
 
@@ -74,3 +86,20 @@ The broader Compose smoke tests remain:
 - Reserve moves credits from balance to frozen and writes a wallet log.
 - Settlement releases unused credits and records actual usage.
 - Settlement rejects underestimated charges when top-up balance is insufficient.
+
+`AiGatewayServiceTest`:
+
+- Fallback route success uses the fallback provider/model for response, billing, and usage log.
+- Rate-limit rejection before wallet reservation does not release unfrozen credits.
+
+`RateLimitServiceTest`:
+
+- Redis counters are rolled back when rate-limit checks reject a request.
+- Audit-log failures do not suppress the original `429` gateway error.
+
+`ProviderCircuitBreakerServiceTest`:
+
+- Retry succeeds on a later attempt and records provider recovery.
+- Failure threshold opens the circuit.
+- Cooling-down providers are rejected.
+- Success clears previous circuit state.

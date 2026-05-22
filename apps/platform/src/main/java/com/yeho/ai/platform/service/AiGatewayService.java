@@ -61,6 +61,7 @@ public class AiGatewayService {
         String providerCode = null;
         String modelCode = null;
         RateLimitService.RateLimitLease rateLimitLease = null;
+        boolean walletReserved = false;
         try {
             validateRequest(request);
             modelCode = request.getModel();
@@ -83,6 +84,7 @@ public class AiGatewayService {
                 + (request.getMaxTokens() == null ? 512 : request.getMaxTokens());
             rateLimitLease = rateLimitService.acquire(tenantApiKey, estimatedTokens, reservedCredits, requestId);
             aiWalletService.reserve(tenantId, reservedCredits, requestId);
+            walletReserved = true;
 
             ProviderCallResult providerCallResult = callProviderWithFallback(route, request, requestId);
             route = providerCallResult.route();
@@ -124,8 +126,9 @@ public class AiGatewayService {
             );
             return buildResponse(request, route.model(), adapterResponse);
         } catch (GatewayException ex) {
-            if (tenantId != null && reservedCredits > 0) {
+            if (walletReserved && tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, ex.getMessage());
+                walletReserved = false;
             }
             rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             aiUsageLogService.record(
@@ -152,8 +155,9 @@ public class AiGatewayService {
             }
             throw ex;
         } catch (Exception ex) {
-            if (tenantId != null && reservedCredits > 0) {
+            if (walletReserved && tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, "Rollback failed request");
+                walletReserved = false;
             }
             rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             aiUsageLogService.record(
@@ -195,6 +199,7 @@ public class AiGatewayService {
         String providerCode = null;
         String modelCode = null;
         RateLimitService.RateLimitLease rateLimitLease = null;
+        boolean walletReserved = false;
         try {
             validateRequest(request);
             modelCode = request.getModel();
@@ -216,6 +221,7 @@ public class AiGatewayService {
                 + (request.getMaxTokens() == null ? 512 : request.getMaxTokens());
             rateLimitLease = rateLimitService.acquire(tenantApiKey, estimatedTokens, reservedCredits, requestId);
             aiWalletService.reserve(tenantId, reservedCredits, requestId);
+            walletReserved = true;
 
             AdapterChatRequest adapterRequest = new AdapterChatRequest(
                 route.provider().getBaseUrl(),
@@ -241,8 +247,9 @@ public class AiGatewayService {
             );
             return outputStream -> writeStreamingResponse(context, outputStream);
         } catch (GatewayException ex) {
-            if (tenantId != null && reservedCredits > 0) {
+            if (walletReserved && tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, ex.getMessage());
+                walletReserved = false;
             }
             rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             rateLimitService.releaseConcurrent(rateLimitLease);
@@ -270,8 +277,9 @@ public class AiGatewayService {
             }
             throw ex;
         } catch (Exception ex) {
-            if (tenantId != null && reservedCredits > 0) {
+            if (walletReserved && tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, "Rollback failed stream request");
+                walletReserved = false;
             }
             rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             rateLimitService.releaseConcurrent(rateLimitLease);

@@ -186,6 +186,7 @@ public class ProviderConnectionTestService {
                     update ai_provider
                     set health_status = ?,
                         consecutive_failures = 0,
+                        circuit_open_until = null,
                         last_checked_at = now(),
                         updated_at = now()
                     where id = ?

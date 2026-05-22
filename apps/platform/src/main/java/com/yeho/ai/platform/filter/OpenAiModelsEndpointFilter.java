@@ -22,7 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.server.ResponseStatusException;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 3)
 public class OpenAiModelsEndpointFilter extends OncePerRequestFilter {
 
     private static final String MODELS_READ_SCOPE = "models:read";

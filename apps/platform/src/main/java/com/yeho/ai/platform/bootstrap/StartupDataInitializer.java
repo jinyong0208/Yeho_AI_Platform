@@ -65,7 +65,7 @@ public class StartupDataInitializer implements ApplicationRunner {
     @Value("${yeho.gateway.demo-api-key:yh_sk_demo_default_key}")
     private String demoApiKey;
 
-    @Value("${yeho.gateway.mock-provider-base-url:http://localhost:8080/mock-provider}")
+    @Value("${yeho.gateway.mock-provider-base-url:http://localhost:8080/mock-provider/v1}")
     private String mockProviderBaseUrl;
 
     @Override
