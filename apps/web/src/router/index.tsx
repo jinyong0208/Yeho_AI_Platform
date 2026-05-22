@@ -1,22 +1,24 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
 import MainLayout from '../layouts/MainLayout';
-import DashboardPage from '../pages/DashboardPage';
-import LoginPage from '../pages/LoginPage';
-import TenantPage from '../pages/TenantPage';
-import UserPage from '../pages/UserPage';
-import ProviderPage from '../pages/ProviderPage';
-import ModelPage from '../pages/ModelPage';
-import ApiKeyPage from '../pages/ApiKeyPage';
-import WalletPage from '../pages/WalletPage';
-import WalletTransactionPage from '../pages/WalletTransactionPage';
-import InvoicePage from '../pages/InvoicePage';
-import UsageLogPage from '../pages/UsageLogPage';
-import TokenStatsPage from '../pages/TokenStatsPage';
-import AuditLogPage from '../pages/AuditLogPage';
-import AgentDebugPage from '../pages/AgentDebugPage';
-import PlaceholderPage from '../pages/PlaceholderPage';
 import { useAuthStore } from '../store/useAuthStore';
+
+const DashboardPage = lazy(() => import('../pages/DashboardPage'));
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const TenantPage = lazy(() => import('../pages/TenantPage'));
+const UserPage = lazy(() => import('../pages/UserPage'));
+const ProviderPage = lazy(() => import('../pages/ProviderPage'));
+const ModelPage = lazy(() => import('../pages/ModelPage'));
+const ApiKeyPage = lazy(() => import('../pages/ApiKeyPage'));
+const WalletPage = lazy(() => import('../pages/WalletPage'));
+const WalletTransactionPage = lazy(() => import('../pages/WalletTransactionPage'));
+const InvoicePage = lazy(() => import('../pages/InvoicePage'));
+const UsageLogPage = lazy(() => import('../pages/UsageLogPage'));
+const TokenStatsPage = lazy(() => import('../pages/TokenStatsPage'));
+const AuditLogPage = lazy(() => import('../pages/AuditLogPage'));
+const AgentDebugPage = lazy(() => import('../pages/AgentDebugPage'));
+const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const token = useAuthStore((state) => state.accessToken);
@@ -26,10 +28,14 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return children;
 }
 
+function routePage(element: ReactNode) {
+  return <Suspense fallback={<div className="route-skeleton" />}>{element}</Suspense>;
+}
+
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: routePage(<LoginPage />),
   },
   {
     path: '/',
@@ -39,20 +45,20 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'tenants', element: <TenantPage /> },
-      { path: 'users', element: <UserPage /> },
-      { path: 'providers', element: <ProviderPage /> },
-      { path: 'models', element: <ModelPage /> },
-      { path: 'api-keys', element: <ApiKeyPage /> },
-      { path: 'wallet', element: <WalletPage /> },
-      { path: 'wallet/transactions', element: <WalletTransactionPage /> },
-      { path: 'invoices', element: <InvoicePage /> },
-      { path: 'usage-logs', element: <UsageLogPage /> },
-      { path: 'token-stats', element: <TokenStatsPage /> },
-      { path: 'audit-logs', element: <AuditLogPage /> },
-      { path: 'agent-debug', element: <AgentDebugPage /> },
-      { path: 'workflow', element: <PlaceholderPage kind="workflow" /> },
+      { index: true, element: routePage(<DashboardPage />) },
+      { path: 'tenants', element: routePage(<TenantPage />) },
+      { path: 'users', element: routePage(<UserPage />) },
+      { path: 'providers', element: routePage(<ProviderPage />) },
+      { path: 'models', element: routePage(<ModelPage />) },
+      { path: 'api-keys', element: routePage(<ApiKeyPage />) },
+      { path: 'wallet', element: routePage(<WalletPage />) },
+      { path: 'wallet/transactions', element: routePage(<WalletTransactionPage />) },
+      { path: 'invoices', element: routePage(<InvoicePage />) },
+      { path: 'usage-logs', element: routePage(<UsageLogPage />) },
+      { path: 'token-stats', element: routePage(<TokenStatsPage />) },
+      { path: 'audit-logs', element: routePage(<AuditLogPage />) },
+      { path: 'agent-debug', element: routePage(<AgentDebugPage />) },
+      { path: 'workflow', element: routePage(<PlaceholderPage kind="workflow" />) },
     ],
   },
 ]);

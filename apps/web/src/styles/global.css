@@ -105,6 +105,25 @@ body {
   border-top: 0;
 }
 
+.route-skeleton {
+  min-height: 240px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(246, 247, 249, 0.65), rgba(255, 255, 255, 0.95), rgba(246, 247, 249, 0.65));
+  background-size: 200% 100%;
+  animation: route-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes route-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .wide-panel {
   grid-column: span 2;
 }
