@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, rootApiClient } from './client';
 
 type Id = string;
 
@@ -50,9 +50,34 @@ export type ModelResponse = {
   inputCreditRate: number;
   outputCreditRate: number;
   billingMultiplier: number;
+  currentPriceVersionId?: Id | null;
   supportStream: boolean;
   supportToolCall: boolean;
   status: string;
+};
+
+export type ModelPriceVersionResponse = {
+  id: Id;
+  modelId: Id;
+  versionNo: number;
+  inputPrice: number;
+  outputPrice: number;
+  inputCreditRate: number;
+  outputCreditRate: number;
+  billingMultiplier: number;
+  effectiveAt?: string | null;
+  remark?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ModelPriceVersionPayload = {
+  inputPrice: number;
+  outputPrice: number;
+  inputCreditRate: number;
+  outputCreditRate: number;
+  billingMultiplier: number;
+  remark?: string;
 };
 
 export type TenantApiKeyResponse = {
@@ -68,6 +93,30 @@ export type TenantApiKeyResponse = {
 
 export type TenantApiKeyCreated = TenantApiKeyResponse & {
   apiKey: string;
+};
+
+export type ApiKeyLifecycleResponse = {
+  id: Id;
+  tenant_id?: Id;
+  tenantId?: Id;
+  api_key_prefix?: string;
+  apiKeyPrefix?: string;
+  name: string;
+  status: string;
+  expired_at?: string | null;
+  expiredAt?: string | null;
+  created_at?: string;
+  createdAt?: string;
+  last_used_at?: string | null;
+  lastUsedAt?: string | null;
+  scopes?: string | string[];
+};
+
+export type ApiKeyUsageSummary = {
+  apiKey: ApiKeyLifecycleResponse;
+  days: number;
+  summary: Record<string, unknown>;
+  daily: Record<string, unknown>[];
 };
 
 export type RateLimitResponse = {
@@ -108,6 +157,10 @@ export const gatewayApi = {
   disableModel: async (id: Id) => {
     await apiClient.delete(`/models/${id}`);
   },
+  modelPriceVersions: async (id: Id): Promise<ModelPriceVersionResponse[]> =>
+    unwrapData(await apiClient.get(`/models/${id}/price-versions`)),
+  createModelPriceVersion: async (id: Id, payload: ModelPriceVersionPayload): Promise<ModelPriceVersionResponse> =>
+    unwrapData(await apiClient.post(`/models/${id}/price-versions`, payload)),
   apiKeys: async (tenantId: Id): Promise<TenantApiKeyResponse[]> =>
     unwrapData(await apiClient.get(`/tenants/${tenantId}/api-keys`)),
   createApiKey: async (tenantId: Id, payload: { name: string; scopes?: string[] }): Promise<TenantApiKeyCreated> =>
@@ -115,6 +168,12 @@ export const gatewayApi = {
   revokeApiKey: async (tenantId: Id, keyId: Id) => {
     await apiClient.delete(`/tenants/${tenantId}/api-keys/${keyId}`);
   },
+  disableApiKey: async (keyId: Id): Promise<ApiKeyLifecycleResponse> =>
+    (await rootApiClient.post(`/api/api-keys/${keyId}/disable`)).data,
+  enableApiKey: async (keyId: Id): Promise<ApiKeyLifecycleResponse> =>
+    (await rootApiClient.post(`/api/api-keys/${keyId}/enable`)).data,
+  apiKeyUsageSummary: async (keyId: Id, days = 30): Promise<ApiKeyUsageSummary> =>
+    (await rootApiClient.get(`/api/api-keys/${keyId}/usage-summary`, { params: { days } })).data,
   tenantRateLimit: async (tenantId: Id): Promise<RateLimitResponse | null> =>
     unwrapData(await apiClient.get(`/tenants/${tenantId}/rate-limits`)),
   updateTenantRateLimit: async (tenantId: Id, payload: RateLimitPayload): Promise<RateLimitResponse> =>

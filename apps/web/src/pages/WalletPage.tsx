@@ -1,4 +1,5 @@
 import {
+  Alert,
   Badge,
   Box,
   Button,
@@ -16,9 +17,10 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
+import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBolt, IconCircleCheck, IconCoins, IconCreditCard, IconPlus } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBolt, IconCircleCheck, IconCoins, IconCreditCard, IconPlus, IconX } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { billingApi } from '../api/billing';
@@ -31,6 +33,8 @@ type TenantLite = {
 };
 
 const formatCredits = (value?: number) => `${(value ?? 0).toLocaleString()} Credits`;
+const readAlertCredits = (alert: any) => Number(alert.balance_credits ?? alert.balanceCredits ?? 0);
+const readAlertTenant = (alert: any) => alert.tenant_name ?? alert.tenantName ?? alert.tenant_code ?? alert.tenantCode ?? '-';
 
 export default function WalletPage() {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -46,6 +50,11 @@ export default function WalletPage() {
   const ordersQuery = useQuery({
     queryKey: ['recharge-orders', selectedTenantId],
     queryFn: () => billingApi.rechargeOrders(selectedTenantId, 8),
+    enabled: Boolean(selectedTenantId),
+  });
+  const lowBalanceQuery = useQuery({
+    queryKey: ['wallet-low-balance', selectedTenantId],
+    queryFn: () => billingApi.lowBalanceAlerts(selectedTenantId, 10000, 5),
     enabled: Boolean(selectedTenantId),
   });
   const form = useForm({
@@ -83,10 +92,41 @@ export default function WalletPage() {
       queryClient.invalidateQueries({ queryKey: ['wallet', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['wallet-logs', selectedTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['wallet-low-balance', selectedTenantId] });
+    },
+  });
+  const closeOrderMutation = useMutation({
+    mutationFn: billingApi.closeRechargeOrder,
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: '已关闭', message: '充值订单已关闭，钱包余额未变化。' });
+      queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
     },
   });
   const wallet = walletQuery.data;
   const orders = ordersQuery.data ?? [];
+  const lowBalanceAlerts = lowBalanceQuery.data ?? [];
+
+  const openConfirmRecharge = (orderId: string) => {
+    modals.openConfirmModal({
+      title: '确认充值入账',
+      centered: true,
+      children: <Text size="sm">确认后 Credits 会写入钱包并生成钱包流水。</Text>,
+      labels: { confirm: '确认入账', cancel: '取消' },
+      confirmProps: { color: 'teal' },
+      onConfirm: () => confirmMutation.mutate(orderId),
+    });
+  };
+
+  const openCloseOrder = (orderId: string) => {
+    modals.openConfirmModal({
+      title: '关闭充值订单',
+      centered: true,
+      children: <Text size="sm">关闭后订单不会入账，仅保留操作记录。</Text>,
+      labels: { confirm: '关闭订单', cancel: '取消' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => closeOrderMutation.mutate(orderId),
+    });
+  };
 
   return (
     <Stack gap="lg">
@@ -122,6 +162,12 @@ export default function WalletPage() {
         <MetricCard icon={<IconCircleCheck size={20} />} label="累计消耗" value={formatCredits(wallet?.totalUsedCredits)} color="red" />
       </SimpleGrid>
 
+      {lowBalanceAlerts.length > 0 && (
+        <Alert color="yellow" icon={<IconAlertTriangle size={16} />} radius="md">
+          {lowBalanceAlerts.map((alert) => `${readAlertTenant(alert)} 余额 ${formatCredits(readAlertCredits(alert))}`).join('；')}
+        </Alert>
+      )}
+
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
@@ -145,16 +191,30 @@ export default function WalletPage() {
                   {order.amountCny} CNY · {formatCredits(order.credits)} · {order.payChannel}
                 </Text>
               </Box>
-              <Button
-                variant="light"
-                color="dark"
-                size="xs"
-                disabled={order.status !== 'CREATED'}
-                loading={confirmMutation.isPending}
-                onClick={() => confirmMutation.mutate(order.id)}
-              >
-                确认入账
-              </Button>
+              <Group gap="xs" wrap="nowrap">
+                <Button
+                  variant="light"
+                  color="dark"
+                  size="xs"
+                  leftSection={<IconCircleCheck size={14} />}
+                  disabled={order.status !== 'CREATED'}
+                  loading={confirmMutation.isPending}
+                  onClick={() => openConfirmRecharge(order.id)}
+                >
+                  确认入账
+                </Button>
+                <Button
+                  variant="subtle"
+                  color="red"
+                  size="xs"
+                  leftSection={<IconX size={14} />}
+                  disabled={order.status !== 'CREATED'}
+                  loading={closeOrderMutation.isPending}
+                  onClick={() => openCloseOrder(order.id)}
+                >
+                  关闭
+                </Button>
+              </Group>
             </Group>
           ))}
           {orders.length === 0 && (

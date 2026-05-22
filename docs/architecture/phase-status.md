@@ -77,6 +77,7 @@ The platform manages capabilities, not customer knowledge data:
 - Closeout smoke script for OpenAI-compatible errors, API key lifecycle, tenant isolation, wallet alert query, price version list, and provider health list.
 - Deployment closeout runbook with `.env` guidance and secret handling notes.
 - Real provider end-to-end runbook for DeepSeek and Qwen.
+- Console entry points for API key enable/disable/usage summary, recharge order close/confirm, low-balance alerts, provider health, and model price versions.
 
 ### Embeddings And EDMS Integration
 
@@ -94,10 +95,8 @@ The platform manages capabilities, not customer knowledge data:
 - End-to-end success smoke test with a real Qwen embedding provider key.
 - Provider resilience behavior needs richer automated tests.
 - Provider connection test should be verified against real DeepSeek, Qwen, and OpenAI-compatible endpoints.
-- API key lifecycle should be wired into the console UI with confirmation dialogs.
-- Wallet operation APIs should be wired into the console with confirmation dialogs and low-balance cards.
+- Provider API key rotation and richer model editing still need final console polish.
 - Recharge orders need business reconciliation exports before formal finance rollout.
-- Price version APIs should be wired into the model console.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
 - OpenAI-compatible error body consistency should receive regression tests across chat, embeddings, and models.
 
@@ -116,6 +115,6 @@ The platform manages capabilities, not customer knowledge data:
 ## Next Recommended Work
 
 1. Run real DeepSeek and Qwen provider tests with production-like credentials.
-2. Wire API key lifecycle, wallet operations, and price versions into the console UI.
-3. Add automated regression tests for API key scope, tenant limit, wallet deduction, and OpenAI-compatible errors.
-4. Add provider health and circuit breaker state regression tests.
+2. Add automated regression tests for API key scope, tenant limit, wallet deduction, and OpenAI-compatible errors.
+3. Add provider health and circuit breaker state regression tests.
+4. Add provider key rotation UX and finance reconciliation export.

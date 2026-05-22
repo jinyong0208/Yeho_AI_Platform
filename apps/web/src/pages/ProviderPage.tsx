@@ -23,6 +23,7 @@ import {
   IconRefresh,
   IconServerCog,
 } from '@tabler/icons-react';
+import { rootApiClient } from '../api/client';
 
 type ProviderHealth = {
   provider_id?: number;
@@ -70,47 +71,12 @@ type ProviderTestLog = {
   testedAt?: string;
 };
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? '';
-
-function readToken() {
-  const direct = localStorage.getItem('token') ?? localStorage.getItem('access_token');
-  if (direct) {
-    return direct;
-  }
-
-  for (const key of ['auth', 'auth-storage', 'yeho-auth']) {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      continue;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      const token = parsed?.state?.token ?? parsed?.token ?? parsed?.accessToken ?? parsed?.state?.accessToken;
-      if (typeof token === 'string' && token.length > 0) {
-        return token;
-      }
-    } catch {
-      // Ignore malformed local storage entries from older console builds.
-    }
-  }
-  return '';
-}
-
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = readToken();
-  const response = await fetch(`${apiBase}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init?.headers,
-    },
+  const response = await rootApiClient.request<T>({
+    url: path,
+    method: init?.method ?? 'GET',
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
-  }
-  return response.json() as Promise<T>;
+  return response.data;
 }
 
 function providerId(provider: ProviderHealth) {
