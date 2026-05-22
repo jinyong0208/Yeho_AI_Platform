@@ -36,6 +36,7 @@ import {
   IconLogout,
   IconReceiptTax,
   IconRobot,
+  IconTemplate,
   IconSettingsAutomation,
   IconShieldCheck,
   IconUsers,
@@ -59,6 +60,9 @@ const ProfitDashboardPage = lazy(() => import('../pages/ProfitDashboardPage'));
 const ProviderCostDashboardPage = lazy(() => import('../pages/ProviderCostDashboardPage'));
 const AuditLogPage = lazy(() => import('../pages/AuditLogPage'));
 const AgentDebugPage = lazy(() => import('../pages/AgentDebugPage'));
+const PromptTemplatePage = lazy(() => import('../pages/PromptTemplatePage'));
+const AgentConfigPage = lazy(() => import('../pages/AgentConfigPage'));
+const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 
 type NavItem = {
@@ -83,6 +87,9 @@ const navItems: NavItem[] = [
   { group: 'Observability', to: '/profit', labelKey: 'profitDashboard', icon: IconReceiptTax },
   { group: 'Observability', to: '/provider-costs', labelKey: 'providerCostDashboard', icon: IconChartBar },
   { group: 'Observability', to: '/audit-logs', labelKey: 'auditLogs', icon: IconShieldCheck },
+  { group: 'Orchestration', to: '/prompt-templates', labelKey: 'promptTemplates', icon: IconTemplate },
+  { group: 'Orchestration', to: '/agent-configs', labelKey: 'agentConfigs', icon: IconRobot },
+  { group: 'Orchestration', to: '/agent-execute-logs', labelKey: 'agentExecuteLogs', icon: IconActivity },
   { group: 'Orchestration', to: '/agent-debug', labelKey: 'agentDebug', icon: IconRobot },
   { group: 'Orchestration', to: '/workflow', labelKey: 'workflow', icon: IconSettingsAutomation },
 ];
@@ -209,6 +216,9 @@ export const router = createBrowserRouter([
       { path: 'profit', element: withSuspense(<ProfitDashboardPage />) },
       { path: 'provider-costs', element: withSuspense(<ProviderCostDashboardPage />) },
       { path: 'audit-logs', element: withSuspense(<AuditLogPage />) },
+      { path: 'prompt-templates', element: withSuspense(<PromptTemplatePage />) },
+      { path: 'agent-configs', element: withSuspense(<AgentConfigPage />) },
+      { path: 'agent-execute-logs', element: withSuspense(<AgentExecuteLogPage />) },
       { path: 'agent-debug', element: withSuspense(<AgentDebugPage />) },
       { path: 'workflow', element: withSuspense(<PlaceholderPage kind="workflow" />) },
     ],
