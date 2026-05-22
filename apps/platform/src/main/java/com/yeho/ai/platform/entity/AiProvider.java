@@ -17,6 +17,15 @@ public class AiProvider {
     private String baseUrl;
     private String apiKeyEncrypted;
     private String status;
+    private Integer timeoutMs;
+    private Integer retryCount;
+    private Integer circuitFailureThreshold;
+    private Integer circuitCooldownSeconds;
+    private String fallbackModelCode;
+    private String healthStatus;
+    private Integer consecutiveFailures;
+    private LocalDateTime circuitOpenUntil;
+    private LocalDateTime lastCheckedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

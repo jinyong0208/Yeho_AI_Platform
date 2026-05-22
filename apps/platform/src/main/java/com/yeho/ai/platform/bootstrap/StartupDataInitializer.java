@@ -205,6 +205,7 @@ public class StartupDataInitializer implements ApplicationRunner {
             apiKey.setApiKeyHash(apiKeyHashService.hash(demoApiKey));
             apiKey.setApiKeyPrefix(apiKeyHashService.prefix(demoApiKey));
             apiKey.setName("Demo API Key");
+            apiKey.setScopes("admin:*,chat:completion,usage:read,billing:read,provider:test");
             apiKey.setStatus("ACTIVE");
             apiKey.setCreatedAt(now);
             tenantApiKeyMapper.insert(apiKey);
@@ -222,6 +223,12 @@ public class StartupDataInitializer implements ApplicationRunner {
             provider.setBaseUrl(baseUrl);
             provider.setApiKeyEncrypted(secretCryptoService.encrypt(apiKeyPlain));
             provider.setStatus("ACTIVE");
+            provider.setTimeoutMs(120000);
+            provider.setRetryCount(0);
+            provider.setCircuitFailureThreshold(5);
+            provider.setCircuitCooldownSeconds(60);
+            provider.setHealthStatus("UNKNOWN");
+            provider.setConsecutiveFailures(0);
             provider.setCreatedAt(now);
             provider.setUpdatedAt(now);
             aiProviderMapper.insert(provider);
@@ -232,6 +239,12 @@ public class StartupDataInitializer implements ApplicationRunner {
         provider.setBaseUrl(baseUrl);
         provider.setApiKeyEncrypted(secretCryptoService.encrypt(apiKeyPlain));
         provider.setStatus("ACTIVE");
+        provider.setTimeoutMs(provider.getTimeoutMs() == null ? 120000 : provider.getTimeoutMs());
+        provider.setRetryCount(provider.getRetryCount() == null ? 0 : provider.getRetryCount());
+        provider.setCircuitFailureThreshold(provider.getCircuitFailureThreshold() == null ? 5 : provider.getCircuitFailureThreshold());
+        provider.setCircuitCooldownSeconds(provider.getCircuitCooldownSeconds() == null ? 60 : provider.getCircuitCooldownSeconds());
+        provider.setHealthStatus(provider.getHealthStatus() == null ? "UNKNOWN" : provider.getHealthStatus());
+        provider.setConsecutiveFailures(provider.getConsecutiveFailures() == null ? 0 : provider.getConsecutiveFailures());
         provider.setUpdatedAt(now);
         aiProviderMapper.updateById(provider);
         return provider;

@@ -43,6 +43,12 @@ public class AiProviderAdminService {
         provider.setBaseUrl(request.getBaseUrl());
         provider.setApiKeyEncrypted(secretCryptoService.encrypt(request.getApiKey()));
         provider.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus() : "ACTIVE");
+        provider.setTimeoutMs(120000);
+        provider.setRetryCount(0);
+        provider.setCircuitFailureThreshold(5);
+        provider.setCircuitCooldownSeconds(60);
+        provider.setHealthStatus("UNKNOWN");
+        provider.setConsecutiveFailures(0);
         provider.setCreatedAt(now);
         provider.setUpdatedAt(now);
         aiProviderMapper.insert(provider);
@@ -77,6 +83,21 @@ public class AiProviderAdminService {
         }
         if (StringUtils.hasText(request.getStatus())) {
             provider.setStatus(request.getStatus());
+        }
+        if (request.getTimeoutMs() != null) {
+            provider.setTimeoutMs(request.getTimeoutMs());
+        }
+        if (request.getRetryCount() != null) {
+            provider.setRetryCount(request.getRetryCount());
+        }
+        if (request.getCircuitFailureThreshold() != null) {
+            provider.setCircuitFailureThreshold(request.getCircuitFailureThreshold());
+        }
+        if (request.getCircuitCooldownSeconds() != null) {
+            provider.setCircuitCooldownSeconds(request.getCircuitCooldownSeconds());
+        }
+        if (request.getFallbackModelCode() != null) {
+            provider.setFallbackModelCode(StringUtils.hasText(request.getFallbackModelCode()) ? request.getFallbackModelCode() : null);
         }
         provider.setUpdatedAt(LocalDateTime.now());
         aiProviderMapper.updateById(provider);
@@ -209,6 +230,15 @@ public class AiProviderAdminService {
             provider.getBaseUrl(),
             provider.getStatus(),
             StringUtils.hasText(provider.getApiKeyEncrypted()),
+            provider.getTimeoutMs(),
+            provider.getRetryCount(),
+            provider.getCircuitFailureThreshold(),
+            provider.getCircuitCooldownSeconds(),
+            provider.getFallbackModelCode(),
+            provider.getHealthStatus(),
+            provider.getConsecutiveFailures(),
+            provider.getCircuitOpenUntil(),
+            provider.getLastCheckedAt(),
             provider.getCreatedAt(),
             provider.getUpdatedAt()
         );

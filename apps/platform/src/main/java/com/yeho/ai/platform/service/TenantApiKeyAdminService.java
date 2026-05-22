@@ -23,6 +23,7 @@ public class TenantApiKeyAdminService {
     private final TenantApiKeyMapper tenantApiKeyMapper;
     private final TenantMapper tenantMapper;
     private final ApiKeyHashService apiKeyHashService;
+    private final ApiKeyScopeService apiKeyScopeService;
 
     @Transactional
     public ApiKeyCreateResponse create(Long tenantId, ApiKeyCreateRequest request) {
@@ -38,6 +39,7 @@ public class TenantApiKeyAdminService {
         apiKey.setApiKeyHash(apiKeyHashService.hash(plainKey));
         apiKey.setApiKeyPrefix(apiKeyHashService.prefix(plainKey));
         apiKey.setName(request.getName());
+        apiKey.setScopes(apiKeyScopeService.normalizeScopes(request.getScopes()));
         apiKey.setStatus("ACTIVE");
         apiKey.setExpiredAt(request.getExpiredAt());
         apiKey.setCreatedAt(now);
@@ -48,6 +50,7 @@ public class TenantApiKeyAdminService {
             plainKey,
             apiKey.getApiKeyPrefix(),
             apiKey.getName(),
+            apiKeyScopeService.parseScopes(apiKey.getScopes()),
             apiKey.getStatus(),
             apiKey.getExpiredAt(),
             apiKey.getCreatedAt()
@@ -82,6 +85,7 @@ public class TenantApiKeyAdminService {
             apiKey.getTenantId(),
             apiKey.getApiKeyPrefix(),
             apiKey.getName(),
+            apiKeyScopeService.parseScopes(apiKey.getScopes()),
             apiKey.getStatus(),
             apiKey.getExpiredAt(),
             apiKey.getCreatedAt(),

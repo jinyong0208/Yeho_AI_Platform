@@ -37,6 +37,47 @@ public class AiUsageLogService {
         String errorMessage,
         ChatCompletionRequest request
     ) {
+        record(
+            tenantId,
+            userId,
+            apiKeyId,
+            providerCode,
+            modelCode,
+            requestId,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            chargeCredits,
+            model,
+            latencyMs,
+            success,
+            errorCode,
+            errorMessage,
+            request,
+            null
+        );
+    }
+
+    @Transactional
+    public void record(
+        Long tenantId,
+        Long userId,
+        Long apiKeyId,
+        String providerCode,
+        String modelCode,
+        String requestId,
+        int inputTokens,
+        int outputTokens,
+        int totalTokens,
+        long chargeCredits,
+        AiModel model,
+        long latencyMs,
+        boolean success,
+        String errorCode,
+        String errorMessage,
+        ChatCompletionRequest request,
+        String apiKeyScopes
+    ) {
         AiUsageLog log = new AiUsageLog();
         log.setTenantId(tenantId);
         log.setUserId(userId);
@@ -44,6 +85,7 @@ public class AiUsageLogService {
         log.setProviderCode(providerCode);
         log.setModelCode(modelCode);
         log.setRequestId(requestId);
+        log.setApiKeyScopes(apiKeyScopes);
         log.setInputTokens(inputTokens);
         log.setOutputTokens(outputTokens);
         log.setTotalTokens(totalTokens);

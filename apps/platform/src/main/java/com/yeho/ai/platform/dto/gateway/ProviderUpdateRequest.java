@@ -8,4 +8,9 @@ public class ProviderUpdateRequest {
     private String baseUrl;
     private String apiKey;
     private String status;
+    private Integer timeoutMs;
+    private Integer retryCount;
+    private Integer circuitFailureThreshold;
+    private Integer circuitCooldownSeconds;
+    private String fallbackModelCode;
 }

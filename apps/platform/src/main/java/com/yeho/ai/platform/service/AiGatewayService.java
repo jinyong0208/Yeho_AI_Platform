@@ -7,6 +7,7 @@ import com.yeho.ai.platform.dto.openai.ChatCompletionResponse;
 import com.yeho.ai.platform.dto.openai.ChatMessage;
 import com.yeho.ai.platform.dto.openai.OpenAiErrorResponse;
 import com.yeho.ai.platform.entity.AiModel;
+import com.yeho.ai.platform.entity.SysAuditLog;
 import com.yeho.ai.platform.entity.TenantApiKey;
 import com.yeho.ai.platform.gateway.GatewayException;
 import com.yeho.ai.platform.gateway.ModelRoute;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +34,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AiGatewayService {
     private final AiApiKeyService aiApiKeyService;
+    private final ApiKeyScopeService apiKeyScopeService;
+    private final RateLimitService rateLimitService;
+    private final AuditLogService auditLogService;
+    private final ProviderCircuitBreakerService providerCircuitBreakerService;
     private final AiWalletService aiWalletService;
     private final AiUsageLogService aiUsageLogService;
     private final com.yeho.ai.platform.gateway.ModelRouter modelRouter;
@@ -54,6 +60,7 @@ public class AiGatewayService {
         Long apiKeyId = null;
         String providerCode = null;
         String modelCode = null;
+        RateLimitService.RateLimitLease rateLimitLease = null;
         try {
             validateRequest(request);
             modelCode = request.getModel();
@@ -65,22 +72,19 @@ public class AiGatewayService {
             tenantApiKey = aiApiKeyService.authenticate(authorizationHeader);
             tenantId = tenantApiKey.getTenantId();
             apiKeyId = tenantApiKey.getId();
+            apiKeyScopeService.requireScope(tenantApiKey, ApiKeyScopeService.CHAT_COMPLETION);
 
             route = modelRouter.route(request.getModel());
             providerCode = route.provider().getProviderCode();
             AiModel model = route.model();
 
             reservedCredits = aiWalletService.estimateChargeCredits(model, request);
+            int estimatedTokens = aiWalletService.estimatePromptTokens(request.getMessages())
+                + (request.getMaxTokens() == null ? 512 : request.getMaxTokens());
+            rateLimitLease = rateLimitService.acquire(tenantApiKey, estimatedTokens, reservedCredits, requestId);
             aiWalletService.reserve(tenantId, reservedCredits, requestId);
 
-            adapterResponse = route.adapter().chat(new AdapterChatRequest(
-                route.provider().getBaseUrl(),
-                route.decryptedApiKey(),
-                request.getModel(),
-                request.getMessages(),
-                request.getTemperature(),
-                request.getMaxTokens()
-            ));
+            adapterResponse = callProviderWithFallback(route, request, requestId);
 
             inputTokens = adapterResponse.inputTokens() == null
                 ? aiWalletService.estimatePromptTokens(request.getMessages())
@@ -94,6 +98,7 @@ public class AiGatewayService {
 
             long actualChargeCredits = aiWalletService.calculateChargeCredits(model, inputTokens, outputTokens);
             aiWalletService.settle(tenantId, reservedCredits, actualChargeCredits, requestId);
+            rateLimitService.releaseDailyCredits(rateLimitLease, Math.max(0, reservedCredits - actualChargeCredits));
             aiUsageLogService.record(
                 tenantId,
                 null,
@@ -117,6 +122,7 @@ public class AiGatewayService {
             if (tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, ex.getMessage());
             }
+            rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             aiUsageLogService.record(
                 tenantId,
                 null,
@@ -133,13 +139,18 @@ public class AiGatewayService {
                 false,
                 ex.getCode(),
                 ex.getMessage(),
-                request
+                request,
+                tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
+            if ("insufficient_scope".equals(ex.getCode()) && tenantApiKey != null) {
+                recordGatewayAudit(tenantApiKey, requestId, "API_KEY_SCOPE", 403, ex.getMessage());
+            }
             throw ex;
         } catch (Exception ex) {
             if (tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, "Rollback failed request");
             }
+            rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
             aiUsageLogService.record(
                 tenantId,
                 null,
@@ -156,9 +167,12 @@ public class AiGatewayService {
                 false,
                 "provider_error",
                 ex.getMessage(),
-                request
+                request,
+                tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
             throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion failed");
+        } finally {
+            rateLimitService.releaseConcurrent(rateLimitLease);
         }
     }
 
@@ -175,6 +189,7 @@ public class AiGatewayService {
         Long apiKeyId = null;
         String providerCode = null;
         String modelCode = null;
+        RateLimitService.RateLimitLease rateLimitLease = null;
         try {
             validateRequest(request);
             modelCode = request.getModel();
@@ -182,6 +197,7 @@ public class AiGatewayService {
             tenantApiKey = aiApiKeyService.authenticate(authorizationHeader);
             tenantId = tenantApiKey.getTenantId();
             apiKeyId = tenantApiKey.getId();
+            apiKeyScopeService.requireScope(tenantApiKey, ApiKeyScopeService.CHAT_COMPLETION);
 
             route = modelRouter.route(request.getModel());
             providerCode = route.provider().getProviderCode();
@@ -191,6 +207,9 @@ public class AiGatewayService {
             }
 
             reservedCredits = aiWalletService.estimateChargeCredits(model, request);
+            int estimatedTokens = aiWalletService.estimatePromptTokens(request.getMessages())
+                + (request.getMaxTokens() == null ? 512 : request.getMaxTokens());
+            rateLimitLease = rateLimitService.acquire(tenantApiKey, estimatedTokens, reservedCredits, requestId);
             aiWalletService.reserve(tenantId, reservedCredits, requestId);
 
             AdapterChatRequest adapterRequest = new AdapterChatRequest(
@@ -211,13 +230,17 @@ public class AiGatewayService {
                 apiKeyId,
                 providerCode,
                 modelCode,
-                reservedCredits
+                reservedCredits,
+                rateLimitLease,
+                tenantApiKey.getScopes()
             );
             return outputStream -> writeStreamingResponse(context, outputStream);
         } catch (GatewayException ex) {
             if (tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, ex.getMessage());
             }
+            rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
+            rateLimitService.releaseConcurrent(rateLimitLease);
             aiUsageLogService.record(
                 tenantId,
                 null,
@@ -234,13 +257,19 @@ public class AiGatewayService {
                 false,
                 ex.getCode(),
                 ex.getMessage(),
-                request
+                request,
+                tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
+            if ("insufficient_scope".equals(ex.getCode()) && tenantApiKey != null) {
+                recordGatewayAudit(tenantApiKey, requestId, "API_KEY_SCOPE", 403, ex.getMessage());
+            }
             throw ex;
         } catch (Exception ex) {
             if (tenantId != null && reservedCredits > 0) {
                 aiWalletService.release(tenantId, reservedCredits, requestId, "Rollback failed stream request");
             }
+            rateLimitService.releaseDailyCredits(rateLimitLease, reservedCredits);
+            rateLimitService.releaseConcurrent(rateLimitLease);
             aiUsageLogService.record(
                 tenantId,
                 null,
@@ -257,7 +286,8 @@ public class AiGatewayService {
                 false,
                 "provider_error",
                 ex.getMessage(),
-                request
+                request,
+                tenantApiKey == null ? null : tenantApiKey.getScopes()
             );
             throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion stream failed");
         }
@@ -318,6 +348,7 @@ public class AiGatewayService {
 
         try {
             writeChunk(outputStream, completionId, created, context.modelCode(), "assistant", null, null);
+            providerCircuitBreakerService.ensureCircuitClosed(context.route().provider());
             context.route().adapter().streamChat(context.adapterRequest(), chunk -> {
                 applyUsage(usage, chunk);
                 if (chunk.contentDelta() != null && !chunk.contentDelta().isEmpty()) {
@@ -342,6 +373,8 @@ public class AiGatewayService {
                 outputTokens
             );
             aiWalletService.settle(context.tenantId(), context.reservedCredits(), actualChargeCredits, context.requestId());
+            providerCircuitBreakerService.recordSuccess(context.route().provider());
+            rateLimitService.releaseDailyCredits(context.rateLimitLease(), Math.max(0, context.reservedCredits() - actualChargeCredits));
             settled = true;
             aiUsageLogService.record(
                 context.tenantId(),
@@ -359,13 +392,15 @@ public class AiGatewayService {
                 true,
                 null,
                 null,
-                context.request()
+                context.request(),
+                context.apiKeyScopes()
             );
             writeChunk(outputStream, completionId, created, context.modelCode(), null, null, usage.finishReason);
             writeDone(outputStream);
         } catch (Exception ex) {
             if (!settled) {
                 aiWalletService.release(context.tenantId(), context.reservedCredits(), context.requestId(), "Rollback failed stream request");
+                rateLimitService.releaseDailyCredits(context.rateLimitLease(), context.reservedCredits());
             }
             int inputTokens = usage.inputTokens == null
                 ? aiWalletService.estimatePromptTokens(context.request().getMessages())
@@ -375,6 +410,7 @@ public class AiGatewayService {
                 : usage.outputTokens;
             int totalTokens = usage.totalTokens == null ? inputTokens + outputTokens : usage.totalTokens;
             String code = ex instanceof GatewayException gatewayException ? gatewayException.getCode() : "provider_error";
+            providerCircuitBreakerService.recordFailure(context.route().provider());
             aiUsageLogService.record(
                 context.tenantId(),
                 null,
@@ -391,9 +427,12 @@ public class AiGatewayService {
                 false,
                 code,
                 ex.getMessage(),
-                context.request()
+                context.request(),
+                context.apiKeyScopes()
             );
             writeStreamError(outputStream, code, ex.getMessage());
+        } finally {
+            rateLimitService.releaseConcurrent(context.rateLimitLease());
         }
     }
 
@@ -464,7 +503,9 @@ public class AiGatewayService {
         Long apiKeyId,
         String providerCode,
         String modelCode,
-        long reservedCredits
+        long reservedCredits,
+        RateLimitService.RateLimitLease rateLimitLease,
+        String apiKeyScopes
     ) {
     }
 
@@ -473,5 +514,49 @@ public class AiGatewayService {
         private Integer outputTokens;
         private Integer totalTokens;
         private String finishReason = "stop";
+    }
+
+    private AdapterChatResponse callProviderWithFallback(ModelRoute route, ChatCompletionRequest request, String requestId) {
+        try {
+            return providerCircuitBreakerService.execute(route.provider(), () -> route.adapter().chat(new AdapterChatRequest(
+                route.provider().getBaseUrl(),
+                route.decryptedApiKey(),
+                request.getModel(),
+                request.getMessages(),
+                request.getTemperature(),
+                request.getMaxTokens()
+            )));
+        } catch (GatewayException ex) {
+            if (!StringUtils.hasText(route.provider().getFallbackModelCode())) {
+                throw ex;
+            }
+            ModelRoute fallbackRoute = modelRouter.route(route.provider().getFallbackModelCode());
+            return providerCircuitBreakerService.execute(fallbackRoute.provider(), () -> fallbackRoute.adapter().chat(new AdapterChatRequest(
+                fallbackRoute.provider().getBaseUrl(),
+                fallbackRoute.decryptedApiKey(),
+                fallbackRoute.model().getModelCode(),
+                request.getMessages(),
+                request.getTemperature(),
+                request.getMaxTokens()
+            )));
+        }
+    }
+
+    private void recordGatewayAudit(TenantApiKey apiKey, String requestId, String action, int statusCode, String message) {
+        SysAuditLog log = new SysAuditLog();
+        log.setTenantId(apiKey.getTenantId());
+        log.setRequestId(requestId);
+        log.setAction(action);
+        log.setResourceType("ai_gateway");
+        log.setResourceId(String.valueOf(apiKey.getId()));
+        log.setMethod("POST");
+        log.setPath("/v1/chat/completions");
+        log.setStatusCode(statusCode);
+        log.setSuccess(false);
+        log.setLatencyMs(0L);
+        log.setQueryString(message);
+        log.setCreatedAt(LocalDateTime.now());
+        log.setUpdatedAt(LocalDateTime.now());
+        auditLogService.record(log);
     }
 }

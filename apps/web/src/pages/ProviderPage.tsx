@@ -130,9 +130,28 @@ export default function ProviderPage() {
                         Key stored
                       </Badge>
                     )}
+                    <Badge
+                      color={
+                        provider.healthStatus === 'HEALTHY'
+                          ? 'teal'
+                          : provider.healthStatus === 'CIRCUIT_OPEN'
+                            ? 'red'
+                            : provider.healthStatus === 'DEGRADED'
+                              ? 'yellow'
+                              : 'gray'
+                      }
+                      variant="light"
+                      radius="sm"
+                    >
+                      {provider.healthStatus || 'UNKNOWN'}
+                    </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
                     {provider.providerCode} · {provider.baseUrl}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    retry {provider.retryCount ?? 0} · failures {provider.consecutiveFailures ?? 0}
+                    {provider.circuitOpenUntil ? ` · open until ${provider.circuitOpenUntil}` : ''}
                   </Text>
                 </Box>
               </Group>

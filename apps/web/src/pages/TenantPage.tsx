@@ -6,23 +6,29 @@ import {
   Card,
   Group,
   Modal,
+  NumberInput,
   Stack,
   Text,
   TextInput,
   ThemeIcon,
+  Tooltip,
   Title,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBuildingCommunity, IconMail, IconPhone, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconBuildingCommunity, IconGauge, IconMail, IconPhone, IconPlus, IconTrash } from '@tabler/icons-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { gatewayApi } from '../api/gateway';
 import { tenantApi } from '../api/tenants';
 
 export default function TenantPage() {
   const { t } = useTranslation();
   const [opened, { open, close }] = useDisclosure(false);
+  const [limitOpened, { open: openLimit, close: closeLimit }] = useDisclosure(false);
+  const [selectedTenant, setSelectedTenant] = useState<any>(null);
   const queryClient = useQueryClient();
   const form = useForm({
     initialValues: {
@@ -50,7 +56,36 @@ export default function TenantPage() {
     mutationFn: tenantApi.remove,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tenants'] }),
   });
+  const limitForm = useForm({
+    initialValues: {
+      rpmLimit: null as number | null,
+      tpmLimit: null as number | null,
+      dailyCreditsLimit: null as number | null,
+      maxConcurrent: null as number | null,
+    },
+  });
+  const updateLimitMutation = useMutation({
+    mutationFn: (values: typeof limitForm.values) =>
+      gatewayApi.updateTenantRateLimit(selectedTenant.id, { ...values, status: 'ACTIVE' }),
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: '限流已保存', message: '租户限流配置已更新。' });
+      closeLimit();
+      setSelectedTenant(null);
+    },
+  });
   const tenants = tenantsQuery.data ?? [];
+
+  const openLimitModal = async (tenant: any) => {
+    setSelectedTenant(tenant);
+    const limit = await gatewayApi.tenantRateLimit(tenant.id);
+    limitForm.setValues({
+      rpmLimit: limit?.rpmLimit ?? null,
+      tpmLimit: limit?.tpmLimit ?? null,
+      dailyCreditsLimit: limit?.dailyCreditsLimit ?? null,
+      maxConcurrent: limit?.maxConcurrent ?? null,
+    });
+    openLimit();
+  };
 
   return (
     <Stack gap="lg">
@@ -114,15 +149,27 @@ export default function TenantPage() {
                     {tenant.contactPhone || '未设置电话'}
                   </Text>
                 </Group>
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
-                  aria-label="Delete tenant"
-                  loading={deleteMutation.isPending}
-                  onClick={() => deleteMutation.mutate(tenant.id)}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
+                <Tooltip label="租户限流">
+                  <ActionIcon
+                    variant="subtle"
+                    color="blue"
+                    aria-label="Configure tenant rate limit"
+                    onClick={() => openLimitModal(tenant)}
+                  >
+                    <IconGauge size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="删除">
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    aria-label="Delete tenant"
+                    loading={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate(tenant.id)}
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Tooltip>
               </Group>
             </Group>
           ))}
@@ -144,6 +191,28 @@ export default function TenantPage() {
             <TextInput label={t('email')} {...form.getInputProps('contactEmail')} />
             <Button color="dark" type="submit" loading={createMutation.isPending}>
               {t('save')}
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal
+        opened={limitOpened}
+        onClose={() => {
+          closeLimit();
+          setSelectedTenant(null);
+        }}
+        title={`租户限流${selectedTenant ? ` · ${selectedTenant.tenantName}` : ''}`}
+        centered
+      >
+        <form onSubmit={limitForm.onSubmit((values) => updateLimitMutation.mutate(values))}>
+          <Stack>
+            <NumberInput label="RPM 每分钟请求数" min={0} {...limitForm.getInputProps('rpmLimit')} />
+            <NumberInput label="TPM 每分钟 Token" min={0} {...limitForm.getInputProps('tpmLimit')} />
+            <NumberInput label="Daily Credits 每日额度" min={0} {...limitForm.getInputProps('dailyCreditsLimit')} />
+            <NumberInput label="Max Concurrent 最大并发" min={0} {...limitForm.getInputProps('maxConcurrent')} />
+            <Button color="dark" type="submit" loading={updateLimitMutation.isPending} disabled={!selectedTenant}>
+              保存限流
             </Button>
           </Stack>
         </form>

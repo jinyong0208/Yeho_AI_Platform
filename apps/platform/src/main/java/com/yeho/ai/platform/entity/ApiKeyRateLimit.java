@@ -8,17 +8,17 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("tenant_api_key")
-public class TenantApiKey {
+@TableName("api_key_rate_limit")
+public class ApiKeyRateLimit {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
+    private Long apiKeyId;
     private Long tenantId;
-    private String apiKeyHash;
-    private String apiKeyPrefix;
-    private String name;
-    private String scopes;
+    private Integer rpmLimit;
+    private Integer tpmLimit;
+    private Long dailyCreditsLimit;
+    private Integer maxConcurrent;
     private String status;
-    private LocalDateTime expiredAt;
     private LocalDateTime createdAt;
-    private LocalDateTime lastUsedAt;
+    private LocalDateTime updatedAt;
 }

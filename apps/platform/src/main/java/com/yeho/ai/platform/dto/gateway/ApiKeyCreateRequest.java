@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 public class ApiKeyCreateRequest {
@@ -11,4 +12,6 @@ public class ApiKeyCreateRequest {
     private String name;
 
     private LocalDateTime expiredAt;
+
+    private Set<String> scopes;
 }

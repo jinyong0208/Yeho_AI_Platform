@@ -15,6 +15,15 @@ export type ProviderResponse = {
   baseUrl: string;
   status: string;
   hasApiKey: boolean;
+  timeoutMs?: number;
+  retryCount?: number;
+  circuitFailureThreshold?: number;
+  circuitCooldownSeconds?: number;
+  fallbackModelCode?: string | null;
+  healthStatus?: string | null;
+  consecutiveFailures?: number;
+  circuitOpenUntil?: string | null;
+  lastCheckedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -50,6 +59,7 @@ export type TenantApiKeyResponse = {
   id: Id;
   name: string;
   apiKeyPrefix: string;
+  scopes: string[];
   status: string;
   expiredAt?: string | null;
   createdAt?: string;
@@ -58,6 +68,27 @@ export type TenantApiKeyResponse = {
 
 export type TenantApiKeyCreated = TenantApiKeyResponse & {
   apiKey: string;
+};
+
+export type RateLimitResponse = {
+  id?: Id | null;
+  tenantId: Id;
+  apiKeyId?: Id | null;
+  rpmLimit?: number | null;
+  tpmLimit?: number | null;
+  dailyCreditsLimit?: number | null;
+  maxConcurrent?: number | null;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type RateLimitPayload = {
+  rpmLimit?: number | null;
+  tpmLimit?: number | null;
+  dailyCreditsLimit?: number | null;
+  maxConcurrent?: number | null;
+  status?: string;
 };
 
 const unwrapData = <T>(response: ApiEnvelope<T>) => response.data.data;
@@ -79,9 +110,17 @@ export const gatewayApi = {
   },
   apiKeys: async (tenantId: Id): Promise<TenantApiKeyResponse[]> =>
     unwrapData(await apiClient.get(`/tenants/${tenantId}/api-keys`)),
-  createApiKey: async (tenantId: Id, payload: { name: string }): Promise<TenantApiKeyCreated> =>
+  createApiKey: async (tenantId: Id, payload: { name: string; scopes?: string[] }): Promise<TenantApiKeyCreated> =>
     unwrapData(await apiClient.post(`/tenants/${tenantId}/api-keys`, payload)),
   revokeApiKey: async (tenantId: Id, keyId: Id) => {
     await apiClient.delete(`/tenants/${tenantId}/api-keys/${keyId}`);
   },
+  tenantRateLimit: async (tenantId: Id): Promise<RateLimitResponse | null> =>
+    unwrapData(await apiClient.get(`/tenants/${tenantId}/rate-limits`)),
+  updateTenantRateLimit: async (tenantId: Id, payload: RateLimitPayload): Promise<RateLimitResponse> =>
+    unwrapData(await apiClient.put(`/tenants/${tenantId}/rate-limits`, payload)),
+  apiKeyRateLimit: async (tenantId: Id, keyId: Id): Promise<RateLimitResponse | null> =>
+    unwrapData(await apiClient.get(`/tenants/${tenantId}/rate-limits/api-keys/${keyId}`)),
+  updateApiKeyRateLimit: async (tenantId: Id, keyId: Id, payload: RateLimitPayload): Promise<RateLimitResponse> =>
+    unwrapData(await apiClient.put(`/tenants/${tenantId}/rate-limits/api-keys/${keyId}`, payload)),
 };
