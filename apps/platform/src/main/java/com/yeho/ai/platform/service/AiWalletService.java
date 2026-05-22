@@ -1,6 +1,7 @@
 package com.yeho.ai.platform.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yeho.ai.platform.dto.gateway.WalletLogResponse;
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
 import com.yeho.ai.platform.dto.openai.ChatMessage;
 import com.yeho.ai.platform.entity.AiModel;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -146,6 +148,36 @@ public class AiWalletService {
             .eq(TenantWallet::getTenantId, tenantId));
     }
 
+    @Transactional
+    public TenantWallet ensureWallet(Long tenantId) {
+        return lockOrCreateWallet(tenantId);
+    }
+
+    @Transactional
+    public TenantWallet recharge(Long tenantId, long amountCredits, String bizId, String remark) {
+        TenantWallet wallet = lockOrCreateWallet(tenantId);
+        wallet.setBalanceCredits(wallet.getBalanceCredits() + amountCredits);
+        wallet.setTotalRechargeCredits(wallet.getTotalRechargeCredits() + amountCredits);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        tenantWalletMapper.updateById(wallet);
+
+        String logBizId = bizId == null ? "MANUAL-" + UUID.randomUUID().toString().replace("-", "") : bizId;
+        insertLog(tenantId, "RECHARGE", logBizId, "IN", amountCredits, wallet.getBalanceCredits(), remark);
+        return wallet;
+    }
+
+    @Transactional(readOnly = true)
+    public List<WalletLogResponse> listLogs(Long tenantId, Integer limit) {
+        int safeLimit = normalizeLimit(limit);
+        return tenantWalletLogMapper.selectList(new LambdaQueryWrapper<TenantWalletLog>()
+                .eq(TenantWalletLog::getTenantId, tenantId)
+                .orderByDesc(TenantWalletLog::getCreatedAt)
+                .last("LIMIT " + safeLimit))
+            .stream()
+            .map(this::toLogResponse)
+            .toList();
+    }
+
     private TenantWallet lockOrCreateWallet(Long tenantId) {
         TenantWallet wallet = tenantWalletMapper.selectByTenantIdForUpdate(tenantId);
         if (wallet != null) {
@@ -193,5 +225,26 @@ public class AiWalletService {
             return value == null ? "" : value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private WalletLogResponse toLogResponse(TenantWalletLog log) {
+        return new WalletLogResponse(
+            log.getId(),
+            log.getTenantId(),
+            log.getBizType(),
+            log.getBizId(),
+            log.getDirection(),
+            log.getAmountCredits(),
+            log.getBalanceAfter(),
+            log.getRemark(),
+            log.getCreatedAt()
+        );
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null) {
+            return 100;
+        }
+        return Math.max(1, Math.min(limit, 500));
     }
 }
