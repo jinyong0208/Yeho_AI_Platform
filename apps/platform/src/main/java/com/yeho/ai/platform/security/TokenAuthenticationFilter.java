@@ -17,6 +17,12 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "/v1/chat/completions".equals(request.getRequestURI())
+                || "/v1/embeddings".equals(request.getRequestURI());
+    }
     private final TokenService tokenService;
 
     @Override
