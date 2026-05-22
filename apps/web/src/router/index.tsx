@@ -5,6 +5,13 @@ import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
 import TenantPage from '../pages/TenantPage';
 import UserPage from '../pages/UserPage';
+import ProviderPage from '../pages/ProviderPage';
+import ModelPage from '../pages/ModelPage';
+import ApiKeyPage from '../pages/ApiKeyPage';
+import WalletPage from '../pages/WalletPage';
+import WalletTransactionPage from '../pages/WalletTransactionPage';
+import UsageLogPage from '../pages/UsageLogPage';
+import TokenStatsPage from '../pages/TokenStatsPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -32,13 +39,13 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'tenants', element: <TenantPage /> },
       { path: 'users', element: <UserPage /> },
-      { path: 'providers', element: <PlaceholderPage kind="providers" /> },
-      { path: 'models', element: <PlaceholderPage kind="models" /> },
-      { path: 'api-keys', element: <PlaceholderPage kind="apiKeys" /> },
-      { path: 'wallet', element: <PlaceholderPage kind="wallet" /> },
-      { path: 'wallet/transactions', element: <PlaceholderPage kind="walletTransactions" /> },
-      { path: 'usage-logs', element: <PlaceholderPage kind="usageLogs" /> },
-      { path: 'token-stats', element: <PlaceholderPage kind="tokenStats" /> },
+      { path: 'providers', element: <ProviderPage /> },
+      { path: 'models', element: <ModelPage /> },
+      { path: 'api-keys', element: <ApiKeyPage /> },
+      { path: 'wallet', element: <WalletPage /> },
+      { path: 'wallet/transactions', element: <WalletTransactionPage /> },
+      { path: 'usage-logs', element: <UsageLogPage /> },
+      { path: 'token-stats', element: <TokenStatsPage /> },
       { path: 'workflow', element: <PlaceholderPage kind="workflow" /> },
     ],
   },

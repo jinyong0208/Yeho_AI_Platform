@@ -77,7 +77,7 @@ export default function MainLayout() {
           </Group>
           <Group gap="xs">
             <Badge variant="light" color="gray" radius="sm">
-              Phase 1
+              Phase 4
             </Badge>
             <Text size="sm" c="dimmed">
               {user?.username}
