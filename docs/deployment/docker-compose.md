@@ -20,6 +20,8 @@ docker compose --profile optional-storage up -d minio
 docker compose up -d
 ```
 
+共享或准生产环境建议先复制 `.env.example` 为 `.env`，并修改数据库密码、默认管理员密码和 `YEHO_SECURITY_CRYPTO_SECRET`。Provider API Key 会加密落库，`YEHO_SECURITY_CRYPTO_SECRET` 必须在配置真实 Provider 前确定。
+
 重建并启动全部核心服务：
 
 ```bash
@@ -67,6 +69,12 @@ Windows PowerShell：
 
 ```powershell
 .\scripts\smoke-all.ps1
+```
+
+MVP 收口烟测：
+
+```powershell
+.\scripts\smoke-mvp-closeout.ps1
 ```
 
 覆盖：

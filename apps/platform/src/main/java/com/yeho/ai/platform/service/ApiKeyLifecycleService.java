@@ -2,6 +2,7 @@ package com.yeho.ai.platform.service;
 
 import java.util.List;
 import java.util.Map;
+import com.yeho.ai.platform.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -113,6 +114,10 @@ public class ApiKeyLifecycleService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authentication required");
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof AuthenticatedUser user && user.tenantId() != null) {
+            return user.tenantId();
         }
         String username = authentication.getName();
         if (username == null || username.isBlank() || "anonymousUser".equals(username)) {

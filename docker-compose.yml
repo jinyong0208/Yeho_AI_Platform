@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: yeho_ai_platform
       POSTGRES_USER: yeho
-      POSTGRES_PASSWORD: yeho_pass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yeho_pass}
       TZ: Asia/Shanghai
     ports:
       - "5432:5432"
@@ -40,8 +40,8 @@ services:
       - optional-storage
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: yeho_minio
-      MINIO_ROOT_PASSWORD: yeho_minio_pass
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-yeho_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-yeho_minio_pass}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -60,10 +60,12 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/yeho_ai_platform
       SPRING_DATASOURCE_USERNAME: yeho
-      SPRING_DATASOURCE_PASSWORD: yeho_pass
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-yeho_pass}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      YEHO_SECURITY_DEFAULT_ADMIN_PASSWORD: Admin@123456
+      YEHO_SECURITY_DEFAULT_ADMIN_PASSWORD: ${YEHO_SECURITY_DEFAULT_ADMIN_PASSWORD:-Admin@123456}
+      YEHO_SECURITY_CRYPTO_SECRET: ${YEHO_SECURITY_CRYPTO_SECRET:-change-me-in-production}
+      YEHO_BILLING_DEFAULT_WALLET_CREDITS: ${YEHO_BILLING_DEFAULT_WALLET_CREDITS:-100000}
       YEHO_AGENT_BASE_URL: http://agent:8000
     ports:
       - "8080:8080"

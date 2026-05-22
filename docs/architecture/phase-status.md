@@ -72,6 +72,12 @@ The platform manages capabilities, not customer knowledge data:
 - Current model price version pointer.
 - Usage logs record `price_version_id` for historical cost/profit traceability.
 
+### MVP Closeout Operations
+
+- Closeout smoke script for OpenAI-compatible errors, API key lifecycle, tenant isolation, wallet alert query, price version list, and provider health list.
+- Deployment closeout runbook with `.env` guidance and secret handling notes.
+- Real provider end-to-end runbook for DeepSeek and Qwen.
+
 ### Embeddings And EDMS Integration
 
 - OpenAI-compatible `POST /v1/embeddings` preview.
@@ -109,7 +115,7 @@ The platform manages capabilities, not customer knowledge data:
 
 ## Next Recommended Work
 
-1. Add automated integration tests for API key scope, tenant limit, and wallet deduction.
-2. Add OpenAI-compatible error response tests for `/v1/chat/completions` and `/v1/embeddings`.
-3. Add provider health and circuit breaker state smoke tests.
-4. Add sample EDMS RAG protocol fixtures without storing customer knowledge data.
+1. Run real DeepSeek and Qwen provider tests with production-like credentials.
+2. Wire API key lifecycle, wallet operations, and price versions into the console UI.
+3. Add automated regression tests for API key scope, tenant limit, wallet deduction, and OpenAI-compatible errors.
+4. Add provider health and circuit breaker state regression tests.
