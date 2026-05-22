@@ -7,6 +7,8 @@ import {
   Code,
   Group,
   Loader,
+  Modal,
+  PasswordInput,
   SimpleGrid,
   Stack,
   Table,
@@ -15,15 +17,21 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { useDisclosure } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import {
   IconActivityHeartbeat,
   IconAlertTriangle,
   IconBolt,
   IconCircleCheck,
+  IconKey,
   IconRefresh,
   IconServerCog,
 } from '@tabler/icons-react';
+import { useState } from 'react';
 import { rootApiClient } from '../api/client';
+import { gatewayApi } from '../api/gateway';
 
 type ProviderHealth = {
   provider_id?: number;
@@ -125,6 +133,9 @@ function statusColor(status: string) {
 
 export default function ProviderPage() {
   const queryClient = useQueryClient();
+  const [keyOpened, { open: openKey, close: closeKey }] = useDisclosure(false);
+  const [keyProvider, setKeyProvider] = useState<ProviderHealth | null>(null);
+  const keyForm = useForm({ initialValues: { apiKey: '' } });
   const healthQuery = useQuery({
     queryKey: ['provider-health'],
     queryFn: () => requestJson<ProviderHealth[]>('/api/providers/health'),
@@ -145,9 +156,27 @@ export default function ProviderPage() {
       queryClient.invalidateQueries({ queryKey: ['provider-test-logs'] });
     },
   });
+  const rotateKeyMutation = useMutation({
+    mutationFn: (values: typeof keyForm.values) =>
+      gatewayApi.updateProviderApiKey(String(providerId(keyProvider as ProviderHealth)), values),
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: '已保存', message: 'Provider API Key 已加密更新。' });
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-health'] });
+      keyForm.reset();
+      setKeyProvider(null);
+      closeKey();
+    },
+  });
 
   const healthyCount = providers.filter((provider) => healthStatus(provider) === 'HEALTHY').length;
   const unhealthyCount = providers.filter((provider) => healthStatus(provider) === 'UNHEALTHY').length;
+
+  const openKeyModal = (provider: ProviderHealth) => {
+    setKeyProvider(provider);
+    keyForm.reset();
+    openKey();
+  };
 
   return (
     <Stack gap="lg">
@@ -260,13 +289,22 @@ export default function ProviderPage() {
                     <Text size="xs" c="dimmed">
                       Last checked {formatDate(provider.last_checked_at ?? provider.lastCheckedAt)}
                     </Text>
-                    <Button
-                      leftSection={<IconBolt size={16} />}
-                      onClick={() => testMutation.mutate(id)}
-                      loading={testMutation.isPending}
-                    >
-                      Test
-                    </Button>
+                    <Group gap="xs">
+                      <Button
+                        variant="light"
+                        leftSection={<IconKey size={16} />}
+                        onClick={() => openKeyModal(provider)}
+                      >
+                        Rotate Key
+                      </Button>
+                      <Button
+                        leftSection={<IconBolt size={16} />}
+                        onClick={() => testMutation.mutate(id)}
+                        loading={testMutation.isPending}
+                      >
+                        Test
+                      </Button>
+                    </Group>
                   </Group>
                 </Stack>
               </Card>
@@ -312,6 +350,34 @@ export default function ProviderPage() {
           </Table>
         </Table.ScrollContainer>
       </Card>
+
+      <Modal
+        opened={keyOpened}
+        onClose={() => {
+          closeKey();
+          setKeyProvider(null);
+          keyForm.reset();
+        }}
+        title={`Rotate Provider Key${keyProvider ? ` · ${providerCode(keyProvider)}` : ''}`}
+        centered
+      >
+        <form onSubmit={keyForm.onSubmit((values) => rotateKeyMutation.mutate(values))}>
+          <Stack>
+            <Text size="sm" c="dimmed">
+              Provider API Key will be encrypted at rest and never returned by the console API.
+            </Text>
+            <PasswordInput
+              label="Provider API Key"
+              required
+              autoComplete="off"
+              {...keyForm.getInputProps('apiKey')}
+            />
+            <Button color="dark" type="submit" loading={rotateKeyMutation.isPending} disabled={!keyProvider}>
+              Save encrypted key
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
     </Stack>
   );
 }

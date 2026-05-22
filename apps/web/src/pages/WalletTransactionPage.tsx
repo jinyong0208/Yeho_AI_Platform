@@ -1,9 +1,11 @@
-import { Badge, Box, Card, Group, Select, Stack, Text, ThemeIcon, Title } from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
-import { IconArrowDownRight, IconArrowUpRight, IconReceipt2 } from '@tabler/icons-react';
+import { Badge, Box, Button, Card, Group, Select, Stack, Text, ThemeIcon, Title } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { IconArrowDownRight, IconArrowUpRight, IconDownload, IconReceipt2 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { billingApi } from '../api/billing';
 import { tenantApi } from '../api/tenants';
+import { downloadWorkbookFromRows } from '../utils/xlsx';
 
 type TenantLite = {
   id: string;
@@ -23,6 +25,27 @@ export default function WalletTransactionPage() {
     enabled: Boolean(selectedTenantId),
   });
   const logs = logsQuery.data ?? [];
+  const exportLogsMutation = useMutation({
+    mutationFn: () => billingApi.walletLogs(selectedTenantId as string, 500),
+    onSuccess: (rows) => {
+      downloadWorkbookFromRows(
+        rows.map((log) => ({
+          id: log.id,
+          tenantId: log.tenantId,
+          bizType: log.bizType,
+          bizId: log.bizId ?? '',
+          direction: log.direction,
+          amountCredits: log.amountCredits,
+          balanceAfter: log.balanceAfter,
+          remark: log.remark ?? '',
+          createdAt: log.createdAt,
+        })),
+        `wallet-ledger-${selectedTenantId}.xlsx`,
+        'Wallet Ledger',
+      );
+      notifications.show({ color: 'teal', title: '已导出', message: '钱包流水对账文件已生成。' });
+    },
+  });
 
   useEffect(() => {
     if (!selectedTenantId && tenants.length > 0) {
@@ -39,6 +62,16 @@ export default function WalletTransactionPage() {
             记录充值、冻结、扣费和释放动作，为账务核对保留清晰轨迹。
           </Text>
         </Stack>
+        <Button
+          variant="light"
+          color="gray"
+          leftSection={<IconDownload size={16} />}
+          disabled={!selectedTenantId}
+          loading={exportLogsMutation.isPending}
+          onClick={() => exportLogsMutation.mutate()}
+        >
+          导出流水
+        </Button>
       </Group>
 
       <Card className="surface-card" p="lg">

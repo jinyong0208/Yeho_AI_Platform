@@ -6,3 +6,11 @@ export function buildWorkbookFromRows<T extends Record<string, unknown>>(rows: T
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   return workbook;
 }
+
+export function downloadWorkbookFromRows<T extends Record<string, unknown>>(
+  rows: T[],
+  filename: string,
+  sheetName = 'Sheet1',
+) {
+  XLSX.writeFile(buildWorkbookFromRows(rows, sheetName), filename);
+}

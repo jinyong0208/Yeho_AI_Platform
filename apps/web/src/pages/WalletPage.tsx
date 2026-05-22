@@ -20,11 +20,21 @@ import { useDisclosure } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconAlertTriangle, IconBolt, IconCircleCheck, IconCoins, IconCreditCard, IconPlus, IconX } from '@tabler/icons-react';
+import {
+  IconAlertTriangle,
+  IconBolt,
+  IconCircleCheck,
+  IconCoins,
+  IconCreditCard,
+  IconDownload,
+  IconPlus,
+  IconX,
+} from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { billingApi } from '../api/billing';
 import { tenantApi } from '../api/tenants';
+import { downloadWorkbookFromRows } from '../utils/xlsx';
 
 type TenantLite = {
   id: string;
@@ -102,6 +112,28 @@ export default function WalletPage() {
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
     },
   });
+  const exportOrdersMutation = useMutation({
+    mutationFn: () => billingApi.rechargeOrders(selectedTenantId, 200),
+    onSuccess: (rows) => {
+      downloadWorkbookFromRows(
+        rows.map((order) => ({
+          orderNo: order.orderNo,
+          tenantId: order.tenantId,
+          amountCny: order.amountCny,
+          credits: order.credits,
+          status: order.status,
+          payChannel: order.payChannel,
+          paidAt: order.paidAt ?? '',
+          remark: order.remark ?? '',
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        })),
+        `recharge-orders-${selectedTenantId ?? 'all'}.xlsx`,
+        'Recharge Orders',
+      );
+      notifications.show({ color: 'teal', title: '已导出', message: '充值订单对账文件已生成。' });
+    },
+  });
   const wallet = walletQuery.data;
   const orders = ordersQuery.data ?? [];
   const lowBalanceAlerts = lowBalanceQuery.data ?? [];
@@ -173,9 +205,22 @@ export default function WalletPage() {
           <Text size="sm" fw={650}>
             Recharge Orders
           </Text>
-          <Badge color="gray" variant="light" radius="sm">
-            {orders.length} recent
-          </Badge>
+          <Group gap="xs">
+            <Badge color="gray" variant="light" radius="sm">
+              {orders.length} recent
+            </Badge>
+            <Button
+              size="xs"
+              variant="light"
+              color="gray"
+              leftSection={<IconDownload size={14} />}
+              loading={exportOrdersMutation.isPending}
+              disabled={!selectedTenantId}
+              onClick={() => exportOrdersMutation.mutate()}
+            >
+              导出
+            </Button>
+          </Group>
         </Group>
         <Stack gap={0} className="subtle-list">
           {orders.map((order) => (
