@@ -51,9 +51,15 @@ public class OpenAiModelsEndpointFilter extends OncePerRequestFilter {
             requireScope(apiKey);
             writeJson(response, HttpStatus.OK, listModels());
         } catch (ResponseStatusException ex) {
-            writeOpenAiError(response, HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason());
+            OpenAiErrorResponseWriter.write(
+                    objectMapper,
+                    request,
+                    response,
+                    HttpStatus.valueOf(ex.getStatusCode().value()),
+                    ex.getReason()
+            );
         } catch (Exception ex) {
-            writeOpenAiError(response, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
+            OpenAiErrorResponseWriter.write(objectMapper, request, response, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }
 
@@ -140,17 +146,6 @@ public class OpenAiModelsEndpointFilter extends OncePerRequestFilter {
                 "object", "list",
                 "data", models
         );
-    }
-
-    private void writeOpenAiError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
-        writeJson(response, status, Map.of(
-                "error", Map.of(
-                        "message", message == null ? status.getReasonPhrase() : message,
-                        "type", "invalid_request_error",
-                        "param", "",
-                        "code", status.value()
-                )
-        ));
     }
 
     private void writeJson(HttpServletResponse response, HttpStatus status, Object body) throws IOException {

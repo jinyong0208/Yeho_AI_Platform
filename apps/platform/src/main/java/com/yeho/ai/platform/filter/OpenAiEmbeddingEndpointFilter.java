@@ -49,26 +49,21 @@ public class OpenAiEmbeddingEndpointFilter extends OncePerRequestFilter {
             Object result = embeddingGatewayService.embeddings(request.getHeader(HttpHeaders.AUTHORIZATION), embeddingRequest);
             writeJson(response, HttpStatus.OK, result);
         } catch (ResponseStatusException ex) {
-            writeOpenAiError(response, HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason());
+            OpenAiErrorResponseWriter.write(
+                    objectMapper,
+                    request,
+                    response,
+                    HttpStatus.valueOf(ex.getStatusCode().value()),
+                    ex.getReason()
+            );
         } catch (Exception ex) {
             log.warn("Embedding endpoint failed before provider call: {}: {}", ex.getClass().getSimpleName(), ex.getMessage());
-            writeOpenAiError(response, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
+            OpenAiErrorResponseWriter.write(objectMapper, request, response, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }
 
     private boolean isEmbeddingRequest(HttpServletRequest request) {
         return "POST".equalsIgnoreCase(request.getMethod()) && "/v1/embeddings".equals(request.getRequestURI());
-    }
-
-    private void writeOpenAiError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
-        writeJson(response, status, Map.of(
-                "error", Map.of(
-                        "message", message == null ? status.getReasonPhrase() : message,
-                        "type", "invalid_request_error",
-                        "param", "",
-                        "code", status.value()
-                )
-        ));
     }
 
     private void writeJson(HttpServletResponse response, HttpStatus status, Object body) throws IOException {

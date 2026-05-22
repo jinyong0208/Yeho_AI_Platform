@@ -24,6 +24,7 @@ The platform manages capabilities, not customer knowledge data:
 
 - OpenAI-compatible `POST /v1/chat/completions`.
 - OpenAI-compatible `GET /v1/models`.
+- Shared OpenAI-compatible error response writer for `/v1/**` gateway errors.
 - Provider adapter abstraction.
 - OpenAI, DeepSeek, and Qwen adapter baseline.
 - Model router by `model_code`.
@@ -74,7 +75,7 @@ The platform manages capabilities, not customer knowledge data:
 - Provider connection test should be verified against real DeepSeek, Qwen, and OpenAI-compatible endpoints.
 - API key lifecycle should be wired into the console UI with confirmation dialogs.
 - Rate limit concurrency and TPM behavior needs automated integration tests.
-- OpenAI-compatible error body consistency should be reviewed across chat and embeddings.
+- OpenAI-compatible error body consistency should receive regression tests across chat, embeddings, and models.
 
 ### P1 Hardening
 
