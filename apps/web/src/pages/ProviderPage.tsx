@@ -30,6 +30,7 @@ import {
   IconServerCog,
 } from '@tabler/icons-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { rootApiClient } from '../api/client';
 import { gatewayApi } from '../api/gateway';
 
@@ -111,11 +112,11 @@ function lastError(provider: ProviderHealth) {
   return provider.last_test_error_message ?? provider.lastTestErrorMessage;
 }
 
-function formatDate(value?: string | null) {
+function formatDate(value: string | null | undefined, locale: string) {
   if (!value) {
     return '-';
   }
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(locale);
 }
 
 function statusColor(status: string) {
@@ -132,6 +133,7 @@ function statusColor(status: string) {
 }
 
 export default function ProviderPage() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [keyOpened, { open: openKey, close: closeKey }] = useDisclosure(false);
   const [keyProvider, setKeyProvider] = useState<ProviderHealth | null>(null);
@@ -160,7 +162,7 @@ export default function ProviderPage() {
     mutationFn: (values: typeof keyForm.values) =>
       gatewayApi.updateProviderApiKey(String(providerId(keyProvider as ProviderHealth)), values),
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已保存', message: 'Provider API Key 已加密更新。' });
+      notifications.show({ color: 'teal', title: t('providerPage.keySavedTitle'), message: t('providerPage.keySavedMessage') });
       queryClient.invalidateQueries({ queryKey: ['providers'] });
       queryClient.invalidateQueries({ queryKey: ['provider-health'] });
       keyForm.reset();
@@ -186,20 +188,20 @@ export default function ProviderPage() {
             <ThemeIcon variant="light" radius="md" size="lg" color="indigo">
               <IconServerCog size={20} />
             </ThemeIcon>
-            <Title order={2}>Provider Health</Title>
+            <Title order={2}>{t('providerPage.title')}</Title>
           </Group>
           <Text c="dimmed" size="sm">
-            Manage model supplier connectivity without exposing provider keys or customer prompts.
+            {t('providerPage.description')}
           </Text>
         </Stack>
-        <Tooltip label="Refresh provider health">
+        <Tooltip label={t('providerPage.refreshTooltip')}>
           <Button
             variant="light"
             leftSection={<IconRefresh size={16} />}
             onClick={() => healthQuery.refetch()}
             loading={healthQuery.isFetching}
           >
-            Refresh
+            {t('providerPage.refresh')}
           </Button>
         </Tooltip>
       </Group>
@@ -208,7 +210,7 @@ export default function ProviderPage() {
         <Card withBorder radius="md" padding="lg">
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              Providers
+              {t('providerPage.providers')}
             </Text>
             <IconActivityHeartbeat size={18} />
           </Group>
@@ -219,7 +221,7 @@ export default function ProviderPage() {
         <Card withBorder radius="md" padding="lg">
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              Healthy
+              {t('providerPage.healthy')}
             </Text>
             <IconCircleCheck size={18} />
           </Group>
@@ -230,7 +232,7 @@ export default function ProviderPage() {
         <Card withBorder radius="md" padding="lg">
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              Need Attention
+              {t('providerPage.needAttention')}
             </Text>
             <IconAlertTriangle size={18} />
           </Group>
@@ -272,11 +274,11 @@ export default function ProviderPage() {
                   </Group>
 
                   <Group gap="xs">
-                    <Badge variant="outline">Status {provider.status ?? '-'}</Badge>
+                    <Badge variant="outline">{t('status')} {provider.status ?? '-'}</Badge>
                     <Badge variant="outline">
-                      Failures {provider.consecutive_failures ?? provider.consecutiveFailures ?? 0}
+                      {t('providerPage.failures')} {provider.consecutive_failures ?? provider.consecutiveFailures ?? 0}
                     </Badge>
-                    <Badge variant="outline">Latency {lastLatency(provider) ?? '-'} ms</Badge>
+                    <Badge variant="outline">{t('providerPage.latency')} {lastLatency(provider) ?? '-'} ms</Badge>
                   </Group>
 
                   {lastError(provider) && (
@@ -287,7 +289,7 @@ export default function ProviderPage() {
 
                   <Group justify="space-between">
                     <Text size="xs" c="dimmed">
-                      Last checked {formatDate(provider.last_checked_at ?? provider.lastCheckedAt)}
+                      {t('providerPage.lastChecked')} {formatDate(provider.last_checked_at ?? provider.lastCheckedAt, i18n.language)}
                     </Text>
                     <Group gap="xs">
                       <Button
@@ -295,14 +297,14 @@ export default function ProviderPage() {
                         leftSection={<IconKey size={16} />}
                         onClick={() => openKeyModal(provider)}
                       >
-                        Rotate Key
+                        {t('providerPage.rotateKey')}
                       </Button>
                       <Button
                         leftSection={<IconBolt size={16} />}
                         onClick={() => testMutation.mutate(id)}
                         loading={testMutation.isPending}
                       >
-                        Test
+                        {t('providerPage.test')}
                       </Button>
                     </Group>
                   </Group>
@@ -315,18 +317,18 @@ export default function ProviderPage() {
 
       <Card withBorder radius="md" padding="lg">
         <Group justify="space-between" mb="sm">
-          <Text fw={700}>Recent Test Logs</Text>
+          <Text fw={700}>{t('providerPage.recentTestLogs')}</Text>
           <Badge variant="light">{selectedProvider ? providerCode(selectedProvider) : '-'}</Badge>
         </Group>
         <Table.ScrollContainer minWidth={720}>
           <Table verticalSpacing="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Time</Table.Th>
-                <Table.Th>Result</Table.Th>
-                <Table.Th>Latency</Table.Th>
-                <Table.Th>Request ID</Table.Th>
-                <Table.Th>Error</Table.Th>
+                <Table.Th>{t('providerPage.time')}</Table.Th>
+                <Table.Th>{t('providerPage.result')}</Table.Th>
+                <Table.Th>{t('providerPage.latency')}</Table.Th>
+                <Table.Th>{t('providerPage.requestId')}</Table.Th>
+                <Table.Th>{t('providerPage.error')}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -334,9 +336,9 @@ export default function ProviderPage() {
                 const success = Boolean(log.success);
                 return (
                   <Table.Tr key={log.request_id ?? log.requestId}>
-                    <Table.Td>{formatDate(log.tested_at ?? log.testedAt)}</Table.Td>
+                    <Table.Td>{formatDate(log.tested_at ?? log.testedAt, i18n.language)}</Table.Td>
                     <Table.Td>
-                      <Badge color={success ? 'teal' : 'red'}>{success ? 'success' : 'failed'}</Badge>
+                      <Badge color={success ? 'teal' : 'red'}>{success ? t('common.success') : t('common.failed')}</Badge>
                     </Table.Td>
                     <Table.Td>{log.latency_ms ?? log.latencyMs ?? '-'} ms</Table.Td>
                     <Table.Td>
@@ -358,22 +360,22 @@ export default function ProviderPage() {
           setKeyProvider(null);
           keyForm.reset();
         }}
-        title={`Rotate Provider Key${keyProvider ? ` · ${providerCode(keyProvider)}` : ''}`}
+        title={`${t('providerPage.rotateKey')}${keyProvider ? ` · ${providerCode(keyProvider)}` : ''}`}
         centered
       >
         <form onSubmit={keyForm.onSubmit((values) => rotateKeyMutation.mutate(values))}>
           <Stack>
             <Text size="sm" c="dimmed">
-              Provider API Key will be encrypted at rest and never returned by the console API.
+              {t('providerPage.keySecurityNote')}
             </Text>
             <PasswordInput
-              label="Provider API Key"
+              label={t('providerPage.providerApiKey')}
               required
               autoComplete="off"
               {...keyForm.getInputProps('apiKey')}
             />
             <Button color="dark" type="submit" loading={rotateKeyMutation.isPending} disabled={!keyProvider}>
-              Save encrypted key
+              {t('providerPage.saveEncryptedKey')}
             </Button>
           </Stack>
         </form>

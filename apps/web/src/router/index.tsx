@@ -65,6 +65,7 @@ const AgentDebugPage = lazy(() => import('../pages/AgentDebugPage'));
 const PromptTemplatePage = lazy(() => import('../pages/PromptTemplatePage'));
 const AgentConfigPage = lazy(() => import('../pages/AgentConfigPage'));
 const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
+const RateLimitPage = lazy(() => import('../pages/RateLimitPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 
 type NavItem = {
@@ -399,7 +400,7 @@ export const router = createBrowserRouter([
       { path: 'agent-execute-logs', element: secured('/agent-execute-logs', <AgentExecuteLogPage />) },
       { path: 'agent-debug', element: secured('/agent-debug', <AgentDebugPage />) },
       { path: 'workflow', element: secured('/workflow', <PlaceholderPage kind="workflow" />) },
-      { path: 'rate-limits', element: secured('/rate-limits', <PlaceholderPage kind="rateLimits" />) },
+      { path: 'rate-limits', element: secured('/rate-limits', <RateLimitPage />) },
       { path: 'playground', element: secured('/playground', <PlaceholderPage kind="playground" />) },
       { path: 'api-docs', element: secured('/api-docs', <PlaceholderPage kind="apiDocs" />) },
     ],

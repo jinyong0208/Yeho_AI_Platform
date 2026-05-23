@@ -26,8 +26,11 @@ import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconChartHistogram, IconCircleCheck, IconCircleOff, IconGauge, IconKey, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
-import { gatewayApi, type ApiKeyUsageSummary, type TenantApiKeyCreated } from '../api/gateway';
+import { useTranslation } from 'react-i18next';
+import { gatewayApi, type ApiKeyUsageSummary, type TenantApiKeyCreated, type TenantApiKeyResponse } from '../api/gateway';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 
 type TenantLite = {
   id: string;
@@ -46,16 +49,24 @@ const scopeOptions = [
 ];
 
 export default function ApiKeyPage() {
+  const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<TenantApiKeyCreated | null>(null);
-  const [selectedApiKey, setSelectedApiKey] = useState<any>(null);
+  const [selectedApiKey, setSelectedApiKey] = useState<TenantApiKeyResponse | null>(null);
   const [usageSummary, setUsageSummary] = useState<ApiKeyUsageSummary | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const [limitOpened, { open: openLimit, close: closeLimit }] = useDisclosure(false);
   const [usageOpened, { open: openUsage, close: closeUsage }] = useDisclosure(false);
   const queryClient = useQueryClient();
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const tenants = (tenantsQuery.data ?? []) as TenantLite[];
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'api-keys'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('apiKeyPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
   const apiKeysQuery = useQuery({
     queryKey: ['api-keys', selectedTenantId],
     queryFn: () => gatewayApi.apiKeys(selectedTenantId as string),
@@ -81,7 +92,7 @@ export default function ApiKeyPage() {
     mutationFn: (values: { name: string; scopes: string[] }) => gatewayApi.createApiKey(selectedTenantId as string, values),
     onSuccess: (apiKey) => {
       setCreatedKey(apiKey);
-      notifications.show({ color: 'teal', title: '已创建', message: '完整 Key 只展示一次。' });
+      notifications.show({ color: 'teal', title: t('apiKeyPage.createdTitle'), message: t('apiKeyPage.createdMessage') });
       queryClient.invalidateQueries({ queryKey: ['api-keys', selectedTenantId] });
       form.reset();
     },
@@ -93,14 +104,14 @@ export default function ApiKeyPage() {
   const disableMutation = useMutation({
     mutationFn: gatewayApi.disableApiKey,
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已停用', message: 'API Key 已停止网关访问。' });
+      notifications.show({ color: 'teal', title: t('apiKeyPage.disabledTitle'), message: t('apiKeyPage.disabledMessage') });
       queryClient.invalidateQueries({ queryKey: ['api-keys', selectedTenantId] });
     },
   });
   const enableMutation = useMutation({
     mutationFn: gatewayApi.enableApiKey,
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已启用', message: 'API Key 已恢复可用。' });
+      notifications.show({ color: 'teal', title: t('apiKeyPage.enabledTitle'), message: t('apiKeyPage.enabledMessage') });
       queryClient.invalidateQueries({ queryKey: ['api-keys', selectedTenantId] });
     },
   });
@@ -113,16 +124,16 @@ export default function ApiKeyPage() {
   });
   const updateLimitMutation = useMutation({
     mutationFn: (values: typeof limitForm.values) =>
-      gatewayApi.updateApiKeyRateLimit(selectedTenantId as string, selectedApiKey.id, { ...values, status: 'ACTIVE' }),
+      gatewayApi.updateApiKeyRateLimit(selectedTenantId as string, selectedApiKey?.id as string, { ...values, status: 'ACTIVE' }),
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '限流已保存', message: 'API Key 限流配置已更新。' });
+      notifications.show({ color: 'teal', title: t('apiKeyPage.limitSavedTitle'), message: t('apiKeyPage.limitSavedMessage') });
       closeLimit();
       setSelectedApiKey(null);
     },
   });
   const apiKeys = apiKeysQuery.data ?? [];
 
-  const openLimitModal = async (apiKey: any) => {
+  const openLimitModal = async (apiKey: TenantApiKeyResponse) => {
     setSelectedApiKey(apiKey);
     const limit = selectedTenantId ? await gatewayApi.apiKeyRateLimit(selectedTenantId, apiKey.id) : null;
     limitForm.setValues({
@@ -134,34 +145,34 @@ export default function ApiKeyPage() {
     openLimit();
   };
 
-  const openDisableConfirm = (apiKey: any) => {
+  const openDisableConfirm = (apiKey: TenantApiKeyResponse) => {
     modals.openConfirmModal({
-      title: '停用 API Key',
+      title: t('apiKeyPage.disableConfirmTitle'),
       centered: true,
-      children: <Text size="sm">停用后该 Key 将无法继续调用 OpenAI-compatible API。</Text>,
-      labels: { confirm: '停用', cancel: '取消' },
+      children: <Text size="sm">{t('apiKeyPage.disableConfirmBody')}</Text>,
+      labels: { confirm: t('apiKeyPage.disable'), cancel: t('apiKeyPage.cancel') },
       confirmProps: { color: 'red' },
       onConfirm: () => disableMutation.mutate(apiKey.id),
     });
   };
 
-  const openEnableConfirm = (apiKey: any) => {
+  const openEnableConfirm = (apiKey: TenantApiKeyResponse) => {
     modals.openConfirmModal({
-      title: '启用 API Key',
+      title: t('apiKeyPage.enableConfirmTitle'),
       centered: true,
-      children: <Text size="sm">启用后该 Key 会恢复调用能力，过期时间仍会生效。</Text>,
-      labels: { confirm: '启用', cancel: '取消' },
+      children: <Text size="sm">{t('apiKeyPage.enableConfirmBody')}</Text>,
+      labels: { confirm: t('apiKeyPage.enable'), cancel: t('apiKeyPage.cancel') },
       confirmProps: { color: 'teal' },
       onConfirm: () => enableMutation.mutate(apiKey.id),
     });
   };
 
-  const openRevokeConfirm = (apiKey: any) => {
+  const openRevokeConfirm = (apiKey: TenantApiKeyResponse) => {
     modals.openConfirmModal({
-      title: '吊销 API Key',
+      title: t('apiKeyPage.revokeConfirmTitle'),
       centered: true,
-      children: <Text size="sm">吊销不会删除记录，也不会再展示完整 Key。</Text>,
-      labels: { confirm: '吊销', cancel: '取消' },
+      children: <Text size="sm">{t('apiKeyPage.revokeConfirmBody')}</Text>,
+      labels: { confirm: t('apiKeyPage.revoke'), cancel: t('apiKeyPage.cancel') },
       confirmProps: { color: 'red' },
       onConfirm: () => revokeMutation.mutate(apiKey.id),
     });
@@ -173,22 +184,23 @@ export default function ApiKeyPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>API Key 管理</Title>
+          <Title order={2}>{canSelectTenant ? t('apiKeyPage.scopeTitle') : t('apiKeyPage.title')}</Title>
           <Text c="dimmed" maw={680}>
-            为租户签发网关调用 Key。数据库只保存 hash，完整 Key 只在创建时展示一次。
+            {t('apiKeyPage.description')}
           </Text>
         </Stack>
         <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
-          新建 Key
+          {t('apiKeyPage.createKey')}
         </Button>
       </Group>
 
       <Card className="surface-card" p="lg">
         <Select
-          label="租户"
+          label={t('apiKeyPage.tenant')}
           maw={360}
           value={selectedTenantId}
           onChange={setSelectedTenantId}
+          disabled={!canSelectTenant}
           data={tenants.map((tenant) => ({
             value: tenant.id,
             label: `${tenant.tenantName} · ${tenant.tenantCode}`,
@@ -199,10 +211,10 @@ export default function ApiKeyPage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Tenant API Keys
+            {t('apiKeyPage.listTitle')}
           </Text>
           <Badge color="gray" variant="light" radius="sm">
-            {apiKeys.length} total
+            {t('apiKeyPage.total', { count: apiKeys.length })}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -220,7 +232,7 @@ export default function ApiKeyPage() {
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
-                    {apiKey.apiKeyPrefix} · last used {apiKey.lastUsedAt || 'never'}
+                    {apiKey.apiKeyPrefix} · {t('apiKeyPage.lastUsed')} {apiKey.lastUsedAt || t('apiKeyPage.never')}
                   </Text>
                   <Group gap={4} mt={4}>
                     {(apiKey.scopes ?? []).map((scope: string) => (
@@ -232,7 +244,7 @@ export default function ApiKeyPage() {
                 </Box>
               </Group>
               <Group gap="xs" wrap="nowrap">
-                <Tooltip label="用量摘要">
+                <Tooltip label={t('apiKeyPage.usageSummary')}>
                   <ActionIcon
                     variant="subtle"
                     color="gray"
@@ -246,7 +258,7 @@ export default function ApiKeyPage() {
                     <IconChartHistogram size={16} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label="限流配置">
+                <Tooltip label={t('apiKeyPage.rateLimit')}>
                   <ActionIcon
                     variant="subtle"
                     color="blue"
@@ -257,7 +269,7 @@ export default function ApiKeyPage() {
                   </ActionIcon>
                 </Tooltip>
                 {apiKey.status === 'ACTIVE' ? (
-                  <Tooltip label="停用">
+                  <Tooltip label={t('apiKeyPage.disable')}>
                     <ActionIcon
                       variant="subtle"
                       color="orange"
@@ -269,7 +281,7 @@ export default function ApiKeyPage() {
                     </ActionIcon>
                   </Tooltip>
                 ) : (
-                  <Tooltip label="启用">
+                  <Tooltip label={t('apiKeyPage.enable')}>
                     <ActionIcon
                       variant="subtle"
                       color="teal"
@@ -281,7 +293,7 @@ export default function ApiKeyPage() {
                     </ActionIcon>
                   </Tooltip>
                 )}
-                <Tooltip label="吊销">
+                <Tooltip label={t('apiKeyPage.revoke')}>
                   <ActionIcon
                     variant="subtle"
                     color="red"
@@ -304,23 +316,23 @@ export default function ApiKeyPage() {
           close();
           setCreatedKey(null);
         }}
-        title="新建 API Key"
+        title={t('apiKeyPage.createTitle')}
         centered
       >
         <Stack>
           <form onSubmit={form.onSubmit((values) => createMutation.mutate(values))}>
             <Stack>
-              <TextInput label="名称" required {...form.getInputProps('name')} />
-              <MultiSelect label="Scopes" data={scopeOptions} required {...form.getInputProps('scopes')} />
+              <TextInput label={t('name')} required {...form.getInputProps('name')} />
+              <MultiSelect label={t('apiKeyPage.scopes')} data={scopeOptions} required {...form.getInputProps('scopes')} />
               <Button color="dark" type="submit" loading={createMutation.isPending}>
-                创建
+                {t('create')}
               </Button>
             </Stack>
           </form>
           {createdKey && (
             <Card p="sm" radius="sm" withBorder>
               <Text size="xs" c="dimmed" mb={6}>
-                完整 Key
+                {t('apiKeyPage.fullKey')}
               </Text>
               <Code block>{createdKey.apiKey}</Code>
             </Card>
@@ -334,17 +346,17 @@ export default function ApiKeyPage() {
           closeLimit();
           setSelectedApiKey(null);
         }}
-        title={`API Key 限流${selectedApiKey ? ` · ${selectedApiKey.name}` : ''}`}
+        title={`${t('apiKeyPage.limitTitle')}${selectedApiKey ? ` · ${selectedApiKey.name}` : ''}`}
         centered
       >
         <form onSubmit={limitForm.onSubmit((values) => updateLimitMutation.mutate(values))}>
           <Stack>
-            <NumberInput label="RPM 每分钟请求数" min={0} {...limitForm.getInputProps('rpmLimit')} />
-            <NumberInput label="TPM 每分钟 Token" min={0} {...limitForm.getInputProps('tpmLimit')} />
-            <NumberInput label="Daily Credits 每日额度" min={0} {...limitForm.getInputProps('dailyCreditsLimit')} />
-            <NumberInput label="Max Concurrent 最大并发" min={0} {...limitForm.getInputProps('maxConcurrent')} />
+            <NumberInput label={t('rateLimitPage.fields.rpmLimit')} min={0} {...limitForm.getInputProps('rpmLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.tpmLimit')} min={0} {...limitForm.getInputProps('tpmLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.dailyCreditsLimit')} min={0} {...limitForm.getInputProps('dailyCreditsLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.maxConcurrent')} min={0} {...limitForm.getInputProps('maxConcurrent')} />
             <Button color="dark" type="submit" loading={updateLimitMutation.isPending} disabled={!selectedApiKey}>
-              保存限流
+              {t('apiKeyPage.saveRateLimit')}
             </Button>
           </Stack>
         </form>
@@ -357,7 +369,7 @@ export default function ApiKeyPage() {
           setUsageSummary(null);
           setSelectedApiKey(null);
         }}
-        title={`API Key 用量${usageSummary?.apiKey?.name ? ` · ${usageSummary.apiKey.name}` : ''}`}
+        title={`${t('apiKeyPage.usageTitle')}${usageSummary?.apiKey?.name ? ` · ${usageSummary.apiKey.name}` : ''}`}
         centered
         size="lg"
       >
@@ -367,19 +379,19 @@ export default function ApiKeyPage() {
           )}
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             <Card p="sm" radius="sm" withBorder>
-              <Text size="xs" c="dimmed">Requests</Text>
+              <Text size="xs" c="dimmed">{t('common.requests')}</Text>
               <Text fw={750}>{readSummaryNumber('request_count').toLocaleString()}</Text>
             </Card>
             <Card p="sm" radius="sm" withBorder>
-              <Text size="xs" c="dimmed">Tokens</Text>
+              <Text size="xs" c="dimmed">{t('common.tokens')}</Text>
               <Text fw={750}>{readSummaryNumber('total_tokens').toLocaleString()}</Text>
             </Card>
             <Card p="sm" radius="sm" withBorder>
-              <Text size="xs" c="dimmed">Credits</Text>
+              <Text size="xs" c="dimmed">{t('common.credits')}</Text>
               <Text fw={750}>{readSummaryNumber('charge_credits').toLocaleString()}</Text>
             </Card>
             <Card p="sm" radius="sm" withBorder>
-              <Text size="xs" c="dimmed">Failures</Text>
+              <Text size="xs" c="dimmed">{t('apiKeyPage.failures')}</Text>
               <Text fw={750}>{readSummaryNumber('failure_count').toLocaleString()}</Text>
             </Card>
           </SimpleGrid>
@@ -388,15 +400,15 @@ export default function ApiKeyPage() {
               <Group key={String(row.day)} className="list-row" p="sm" justify="space-between">
                 <Text size="sm" fw={650}>{String(row.day)}</Text>
                 <Group gap="xs">
-                  <Badge color="gray" variant="light">req {String(row.request_count ?? 0)}</Badge>
-                  <Badge color="gray" variant="light">tok {String(row.total_tokens ?? 0)}</Badge>
-                  <Badge color="gray" variant="light">credits {String(row.charge_credits ?? 0)}</Badge>
+                  <Badge color="gray" variant="light">{t('common.requestAbbr')} {String(row.request_count ?? 0)}</Badge>
+                  <Badge color="gray" variant="light">{t('common.tokenAbbr')} {String(row.total_tokens ?? 0)}</Badge>
+                  <Badge color="gray" variant="light">{t('common.credits')} {String(row.charge_credits ?? 0)}</Badge>
                 </Group>
               </Group>
             ))}
             {(usageSummary?.daily ?? []).length === 0 && (
               <Box p="lg" ta="center">
-                <Text c="dimmed">近 30 天暂无调用。</Text>
+                <Text c="dimmed">{t('apiKeyPage.emptyUsage')}</Text>
               </Box>
             )}
           </Stack>
