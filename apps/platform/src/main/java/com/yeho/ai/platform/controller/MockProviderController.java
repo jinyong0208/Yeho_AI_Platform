@@ -23,11 +23,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/mock-provider/v1")
 @RequiredArgsConstructor
 public class MockProviderController {
+    private static final Pattern DELAY_MARKER = Pattern.compile("\\[mock-delay-ms=(\\d{1,5})]");
+
     private final ObjectMapper objectMapper;
 
     @PostMapping("/chat/completions")
@@ -35,6 +39,7 @@ public class MockProviderController {
         @RequestBody ChatCompletionRequest request,
         HttpServletResponse response
     ) {
+        sleepIfRequested(request);
         if (Boolean.TRUE.equals(request.getStream())) {
             response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
             response.setHeader("Cache-Control", "no-cache");
@@ -167,6 +172,24 @@ public class MockProviderController {
             .map(ChatMessage::getContent)
             .orElse(request.getMessages().get(request.getMessages().size() - 1).getContent());
         return "Mock response for " + request.getModel() + ": " + truncate(lastUserMessage, 120);
+    }
+
+    private void sleepIfRequested(ChatCompletionRequest request) {
+        String content = request.getMessages() == null ? "" : request.getMessages().stream()
+            .map(ChatMessage::getContent)
+            .filter(value -> value != null && !value.isBlank())
+            .reduce((first, second) -> second)
+            .orElse("");
+        Matcher matcher = DELAY_MARKER.matcher(content);
+        if (!matcher.find()) {
+            return;
+        }
+        long delayMs = Math.min(Long.parseLong(matcher.group(1)), 10_000L);
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private int estimatePromptTokens(ChatCompletionRequest request) {

@@ -35,6 +35,7 @@ The broader Compose smoke tests remain:
 .\scripts\smoke-all.ps1
 .\scripts\smoke-mvp-closeout.ps1
 .\scripts\smoke-gateway-integration.ps1
+.\scripts\smoke-rate-limit-hardening.ps1
 .\scripts\regression-openai-errors.ps1
 ```
 
@@ -46,6 +47,11 @@ The broader Compose smoke tests remain:
 - `/v1/embeddings` rejects keys without `embedding:create`.
 - `/v1/embeddings` success path records usage with the caller `X-Request-Id`.
 - API-key RPM limit returns OpenAI-compatible `429 rate_limit_rpm_exceeded`.
+
+`smoke-rate-limit-hardening.ps1` adds endpoint-level checks for:
+
+- TPM rejection with `rate_limit_tpm_exceeded`.
+- Max-concurrency rejection with `rate_limit_concurrent_exceeded`.
 
 `regression-openai-errors.ps1` checks OpenAI-compatible error envelopes and `X-Request-Id` for:
 

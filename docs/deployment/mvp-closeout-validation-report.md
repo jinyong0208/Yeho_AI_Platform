@@ -27,6 +27,8 @@ The MVP closeout validation passed for:
 - OpenAI-compatible error regression.
 - Real DeepSeek provider probe and gateway chat.
 - Real Qwen provider probe and gateway chat.
+- Real Qwen embedding gateway call.
+- Endpoint-level TPM and max-concurrency rate-limit rejection.
 
 ## Commands Verified
 
@@ -62,6 +64,8 @@ Smoke tests:
 .\scripts\smoke-gateway-integration.ps1
 .\scripts\smoke-mvp-closeout.ps1
 .\scripts\regression-openai-errors.ps1
+.\scripts\qwen-embedding-e2e.ps1
+.\scripts\smoke-rate-limit-hardening.ps1
 docker compose config --quiet
 ```
 
@@ -91,6 +95,29 @@ Qwen:
 
 For both providers, wallet logs contained the expected `RESERVE`, `RELEASE`, and `SETTLE` records tied to the gateway request id, and usage logs recorded tenant, API key, provider, model, token usage, charge credits, real cost, profit, and price version data.
 
+Qwen Embedding:
+
+- Provider: `QWEN`
+- Model: `text-embedding-v4`
+- Gateway embedding request id: `qwen-embedding-e2e-1779514862236`
+- HTTP status: `200`
+- Vector dimensions: `1024`
+- Token usage: prompt `26`, total `26`
+- Usage log recorded: `true`
+
+The embedding validation returned the vector directly to the caller and did not persist customer documents, chunks, or vectors in Yeho AI Platform.
+
+Rate Limit Hardening:
+
+- TPM request id: `rate-hardening-tpm-1779514678366`
+- TPM status: `429`
+- TPM error code: `rate_limit_tpm_exceeded`
+- Concurrent first request id: `rate-hardening-concurrent-first-1779514678366`
+- Concurrent first status: `200`
+- Concurrent second request id: `rate-hardening-concurrent-second-1779514678366`
+- Concurrent second status: `429`
+- Concurrent error code: `rate_limit_concurrent_exceeded`
+
 ## Security And Secret Handling
 
 - The temporary local helper file `C:\tmp\yeho-provider-secrets.ps1` contains plaintext provider keys and should be deleted after validation.
@@ -100,9 +127,7 @@ For both providers, wallet logs contained the expected `RESERVE`, `RELEASE`, and
 
 ## Still Pending
 
-- Real Qwen embedding end-to-end validation.
 - Endpoint-level provider timeout/retry/circuit-breaker integration tests.
-- TPM and max-concurrency endpoint-level integration tests.
 - Final console polish for provider resilience configuration.
 - Broader manual browser QA for the console pages.
 - Production deployment checklist for backup, restore, log retention, and monitoring thresholds.

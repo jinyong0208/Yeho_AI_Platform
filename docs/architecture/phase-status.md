@@ -83,12 +83,15 @@ The platform manages capabilities, not customer knowledge data:
 - Lightweight finance reconciliation exports for recharge orders and wallet ledger rows.
 - Backend regression tests for API key scopes, tenant isolation rules, OpenAI-compatible error envelope, and wallet credit accounting.
 - Rate limit service regression tests for Redis counter rollback, audit logging, and daily/concurrent release behavior.
+- Endpoint-level rate-limit smoke coverage for TPM and max concurrent limits.
 - Provider circuit breaker regression tests for retry, cooldown rejection, failure threshold opening, and success recovery.
 - Gateway fallback regression test verifies actual fallback provider/model are used for response, usage log, and billing.
 - OpenAI-compatible endpoint filter tests for chat preflight errors, model listing, and embedding responses.
 - Gateway integration smoke script for chat success, wallet deduction, usage/request_id trace, embedding scope/usage, and rate-limit 429.
+- Rate-limit hardening smoke script for endpoint-level TPM and max-concurrency rejection.
 - OpenAI-compatible gateway error regression script for models, chat completions, embeddings, invalid keys, and scope denial.
 - Provider E2E script for DeepSeek/Qwen/OpenAI-compatible probe and optional gateway chat verification without printing provider secrets.
+- Qwen embedding E2E script for real `/v1/embeddings` validation without printing provider secrets or embedding vectors.
 - MVP closeout validation report with provider request ids, smoke command matrix, remaining hardening items, and secret cleanup notes.
 
 ### Embeddings And EDMS Integration
@@ -97,6 +100,7 @@ The platform manages capabilities, not customer knowledge data:
 - Qwen embedding route preview.
 - `embedding:create` API key scope.
 - Embedding usage failure logging with request scope.
+- Real Qwen embedding end-to-end validation through `/v1/embeddings`, including request id echo, vector response, and usage log.
 - EDMS RAG protocol document.
 - No centralized vector store, document chunk storage, or document storage in Yeho AI Platform.
 
@@ -104,11 +108,9 @@ The platform manages capabilities, not customer knowledge data:
 
 ### P0 Hardening
 
-- End-to-end success smoke test with a real Qwen embedding provider key.
 - Provider resilience behavior has service-level retry/circuit/fallback coverage; endpoint-level resilience tests are still pending.
 - Provider base URL and resilience configuration need final console polish.
 - Recharge-order reconciliation exports are lightweight MVP files; formal finance reconciliation workflow remains future work.
-- Rate limit RPM behavior has service-level and black-box integration coverage; TPM/concurrency endpoint integration tests are still pending.
 - OpenAI-compatible error body consistency now has script-level, endpoint filter-level, and gateway integration checks; full controller integration tests are still pending.
 - Production rollout still needs backup, restore, log retention, monitoring threshold, and manual browser QA checklists.
 
@@ -126,8 +128,7 @@ The platform manages capabilities, not customer knowledge data:
 
 ## Next Recommended Work
 
-1. Run real Qwen embedding validation and keep it within the no-centralized-vector-storage boundary.
-2. Add full controller integration tests for TPM/concurrency limits and advanced `/v1/**` edge cases.
-3. Add endpoint-level provider health and circuit breaker state regression tests.
-4. Add provider base URL/resilience configuration UX and formal finance reconciliation workflow.
-5. Finish production rollout checklists for backup, restore, log retention, monitoring thresholds, and manual console QA.
+1. Add full controller integration tests for TPM/concurrency limits and advanced `/v1/**` edge cases.
+2. Add endpoint-level provider health and circuit breaker state regression tests.
+3. Add provider base URL/resilience configuration UX and formal finance reconciliation workflow.
+4. Finish production rollout checklists for backup, restore, log retention, monitoring thresholds, and manual console QA.

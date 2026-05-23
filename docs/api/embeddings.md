@@ -64,6 +64,7 @@ Configuration:
 - Configure Qwen Provider base URL in `ai_provider.base_url`.
 - Configure Provider API Key through the Provider API Key management endpoint.
 - Use model code `text-embedding-v4` or another active model mapped to Provider `QWEN`.
+- Run `scripts/qwen-embedding-e2e.ps1` for real provider validation.
 
 ## Boundary
 
