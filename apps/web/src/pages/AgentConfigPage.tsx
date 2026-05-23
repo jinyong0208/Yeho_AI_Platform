@@ -4,22 +4,51 @@ import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconPlus } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { gatewayApi } from '../api/gateway';
 import { orchestrationApi, type AgentConfig } from '../api/orchestration';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
+
+type TenantLite = {
+  id: string;
+  tenantCode: string;
+  tenantName: string;
+};
 
 export function AgentConfigPage() {
+  const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
   const queryClient = useQueryClient();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [editing, setEditing] = useState<AgentConfig | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
 
-  const tenants = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const models = useQuery({ queryKey: ['models'], queryFn: gatewayApi.models });
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'agent-configs'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
+  const tenantOptions = tenants.map((tenant) => ({ value: String(tenant.id), label: `${tenant.tenantName} / ${tenant.tenantCode}` }));
+  const selectedTenantNumber = tenantId ? Number(tenantId) : undefined;
+  const hasTenantScope = canSelectTenant || Number.isFinite(selectedTenantNumber);
+
+  useEffect(() => {
+    if (!tenantId && tenants.length > 0) {
+      setTenantId(tenants[0].id);
+    }
+  }, [tenantId, tenants]);
+
+  const models = useQuery({ queryKey: ['models', 'agent-configs'], queryFn: gatewayApi.models });
   const configs = useQuery({
     queryKey: ['agent-configs', tenantId],
-    queryFn: () => orchestrationApi.agentConfigs(tenantId ? Number(tenantId) : undefined),
+    queryFn: () => orchestrationApi.agentConfigs(selectedTenantNumber),
+    enabled: hasTenantScope,
   });
 
   const form = useForm({
@@ -34,6 +63,12 @@ export function AgentConfigPage() {
       maxTokens: 2048,
       status: 'ACTIVE',
     },
+    validate: {
+      tenantId: (value) => (value ? null : t('agentConfigPage.required')),
+      agentCode: (value) => (value.trim() ? null : t('agentConfigPage.required')),
+      agentName: (value) => (value.trim() ? null : t('agentConfigPage.required')),
+      defaultModel: (value) => (value ? null : t('agentConfigPage.required')),
+    },
   });
 
   const saveMutation = useMutation({
@@ -42,7 +77,11 @@ export function AgentConfigPage() {
       return editing ? orchestrationApi.updateAgentConfig(editing.id, payload) : orchestrationApi.createAgentConfig(payload);
     },
     onSuccess: () => {
-      notifications.show({ color: 'green', title: '已保存', message: 'Agent 配置已更新。' });
+      notifications.show({
+        color: 'green',
+        title: t('agentConfigPage.savedTitle'),
+        message: t('agentConfigPage.savedMessage'),
+      });
       close();
       setEditing(null);
       queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
@@ -51,8 +90,25 @@ export function AgentConfigPage() {
 
   const disableMutation = useMutation({
     mutationFn: orchestrationApi.disableAgentConfig,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agent-configs'] }),
+    onSuccess: () => {
+      notifications.show({
+        color: 'gray',
+        title: t('agentConfigPage.disabledTitle'),
+        message: t('agentConfigPage.disabledMessage'),
+      });
+      queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
+    },
   });
+
+  const modelOptions = (models.data ?? []).map((model) => ({
+    value: model.modelCode,
+    label: `${model.displayName || model.modelCode} / ${model.modelCode}`,
+  }));
+  const statusOptions = [
+    { value: 'ACTIVE', label: t('agentConfigPage.status.ACTIVE') },
+    { value: 'DISABLED', label: t('agentConfigPage.status.DISABLED') },
+  ];
+  const formatStatus = (status: string) => t(`agentConfigPage.status.${status}`, { defaultValue: status });
 
   const openEditor = (config?: AgentConfig) => {
     setEditing(config ?? null);
@@ -72,36 +128,39 @@ export function AgentConfigPage() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between">
+      <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>Agent Config</Title>
-          <Text c="dimmed">维护 Agent 基础配置，不启用多 Agent 自治或复杂 Workflow Runtime。</Text>
+          <Title order={2}>{t('agentConfigPage.title')}</Title>
+          <Text c="dimmed" maw={720}>
+            {t('agentConfigPage.description')}
+          </Text>
         </Stack>
         <Group>
           <Select
-            placeholder="Tenant"
-            data={(tenants.data ?? []).map((tenant) => ({ value: String(tenant.id), label: tenant.tenantName }))}
+            placeholder={t('agentConfigPage.tenant')}
+            data={tenantOptions}
             value={tenantId}
             onChange={setTenantId}
             clearable
+            disabled={!canSelectTenant}
           />
-          <Button leftSection={<IconPlus size={16} />} onClick={() => openEditor()}>
-            新建 Agent
+          <Button color="dark" leftSection={<IconPlus size={16} />} disabled={!tenantId} onClick={() => openEditor()}>
+            {t('agentConfigPage.createAgent')}
           </Button>
         </Group>
       </Group>
 
-      <Card p="lg">
+      <Card className="surface-card" p="lg">
         <Table.ScrollContainer minWidth={900}>
           <Table verticalSpacing="sm">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Code</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Model</Table.Th>
-                <Table.Th>Temperature</Table.Th>
-                <Table.Th>Max Tokens</Table.Th>
-                <Table.Th>Status</Table.Th>
+                <Table.Th>{t('code')}</Table.Th>
+                <Table.Th>{t('name')}</Table.Th>
+                <Table.Th>{t('agentConfigPage.defaultModel')}</Table.Th>
+                <Table.Th>{t('agentConfigPage.temperature')}</Table.Th>
+                <Table.Th>{t('agentConfigPage.maxTokens')}</Table.Th>
+                <Table.Th>{t('status')}</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -117,49 +176,65 @@ export function AgentConfigPage() {
                   <Table.Td>{config.maxTokens}</Table.Td>
                   <Table.Td>
                     <Badge variant="light" color={config.status === 'ACTIVE' ? 'green' : 'gray'}>
-                      {config.status}
+                      {formatStatus(config.status)}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
                     <Group justify="flex-end">
                       <Button size="xs" variant="light" onClick={() => openEditor(config)}>
-                        编辑
+                        {t('agentConfigPage.edit')}
                       </Button>
                       <Button size="xs" color="red" variant="subtle" onClick={() => disableMutation.mutate(config.id)}>
-                        禁用
+                        {t('agentConfigPage.disable')}
                       </Button>
                     </Group>
                   </Table.Td>
                 </Table.Tr>
               ))}
+              {(configs.data ?? []).length === 0 && (
+                <Table.Tr>
+                  <Table.Td colSpan={7}>
+                    <Text c="dimmed" ta="center" py="xl">
+                      {t('agentConfigPage.empty')}
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              )}
             </Table.Tbody>
           </Table>
         </Table.ScrollContainer>
       </Card>
 
-      <Modal opened={opened} onClose={close} title={editing ? '编辑 Agent' : '新建 Agent'} size="lg">
+      <Modal opened={opened} onClose={close} title={editing ? t('agentConfigPage.editAgent') : t('agentConfigPage.newAgent')} size="lg">
         <form onSubmit={form.onSubmit((values) => saveMutation.mutate(values))}>
           <Stack>
             <Select
-              label="Tenant"
-              data={(tenants.data ?? []).map((tenant) => ({ value: String(tenant.id), label: tenant.tenantName }))}
+              label={t('agentConfigPage.tenant')}
+              data={tenantOptions}
+              disabled={!canSelectTenant}
+              required
               {...form.getInputProps('tenantId')}
             />
-            <TextInput label="Code" {...form.getInputProps('agentCode')} />
-            <TextInput label="Name" {...form.getInputProps('agentName')} />
-            <TextInput label="Description" {...form.getInputProps('description')} />
+            <TextInput label={t('code')} required {...form.getInputProps('agentCode')} />
+            <TextInput label={t('name')} required {...form.getInputProps('agentName')} />
+            <TextInput label={t('agentConfigPage.descriptionLabel')} {...form.getInputProps('description')} />
             <Select
-              label="Default Model"
-              data={(models.data ?? []).map((model) => ({ value: model.modelCode, label: model.displayName }))}
+              label={t('agentConfigPage.defaultModel')}
+              data={modelOptions}
+              searchable
+              required
               {...form.getInputProps('defaultModel')}
             />
-            <NumberInput label="Temperature" min={0} max={2} step={0.1} {...form.getInputProps('temperature')} />
-            <NumberInput label="Max Tokens" min={1} max={128000} {...form.getInputProps('maxTokens')} />
-            <Select label="Status" data={['ACTIVE', 'DISABLED']} {...form.getInputProps('status')} />
-            <Textarea label="System Prompt" minRows={6} autosize {...form.getInputProps('systemPrompt')} />
+            <NumberInput label={t('agentConfigPage.temperature')} min={0} max={2} step={0.1} {...form.getInputProps('temperature')} />
+            <NumberInput label={t('agentConfigPage.maxTokens')} min={1} max={128000} {...form.getInputProps('maxTokens')} />
+            <Select label={t('status')} data={statusOptions} {...form.getInputProps('status')} />
+            <Textarea label={t('agentConfigPage.systemPrompt')} minRows={6} autosize {...form.getInputProps('systemPrompt')} />
+            <Text size="xs" c="dimmed">
+              {t('agentConfigPage.boundaryNote')}
+            </Text>
             <Group justify="flex-end">
-              <Button type="submit" loading={saveMutation.isPending}>
-                保存
+              <Button color="dark" type="submit" loading={saveMutation.isPending}>
+                {t('save')}
               </Button>
             </Group>
           </Stack>
