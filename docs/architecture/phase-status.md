@@ -77,6 +77,7 @@ The platform manages capabilities, not customer knowledge data:
 - Closeout smoke script for OpenAI-compatible errors, API key lifecycle, tenant isolation, wallet alert query, price version list, and provider health list.
 - Deployment closeout runbook with `.env` guidance and secret handling notes.
 - Real provider end-to-end runbook for DeepSeek and Qwen.
+- Real DeepSeek and Qwen chat end-to-end validation through Provider Adapter, Model Router, wallet billing, usage log, and provider health.
 - Console entry points for API key enable/disable/usage summary, recharge order close/confirm, low-balance alerts, provider health, and model price versions.
 - Provider API key rotation console modal that does not expose stored secrets.
 - Lightweight finance reconciliation exports for recharge orders and wallet ledger rows.
@@ -88,6 +89,7 @@ The platform manages capabilities, not customer knowledge data:
 - Gateway integration smoke script for chat success, wallet deduction, usage/request_id trace, embedding scope/usage, and rate-limit 429.
 - OpenAI-compatible gateway error regression script for models, chat completions, embeddings, invalid keys, and scope denial.
 - Provider E2E script for DeepSeek/Qwen/OpenAI-compatible probe and optional gateway chat verification without printing provider secrets.
+- MVP closeout validation report with provider request ids, smoke command matrix, remaining hardening items, and secret cleanup notes.
 
 ### Embeddings And EDMS Integration
 
@@ -104,11 +106,11 @@ The platform manages capabilities, not customer knowledge data:
 
 - End-to-end success smoke test with a real Qwen embedding provider key.
 - Provider resilience behavior has service-level retry/circuit/fallback coverage; endpoint-level resilience tests are still pending.
-- Provider connection test script is ready; actual real DeepSeek/Qwen success still requires external provider keys.
 - Provider base URL and resilience configuration need final console polish.
 - Recharge-order reconciliation exports are lightweight MVP files; formal finance reconciliation workflow remains future work.
 - Rate limit RPM behavior has service-level and black-box integration coverage; TPM/concurrency endpoint integration tests are still pending.
 - OpenAI-compatible error body consistency now has script-level, endpoint filter-level, and gateway integration checks; full controller integration tests are still pending.
+- Production rollout still needs backup, restore, log retention, monitoring threshold, and manual browser QA checklists.
 
 ### P1 Hardening
 
@@ -124,7 +126,8 @@ The platform manages capabilities, not customer knowledge data:
 
 ## Next Recommended Work
 
-1. Run real DeepSeek and Qwen provider tests with production-like credentials.
+1. Run real Qwen embedding validation and keep it within the no-centralized-vector-storage boundary.
 2. Add full controller integration tests for TPM/concurrency limits and advanced `/v1/**` edge cases.
 3. Add endpoint-level provider health and circuit breaker state regression tests.
 4. Add provider base URL/resilience configuration UX and formal finance reconciliation workflow.
+5. Finish production rollout checklists for backup, restore, log retention, monitoring thresholds, and manual console QA.

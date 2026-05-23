@@ -4,6 +4,8 @@ This runbook is for the current MVP boundary: AI Gateway, Billing, Audit, API Ke
 
 It does not deploy centralized RAG, document storage, document chunks, vector indexes, OnlyOffice, or Kubernetes.
 
+The latest closeout validation evidence is recorded in [MVP Closeout Validation Report](mvp-closeout-validation-report.md).
+
 ## Architecture Boundary
 
 - EDMS owns documents, chunks, vector indexes, RAG retrieval, and permission filtering.
