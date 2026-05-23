@@ -8,11 +8,14 @@ import {
   Group,
   Loader,
   Modal,
+  NumberInput,
   PasswordInput,
+  Select,
   SimpleGrid,
   Stack,
   Table,
   Text,
+  TextInput,
   ThemeIcon,
   Title,
   Tooltip,
@@ -28,11 +31,12 @@ import {
   IconKey,
   IconRefresh,
   IconServerCog,
+  IconSettings,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { rootApiClient } from '../api/client';
-import { gatewayApi } from '../api/gateway';
+import { gatewayApi, type ProviderResponse } from '../api/gateway';
 
 type ProviderHealth = {
   provider_id?: number;
@@ -136,12 +140,32 @@ export default function ProviderPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [keyOpened, { open: openKey, close: closeKey }] = useDisclosure(false);
+  const [configOpened, { open: openConfig, close: closeConfig }] = useDisclosure(false);
   const [keyProvider, setKeyProvider] = useState<ProviderHealth | null>(null);
+  const [configProvider, setConfigProvider] = useState<ProviderResponse | null>(null);
   const keyForm = useForm({ initialValues: { apiKey: '' } });
+  const configForm = useForm({
+    initialValues: {
+      providerName: '',
+      baseUrl: '',
+      status: 'ACTIVE',
+      timeoutMs: 120000,
+      retryCount: 0,
+      circuitFailureThreshold: 5,
+      circuitCooldownSeconds: 60,
+      fallbackModelCode: '',
+    },
+    validate: {
+      providerName: (value) => (value.trim() ? null : t('providerPage.required')),
+      baseUrl: (value) => (value.trim() ? null : t('providerPage.required')),
+    },
+  });
   const healthQuery = useQuery({
     queryKey: ['provider-health'],
     queryFn: () => requestJson<ProviderHealth[]>('/api/providers/health'),
   });
+  const providerConfigQuery = useQuery({ queryKey: ['providers'], queryFn: gatewayApi.providers });
+  const modelQuery = useQuery({ queryKey: ['models', 'provider-config'], queryFn: gatewayApi.models });
 
   const providers = healthQuery.data ?? [];
   const selectedProvider = providers[0];
@@ -156,6 +180,26 @@ export default function ProviderPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-health'] });
       queryClient.invalidateQueries({ queryKey: ['provider-test-logs'] });
+    },
+  });
+  const updateProviderMutation = useMutation({
+    mutationFn: (values: typeof configForm.values) =>
+      gatewayApi.updateProvider(String(configProvider?.id), {
+        providerName: values.providerName,
+        baseUrl: values.baseUrl,
+        status: values.status,
+        timeoutMs: values.timeoutMs,
+        retryCount: values.retryCount,
+        circuitFailureThreshold: values.circuitFailureThreshold,
+        circuitCooldownSeconds: values.circuitCooldownSeconds,
+        fallbackModelCode: values.fallbackModelCode || null,
+      }),
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: t('providerPage.configSavedTitle'), message: t('providerPage.configSavedMessage') });
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+      queryClient.invalidateQueries({ queryKey: ['provider-health'] });
+      setConfigProvider(null);
+      closeConfig();
     },
   });
   const rotateKeyMutation = useMutation({
@@ -179,6 +223,29 @@ export default function ProviderPage() {
     keyForm.reset();
     openKey();
   };
+
+  const openConfigModal = (provider: ProviderHealth) => {
+    const id = String(providerId(provider));
+    const config = (providerConfigQuery.data ?? []).find((item) => String(item.id) === id);
+    if (!config) {
+      return;
+    }
+    setConfigProvider(config);
+    configForm.setValues({
+      providerName: config.providerName,
+      baseUrl: config.baseUrl,
+      status: config.status,
+      timeoutMs: config.timeoutMs ?? 120000,
+      retryCount: config.retryCount ?? 0,
+      circuitFailureThreshold: config.circuitFailureThreshold ?? 5,
+      circuitCooldownSeconds: config.circuitCooldownSeconds ?? 60,
+      fallbackModelCode: config.fallbackModelCode ?? '',
+    });
+    openConfig();
+  };
+
+  const configFor = (provider: ProviderHealth) =>
+    (providerConfigQuery.data ?? []).find((item) => String(item.id) === String(providerId(provider)));
 
   return (
     <Stack gap="lg">
@@ -257,6 +324,7 @@ export default function ProviderPage() {
           {providers.map((provider) => {
             const id = providerId(provider);
             const currentHealth = healthStatus(provider);
+            const config = configFor(provider);
             return (
               <Card key={id} withBorder radius="md" padding="lg">
                 <Stack gap="md">
@@ -279,6 +347,9 @@ export default function ProviderPage() {
                       {t('providerPage.failures')} {provider.consecutive_failures ?? provider.consecutiveFailures ?? 0}
                     </Badge>
                     <Badge variant="outline">{t('providerPage.latency')} {lastLatency(provider) ?? '-'} ms</Badge>
+                    <Badge variant="outline">{t('providerPage.timeout')} {config?.timeoutMs ?? '-'} ms</Badge>
+                    <Badge variant="outline">{t('providerPage.retry')} {config?.retryCount ?? '-'}</Badge>
+                    {config?.fallbackModelCode && <Badge variant="outline">{t('providerPage.fallback')} {config.fallbackModelCode}</Badge>}
                   </Group>
 
                   {lastError(provider) && (
@@ -292,6 +363,15 @@ export default function ProviderPage() {
                       {t('providerPage.lastChecked')} {formatDate(provider.last_checked_at ?? provider.lastCheckedAt, i18n.language)}
                     </Text>
                     <Group gap="xs">
+                      <Button
+                        variant="light"
+                        color="gray"
+                        leftSection={<IconSettings size={16} />}
+                        onClick={() => openConfigModal(provider)}
+                        disabled={providerConfigQuery.isLoading}
+                      >
+                        {t('providerPage.configure')}
+                      </Button>
                       <Button
                         variant="light"
                         leftSection={<IconKey size={16} />}
@@ -360,7 +440,7 @@ export default function ProviderPage() {
           setKeyProvider(null);
           keyForm.reset();
         }}
-        title={`${t('providerPage.rotateKey')}${keyProvider ? ` · ${providerCode(keyProvider)}` : ''}`}
+        title={`${t('providerPage.rotateKey')}${keyProvider ? ` / ${providerCode(keyProvider)}` : ''}`}
         centered
       >
         <form onSubmit={keyForm.onSubmit((values) => rotateKeyMutation.mutate(values))}>
@@ -376,6 +456,64 @@ export default function ProviderPage() {
             />
             <Button color="dark" type="submit" loading={rotateKeyMutation.isPending} disabled={!keyProvider}>
               {t('providerPage.saveEncryptedKey')}
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal
+        opened={configOpened}
+        onClose={() => {
+          closeConfig();
+          setConfigProvider(null);
+        }}
+        title={`${t('providerPage.configure')}${configProvider ? ` / ${configProvider.providerCode}` : ''}`}
+        size="lg"
+        centered
+      >
+        <form onSubmit={configForm.onSubmit((values) => updateProviderMutation.mutate(values))}>
+          <Stack>
+            <Text size="sm" c="dimmed">
+              {t('providerPage.configNote')}
+            </Text>
+            <TextInput label={t('providerPage.providerName')} required {...configForm.getInputProps('providerName')} />
+            <TextInput label={t('providerPage.baseUrl')} required {...configForm.getInputProps('baseUrl')} />
+            <Select
+              label={t('status')}
+              data={[
+                { value: 'ACTIVE', label: t('providerPage.statusActive') },
+                { value: 'DISABLED', label: t('providerPage.statusDisabled') },
+              ]}
+              {...configForm.getInputProps('status')}
+            />
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <NumberInput label={t('providerPage.timeoutMs')} min={1000} max={600000} step={1000} {...configForm.getInputProps('timeoutMs')} />
+              <NumberInput label={t('providerPage.retryCount')} min={0} max={5} {...configForm.getInputProps('retryCount')} />
+              <NumberInput
+                label={t('providerPage.circuitFailureThreshold')}
+                min={1}
+                max={50}
+                {...configForm.getInputProps('circuitFailureThreshold')}
+              />
+              <NumberInput
+                label={t('providerPage.circuitCooldownSeconds')}
+                min={1}
+                max={3600}
+                {...configForm.getInputProps('circuitCooldownSeconds')}
+              />
+            </SimpleGrid>
+            <Select
+              label={t('providerPage.fallbackModel')}
+              placeholder={t('providerPage.noFallback')}
+              clearable
+              searchable
+              data={(modelQuery.data ?? [])
+                .filter((model) => model.status === 'ACTIVE')
+                .map((model) => ({ value: model.modelCode, label: `${model.displayName} / ${model.modelCode}` }))}
+              {...configForm.getInputProps('fallbackModelCode')}
+            />
+            <Button color="dark" type="submit" loading={updateProviderMutation.isPending} disabled={!configProvider}>
+              {t('providerPage.saveConfig')}
             </Button>
           </Stack>
         </form>

@@ -140,11 +140,24 @@ export type RateLimitPayload = {
   status?: string;
 };
 
+export type ProviderUpdatePayload = {
+  providerName?: string;
+  baseUrl?: string;
+  status?: string;
+  timeoutMs?: number | null;
+  retryCount?: number | null;
+  circuitFailureThreshold?: number | null;
+  circuitCooldownSeconds?: number | null;
+  fallbackModelCode?: string | null;
+};
+
 const unwrapData = <T>(response: ApiEnvelope<T>) => response.data.data;
 
 export const gatewayApi = {
   providers: async (): Promise<ProviderResponse[]> => unwrapData(await apiClient.get('/providers')),
   createProvider: async (payload: unknown): Promise<ProviderResponse> => unwrapData(await apiClient.post('/providers', payload)),
+  updateProvider: async (id: Id, payload: ProviderUpdatePayload): Promise<ProviderResponse> =>
+    unwrapData(await apiClient.put(`/providers/${id}`, payload)),
   updateProviderApiKey: async (id: Id, payload: { apiKey: string }): Promise<ProviderResponse> =>
     unwrapData(await apiClient.put(`/providers/${id}/api-key`, payload)),
   testProvider: async (id: Id, payload?: { model?: string; message?: string }): Promise<ProviderTestResponse> =>

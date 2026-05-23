@@ -113,6 +113,6 @@ Real provider smoke after configuring a provider:
 ## Current MVP Gaps
 
 - Real provider success requires external DeepSeek, Qwen, or OpenAI-compatible credentials.
-- API key lifecycle, wallet operations, and price versions have backend APIs; some console UI actions still need final wiring.
-- Provider resilience has runtime behavior and smoke coverage, but still needs richer automated regression tests.
+- API key lifecycle, wallet operations, provider resilience, and price versions have API/console coverage; continue manual UX polish before production rollout.
+- Provider resilience has runtime behavior, console configuration, and smoke coverage, but still needs richer automated regression tests.
 - No centralized document, chunk, or vector data is deployed by design.
