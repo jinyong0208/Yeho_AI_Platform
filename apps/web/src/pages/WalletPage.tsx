@@ -32,8 +32,11 @@ import {
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { billingApi } from '../api/billing';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 import { downloadWorkbookFromRows } from '../utils/xlsx';
 
 type TenantLite = {
@@ -42,16 +45,25 @@ type TenantLite = {
   tenantName: string;
 };
 
-const formatCredits = (value?: number) => `${(value ?? 0).toLocaleString()} Credits`;
 const readAlertCredits = (alert: any) => Number(alert.balance_credits ?? alert.balanceCredits ?? 0);
 const readAlertTenant = (alert: any) => alert.tenant_name ?? alert.tenantName ?? alert.tenant_code ?? alert.tenantCode ?? '-';
 
 export default function WalletPage() {
+  const { t, i18n } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const queryClient = useQueryClient();
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const tenants = (tenantsQuery.data ?? []) as TenantLite[];
+  const numberFormatter = new Intl.NumberFormat(i18n.language);
+  const formatCredits = (value?: number) => `${numberFormatter.format(value ?? 0)} ${t('common.credits')}`;
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'wallet'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
   const walletQuery = useQuery({
     queryKey: ['wallet', selectedTenantId],
     queryFn: () => billingApi.wallet(selectedTenantId as string),
@@ -89,7 +101,7 @@ export default function WalletPage() {
         ...values,
       }),
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已创建', message: '充值订单已生成，可在列表中确认。' });
+      notifications.show({ color: 'teal', title: t('walletPage.orderCreatedTitle'), message: t('walletPage.orderCreatedMessage') });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
       form.reset();
       close();
@@ -98,7 +110,7 @@ export default function WalletPage() {
   const confirmMutation = useMutation({
     mutationFn: billingApi.confirmRechargeOrder,
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已确认', message: 'Credits 已入账。' });
+      notifications.show({ color: 'teal', title: t('walletPage.orderConfirmedTitle'), message: t('walletPage.orderConfirmedMessage') });
       queryClient.invalidateQueries({ queryKey: ['wallet', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['wallet-logs', selectedTenantId] });
@@ -108,7 +120,7 @@ export default function WalletPage() {
   const closeOrderMutation = useMutation({
     mutationFn: billingApi.closeRechargeOrder,
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已关闭', message: '充值订单已关闭，钱包余额未变化。' });
+      notifications.show({ color: 'teal', title: t('walletPage.orderClosedTitle'), message: t('walletPage.orderClosedMessage') });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
     },
   });
@@ -131,7 +143,7 @@ export default function WalletPage() {
         `recharge-orders-${selectedTenantId ?? 'all'}.xlsx`,
         'Recharge Orders',
       );
-      notifications.show({ color: 'teal', title: '已导出', message: '充值订单对账文件已生成。' });
+      notifications.show({ color: 'teal', title: t('walletPage.exportedTitle'), message: t('walletPage.ordersExportedMessage') });
     },
   });
   const wallet = walletQuery.data;
@@ -140,10 +152,10 @@ export default function WalletPage() {
 
   const openConfirmRecharge = (orderId: string) => {
     modals.openConfirmModal({
-      title: '确认充值入账',
+      title: t('walletPage.confirmRechargeTitle'),
       centered: true,
-      children: <Text size="sm">确认后 Credits 会写入钱包并生成钱包流水。</Text>,
-      labels: { confirm: '确认入账', cancel: '取消' },
+      children: <Text size="sm">{t('walletPage.confirmRechargeBody')}</Text>,
+      labels: { confirm: t('walletPage.confirmRecharge'), cancel: t('apiKeyPage.cancel') },
       confirmProps: { color: 'teal' },
       onConfirm: () => confirmMutation.mutate(orderId),
     });
@@ -151,10 +163,10 @@ export default function WalletPage() {
 
   const openCloseOrder = (orderId: string) => {
     modals.openConfirmModal({
-      title: '关闭充值订单',
+      title: t('walletPage.closeOrderTitle'),
       centered: true,
-      children: <Text size="sm">关闭后订单不会入账，仅保留操作记录。</Text>,
-      labels: { confirm: '关闭订单', cancel: '取消' },
+      children: <Text size="sm">{t('walletPage.closeOrderBody')}</Text>,
+      labels: { confirm: t('walletPage.closeOrder'), cancel: t('apiKeyPage.cancel') },
       confirmProps: { color: 'red' },
       onConfirm: () => closeOrderMutation.mutate(orderId),
     });
@@ -164,22 +176,23 @@ export default function WalletPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>钱包余额</Title>
+          <Title order={2}>{t('walletPage.title')}</Title>
           <Text c="dimmed" maw={700}>
-            用 Credits 统一承载租户余额、冻结额度和累计消耗，方便后续对接充值与发票。
+            {t('walletPage.description')}
           </Text>
         </Stack>
         <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
-          创建充值订单
+          {t('walletPage.createRechargeOrder')}
         </Button>
       </Group>
 
       <Card className="surface-card" p="lg">
         <Select
-          label="租户"
+          label={t('walletPage.tenant')}
           maw={360}
           value={selectedTenantId}
           onChange={setSelectedTenantId}
+          disabled={!canSelectTenant}
           data={tenants.map((tenant) => ({
             value: tenant.id,
             label: `${tenant.tenantName} · ${tenant.tenantCode}`,
@@ -188,10 +201,10 @@ export default function WalletPage() {
       </Card>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-        <MetricCard icon={<IconCoins size={20} />} label="可用余额" value={formatCredits(wallet?.balanceCredits)} color="teal" />
-        <MetricCard icon={<IconBolt size={20} />} label="冻结额度" value={formatCredits(wallet?.frozenCredits)} color="yellow" />
-        <MetricCard icon={<IconCreditCard size={20} />} label="累计充值" value={formatCredits(wallet?.totalRechargeCredits)} color="blue" />
-        <MetricCard icon={<IconCircleCheck size={20} />} label="累计消耗" value={formatCredits(wallet?.totalUsedCredits)} color="red" />
+        <MetricCard icon={<IconCoins size={20} />} label={t('walletPage.balanceCredits')} value={formatCredits(wallet?.balanceCredits)} color="teal" />
+        <MetricCard icon={<IconBolt size={20} />} label={t('walletPage.frozenCredits')} value={formatCredits(wallet?.frozenCredits)} color="yellow" />
+        <MetricCard icon={<IconCreditCard size={20} />} label={t('walletPage.totalRechargeCredits')} value={formatCredits(wallet?.totalRechargeCredits)} color="blue" />
+        <MetricCard icon={<IconCircleCheck size={20} />} label={t('walletPage.totalUsedCredits')} value={formatCredits(wallet?.totalUsedCredits)} color="red" />
       </SimpleGrid>
 
       {lowBalanceAlerts.length > 0 && (
@@ -203,11 +216,11 @@ export default function WalletPage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Recharge Orders
+            {t('walletPage.rechargeOrders')}
           </Text>
           <Group gap="xs">
             <Badge color="gray" variant="light" radius="sm">
-              {orders.length} recent
+              {t('walletPage.recentCount', { count: orders.length })}
             </Badge>
             <Button
               size="xs"
@@ -218,7 +231,7 @@ export default function WalletPage() {
               disabled={!selectedTenantId}
               onClick={() => exportOrdersMutation.mutate()}
             >
-              导出
+              {t('walletPage.export')}
             </Button>
           </Group>
         </Group>
@@ -246,7 +259,7 @@ export default function WalletPage() {
                   loading={confirmMutation.isPending}
                   onClick={() => openConfirmRecharge(order.id)}
                 >
-                  确认入账
+                  {t('walletPage.confirmRecharge')}
                 </Button>
                 <Button
                   variant="subtle"
@@ -257,28 +270,28 @@ export default function WalletPage() {
                   loading={closeOrderMutation.isPending}
                   onClick={() => openCloseOrder(order.id)}
                 >
-                  关闭
+                  {t('walletPage.close')}
                 </Button>
               </Group>
             </Group>
           ))}
           {orders.length === 0 && (
             <Box p="xl" ta="center">
-              <Text c="dimmed">暂无充值订单。</Text>
+              <Text c="dimmed">{t('walletPage.emptyOrders')}</Text>
             </Box>
           )}
         </Stack>
       </Card>
 
-      <Modal opened={opened} onClose={close} title="创建充值订单" centered>
+      <Modal opened={opened} onClose={close} title={t('walletPage.createRechargeOrder')} centered>
         <form onSubmit={form.onSubmit((values) => createOrderMutation.mutate(values))}>
           <Stack>
-            <NumberInput label="金额 CNY" min={1} required {...form.getInputProps('amountCny')} />
-            <NumberInput label="Credits" min={1} required {...form.getInputProps('credits')} />
-            <TextInput label="支付渠道" required {...form.getInputProps('payChannel')} />
-            <TextInput label="备注" {...form.getInputProps('remark')} />
+            <NumberInput label={t('walletPage.amountCny')} min={1} required {...form.getInputProps('amountCny')} />
+            <NumberInput label={t('common.credits')} min={1} required {...form.getInputProps('credits')} />
+            <TextInput label={t('walletPage.payChannel')} required {...form.getInputProps('payChannel')} />
+            <TextInput label={t('walletPage.remark')} {...form.getInputProps('remark')} />
             <Button color="dark" type="submit" loading={createOrderMutation.isPending}>
-              创建
+              {t('create')}
             </Button>
           </Stack>
         </form>

@@ -1,10 +1,12 @@
 import { Badge, Box, Card, Group, Select, Stack, Text, ThemeIcon, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { IconActivity, IconAlertTriangle, IconCircleCheck } from '@tabler/icons-react';
-import { useState } from 'react';
-import { gatewayApi } from '../api/gateway';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { tenantApi } from '../api/tenants';
 import { usageApi } from '../api/usage';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 
 type TenantLite = {
   id: string;
@@ -13,11 +15,27 @@ type TenantLite = {
 };
 
 export default function UsageLogPage() {
+  const { t, i18n } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
+  const numberFormatter = new Intl.NumberFormat(i18n.language);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [modelCode, setModelCode] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const modelsQuery = useQuery({ queryKey: ['models'], queryFn: gatewayApi.models });
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'usage-logs'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
+
+  useEffect(() => {
+    if (!tenantId && tenants.length > 0) {
+      setTenantId(tenants[0].id);
+    }
+  }, [tenantId, tenants]);
+
   const logsQuery = useQuery({
     queryKey: ['usage-logs', tenantId, modelCode, success],
     queryFn: () =>
@@ -27,18 +45,25 @@ export default function UsageLogPage() {
         success: success === null ? null : success === 'true',
         limit: 80,
       }),
+    enabled: canSelectTenant || Boolean(tenantId),
   });
-  const tenants = (tenantsQuery.data ?? []) as TenantLite[];
   const logs = logsQuery.data ?? [];
-  const models = modelsQuery.data ?? [];
+  const modelOptions = useMemo(() => {
+    const models = new Set(logs.map((log) => log.modelCode).filter(Boolean) as string[]);
+    if (modelCode) {
+      models.add(modelCode);
+    }
+    return Array.from(models).sort().map((model) => ({ value: model, label: model }));
+  }, [logs, modelCode]);
+  const formatNumber = (value?: number) => numberFormatter.format(value ?? 0);
 
   return (
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>调用日志</Title>
+          <Title order={2}>{t('usageLogPage.title')}</Title>
           <Text c="dimmed" maw={700}>
-            追踪每次网关请求的 request_id、模型、Token、扣费和错误信息，默认不展示 Prompt 原文。
+            {t('usageLogPage.description')}
           </Text>
         </Stack>
       </Group>
@@ -46,34 +71,35 @@ export default function UsageLogPage() {
       <Card className="surface-card" p="lg">
         <Group align="end">
           <Select
-            label="租户"
+            label={t('walletPage.tenant')}
             clearable
             maw={300}
             value={tenantId}
             onChange={setTenantId}
+            disabled={!canSelectTenant}
             data={tenants.map((tenant) => ({
               value: tenant.id,
               label: `${tenant.tenantName} · ${tenant.tenantCode}`,
             }))}
           />
           <Select
-            label="模型"
+            label={t('usageLogPage.model')}
             clearable
             searchable
             maw={260}
             value={modelCode || null}
             onChange={(value) => setModelCode(value || '')}
-            data={models.map((model) => ({ value: model.modelCode, label: model.modelCode }))}
+            data={modelOptions}
           />
           <Select
-            label="结果"
+            label={t('usageLogPage.result')}
             clearable
             maw={180}
             value={success}
             onChange={setSuccess}
             data={[
-              { value: 'true', label: 'Success' },
-              { value: 'false', label: 'Failed' },
+              { value: 'true', label: t('common.success') },
+              { value: 'false', label: t('common.failed') },
             ]}
           />
         </Group>
@@ -82,10 +108,10 @@ export default function UsageLogPage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Gateway Calls
+            {t('usageLogPage.gatewayCalls')}
           </Text>
           <Badge color="gray" variant="light" radius="sm">
-            {logs.length} rows
+            {t('usageLogPage.rowCount', { count: logs.length })}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -94,12 +120,12 @@ export default function UsageLogPage() {
               <Group wrap="nowrap" maw="58%">
                 <ThemeIcon color={log.success ? 'teal' : 'red'} variant="light" radius="sm" size={38}>
                   {log.success ? <IconCircleCheck size={20} /> : <IconAlertTriangle size={20} />}
-                </ThemeIcon>
-                <Box>
-                  <Group gap="xs">
-                    <Text fw={650}>{log.modelCode || 'unknown model'}</Text>
+                  </ThemeIcon>
+                  <Box>
+                    <Group gap="xs">
+                    <Text fw={650}>{log.modelCode || t('common.unknownModel')}</Text>
                     <Badge color={log.success ? 'teal' : 'red'} variant="light" radius="sm">
-                      {log.success ? 'SUCCESS' : 'FAILED'}
+                      {log.success ? t('common.success') : t('common.failed')}
                     </Badge>
                     {log.providerCode && (
                       <Badge color="gray" variant="light" radius="sm">
@@ -118,9 +144,9 @@ export default function UsageLogPage() {
                 </Box>
               </Group>
               <Group gap="xl" wrap="nowrap" visibleFrom="sm">
-                <LogMetric label="Total Tokens" value={String(log.totalTokens ?? 0)} />
-                <LogMetric label="Credits" value={String(log.chargeCredits ?? 0)} />
-                <LogMetric label="Latency" value={`${log.latencyMs ?? 0}ms`} />
+                <LogMetric label={t('usageLogPage.totalTokens')} value={formatNumber(log.totalTokens)} />
+                <LogMetric label={t('common.credits')} value={formatNumber(log.chargeCredits)} />
+                <LogMetric label={t('usageLogPage.latency')} value={`${formatNumber(log.latencyMs)} ms`} />
               </Group>
             </Group>
           ))}
@@ -129,7 +155,7 @@ export default function UsageLogPage() {
               <ThemeIcon color="gray" variant="light" radius="sm" size={40} mb="sm" mx="auto">
                 <IconActivity size={20} />
               </ThemeIcon>
-              <Text c="dimmed">暂无调用日志。</Text>
+              <Text c="dimmed">{t('usageLogPage.empty')}</Text>
             </Box>
           )}
         </Stack>

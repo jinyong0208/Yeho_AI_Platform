@@ -3,8 +3,11 @@ import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { IconArrowDownRight, IconArrowUpRight, IconDownload, IconReceipt2 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { billingApi } from '../api/billing';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 import { downloadWorkbookFromRows } from '../utils/xlsx';
 
 type TenantLite = {
@@ -13,12 +16,20 @@ type TenantLite = {
   tenantName: string;
 };
 
-const formatCredits = (value?: number) => `${(value ?? 0).toLocaleString()} Credits`;
-
 export default function WalletTransactionPage() {
+  const { t, i18n } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
+  const numberFormatter = new Intl.NumberFormat(i18n.language);
+  const formatCredits = (value?: number) => `${numberFormatter.format(value ?? 0)} ${t('common.credits')}`;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const tenants = (tenantsQuery.data ?? []) as TenantLite[];
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'wallet-logs'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
   const logsQuery = useQuery({
     queryKey: ['wallet-logs', selectedTenantId],
     queryFn: () => billingApi.walletLogs(selectedTenantId as string, 80),
@@ -43,7 +54,7 @@ export default function WalletTransactionPage() {
         `wallet-ledger-${selectedTenantId}.xlsx`,
         'Wallet Ledger',
       );
-      notifications.show({ color: 'teal', title: '已导出', message: '钱包流水对账文件已生成。' });
+      notifications.show({ color: 'teal', title: t('walletPage.exportedTitle'), message: t('walletPage.ledgerExportedMessage') });
     },
   });
 
@@ -57,9 +68,9 @@ export default function WalletTransactionPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>钱包流水</Title>
+          <Title order={2}>{t('walletLogPage.title')}</Title>
           <Text c="dimmed" maw={680}>
-            记录充值、冻结、扣费和释放动作，为账务核对保留清晰轨迹。
+            {t('walletLogPage.description')}
           </Text>
         </Stack>
         <Button
@@ -70,16 +81,17 @@ export default function WalletTransactionPage() {
           loading={exportLogsMutation.isPending}
           onClick={() => exportLogsMutation.mutate()}
         >
-          导出流水
+          {t('walletLogPage.exportLedger')}
         </Button>
       </Group>
 
       <Card className="surface-card" p="lg">
         <Select
-          label="租户"
+          label={t('walletPage.tenant')}
           maw={360}
           value={selectedTenantId}
           onChange={setSelectedTenantId}
+          disabled={!canSelectTenant}
           data={tenants.map((tenant) => ({
             value: tenant.id,
             label: `${tenant.tenantName} · ${tenant.tenantCode}`,
@@ -90,10 +102,10 @@ export default function WalletTransactionPage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Wallet Ledger
+            {t('walletLogPage.ledger')}
           </Text>
           <Badge color="gray" variant="light" radius="sm">
-            {logs.length} rows
+            {t('walletLogPage.rowCount', { count: logs.length })}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -113,14 +125,14 @@ export default function WalletTransactionPage() {
                       </Badge>
                     </Group>
                     <Text size="xs" c="dimmed">
-                      {log.remark || log.bizId || '无备注'} · {log.createdAt}
+                      {log.remark || log.bizId || t('walletLogPage.noRemark')} · {log.createdAt}
                     </Text>
                   </Box>
                 </Group>
                 <Stack gap={2} align="flex-end">
                   <Text fw={700}>{formatCredits(log.amountCredits)}</Text>
                   <Text size="xs" c="dimmed">
-                    after {formatCredits(log.balanceAfter)}
+                    {t('walletLogPage.balanceAfter')} {formatCredits(log.balanceAfter)}
                   </Text>
                 </Stack>
               </Group>
@@ -131,7 +143,7 @@ export default function WalletTransactionPage() {
               <ThemeIcon color="gray" variant="light" radius="sm" size={40} mb="sm" mx="auto">
                 <IconReceipt2 size={20} />
               </ThemeIcon>
-              <Text c="dimmed">暂无钱包流水。</Text>
+              <Text c="dimmed">{t('walletLogPage.empty')}</Text>
             </Box>
           )}
         </Stack>
