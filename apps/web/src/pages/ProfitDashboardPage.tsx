@@ -1,20 +1,18 @@
-import { Badge, Card, Group, Grid, SegmentedControl, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { AreaChart, BarChart } from '@mantine/charts';
+import { Badge, Card, Group, Grid, SegmentedControl, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { analyticsApi, type CostMetric } from '../api/analytics';
-
-const formatNumber = (value: number) => new Intl.NumberFormat('zh-CN').format(value ?? 0);
-const formatMoney = (value: number) => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 4 }).format(value ?? 0);
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <Card p="lg">
+    <Card className="surface-card" p="lg">
       <Stack gap={6}>
-        <Text size="xs" c="dimmed" tt="uppercase">
+        <Text size="xs" c="dimmed" tt="uppercase" fw={650}>
           {label}
         </Text>
-        <Text fw={700} size="xl" c={tone}>
+        <Text fw={750} size="xl" c={tone}>
           {value}
         </Text>
       </Stack>
@@ -22,18 +20,30 @@ function MetricCard({ label, value, tone }: { label: string; value: string; tone
   );
 }
 
-function MetricTable({ rows }: { rows: CostMetric[] }) {
+function MetricTable({
+  rows,
+  formatNumber,
+  formatMoney,
+  empty,
+  t,
+}: {
+  rows: CostMetric[];
+  formatNumber: (value?: number) => string;
+  formatMoney: (value?: number) => string;
+  empty: string;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
   return (
     <Table.ScrollContainer minWidth={760}>
       <Table verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>维度</Table.Th>
-            <Table.Th>请求</Table.Th>
-            <Table.Th>Tokens</Table.Th>
-            <Table.Th>Credits</Table.Th>
-            <Table.Th>成本</Table.Th>
-            <Table.Th>利润</Table.Th>
+            <Table.Th>{t('analyticsPage.dimension')}</Table.Th>
+            <Table.Th>{t('analyticsPage.requests')}</Table.Th>
+            <Table.Th>{t('analyticsPage.tokens')}</Table.Th>
+            <Table.Th>{t('analyticsPage.credits')}</Table.Th>
+            <Table.Th>{t('analyticsPage.cost')}</Table.Th>
+            <Table.Th>{t('analyticsPage.profit')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -53,6 +63,15 @@ function MetricTable({ rows }: { rows: CostMetric[] }) {
               </Table.Td>
             </Table.Tr>
           ))}
+          {rows.length === 0 && (
+            <Table.Tr>
+              <Table.Td colSpan={6}>
+                <Text c="dimmed" ta="center" py="xl">
+                  {empty}
+                </Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
         </Table.Tbody>
       </Table>
     </Table.ScrollContainer>
@@ -60,7 +79,12 @@ function MetricTable({ rows }: { rows: CostMetric[] }) {
 }
 
 export function ProfitDashboardPage() {
+  const { t, i18n } = useTranslation();
   const [days, setDays] = useState('7');
+  const numberFormatter = new Intl.NumberFormat(i18n.language);
+  const moneyFormatter = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 4 });
+  const formatNumber = (value?: number) => numberFormatter.format(value ?? 0);
+  const formatMoney = (value?: number) => moneyFormatter.format(value ?? 0);
   const query = useQuery({
     queryKey: ['cost-summary', days],
     queryFn: () => analyticsApi.costSummary(Number(days)),
@@ -78,33 +102,35 @@ export function ProfitDashboardPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>Profit Dashboard</Title>
-          <Text c="dimmed">按 Usage Log 汇总收入、成本、利润、Token 与 Credits。</Text>
+          <Title order={2}>{t('billingAnalyticsPage.title')}</Title>
+          <Text c="dimmed" maw={720}>
+            {t('billingAnalyticsPage.description')}
+          </Text>
         </Stack>
         <SegmentedControl
           value={days}
           onChange={setDays}
           data={[
-            { value: '7', label: '7D' },
-            { value: '30', label: '30D' },
-            { value: '90', label: '90D' },
+            { value: '7', label: t('analyticsPage.days7') },
+            { value: '30', label: t('analyticsPage.days30') },
+            { value: '90', label: t('analyticsPage.days90') },
           ]}
         />
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }}>
-        <MetricCard label="Requests" value={formatNumber(summary?.requests ?? 0)} />
-        <MetricCard label="Tokens" value={formatNumber(summary?.totalTokens ?? 0)} />
-        <MetricCard label="Credits" value={formatNumber(summary?.credits ?? 0)} />
-        <MetricCard label="Cost" value={formatMoney(summary?.cost ?? 0)} />
-        <MetricCard label="Profit" value={formatMoney(summary?.profit ?? 0)} tone={(summary?.profit ?? 0) >= 0 ? 'green' : 'red'} />
+        <MetricCard label={t('analyticsPage.requests')} value={formatNumber(summary?.requests)} />
+        <MetricCard label={t('analyticsPage.tokens')} value={formatNumber(summary?.totalTokens)} />
+        <MetricCard label={t('analyticsPage.credits')} value={formatNumber(summary?.credits)} />
+        <MetricCard label={t('analyticsPage.cost')} value={formatMoney(summary?.cost)} />
+        <MetricCard label={t('analyticsPage.profit')} value={formatMoney(summary?.profit)} tone={(summary?.profit ?? 0) >= 0 ? 'green' : 'red'} />
       </SimpleGrid>
 
       <Grid>
         <Grid.Col span={{ base: 12, lg: 7 }}>
-          <Card p="lg">
+          <Card className="surface-card" p="lg">
             <Stack>
-              <Text fw={700}>Daily Profit</Text>
+              <Text fw={700}>{t('billingAnalyticsPage.dailyProfit')}</Text>
               <AreaChart
                 h={300}
                 data={daily}
@@ -120,9 +146,9 @@ export function ProfitDashboardPage() {
           </Card>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}>
-          <Card p="lg">
+          <Card className="surface-card" p="lg">
             <Stack>
-              <Text fw={700}>Provider Credits</Text>
+              <Text fw={700}>{t('billingAnalyticsPage.providerCredits')}</Text>
               <BarChart
                 h={300}
                 data={summary?.providers ?? []}
@@ -134,11 +160,20 @@ export function ProfitDashboardPage() {
         </Grid.Col>
       </Grid>
 
-      <Card p="lg">
-        <Stack>
-          <Text fw={700}>Top Models</Text>
-          <MetricTable rows={summary?.models ?? []} />
-        </Stack>
+      <Card className="surface-card" p="lg">
+        <Group justify="space-between" mb="md">
+          <Text fw={700}>{t('billingAnalyticsPage.topModels')}</Text>
+          <Badge color="gray" variant="light" radius="sm">
+            {t('analyticsPage.rowCount', { count: summary?.models.length ?? 0 })}
+          </Badge>
+        </Group>
+        <MetricTable
+          rows={summary?.models ?? []}
+          formatNumber={formatNumber}
+          formatMoney={formatMoney}
+          empty={t('billingAnalyticsPage.emptyModels')}
+          t={t}
+        />
       </Card>
     </Stack>
   );
