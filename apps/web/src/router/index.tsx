@@ -25,24 +25,26 @@ import { useDisclosure } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
 import {
   IconActivity,
+  IconAdjustmentsHorizontal,
   IconApi,
+  IconBook2,
   IconBrain,
   IconChartBar,
   IconChartHistogram,
   IconCoins,
-  IconFileInvoice,
   IconGauge,
   IconKey,
   IconLogout,
   IconReceiptTax,
   IconRobot,
-  IconTemplate,
   IconSettingsAutomation,
   IconShieldCheck,
+  IconTerminal2,
   IconUsers,
   IconWallet,
 } from '@tabler/icons-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { isRoleAllowed, resolvePrimaryRole, USER_ROLES, type UserRole } from '../utils/roles';
 
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
@@ -66,33 +68,184 @@ const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 
 type NavItem = {
-  group: string;
+  groupKey: string;
   to: string;
   labelKey: string;
+  roles: UserRole[];
   icon: ComponentType<{ size?: number; stroke?: number }>;
+  muted?: boolean;
 };
 
+const allRoles = [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER];
+
 const navItems: NavItem[] = [
-  { group: 'Workspace', to: '/', labelKey: 'dashboard', icon: IconGauge },
-  { group: 'Workspace', to: '/tenants', labelKey: 'tenants', icon: IconActivity },
-  { group: 'Workspace', to: '/users', labelKey: 'users', icon: IconUsers },
-  { group: 'Gateway', to: '/providers', labelKey: 'providers', icon: IconApi },
-  { group: 'Gateway', to: '/models', labelKey: 'models', icon: IconBrain },
-  { group: 'Gateway', to: '/api-keys', labelKey: 'apiKeys', icon: IconKey },
-  { group: 'Billing', to: '/wallet', labelKey: 'wallet', icon: IconWallet },
-  { group: 'Billing', to: '/wallet/transactions', labelKey: 'walletTransactions', icon: IconCoins },
-  { group: 'Billing', to: '/invoices', labelKey: 'invoices', icon: IconFileInvoice },
-  { group: 'Observability', to: '/usage-logs', labelKey: 'usageLogs', icon: IconActivity },
-  { group: 'Observability', to: '/token-stats', labelKey: 'tokenStats', icon: IconChartHistogram },
-  { group: 'Observability', to: '/profit', labelKey: 'profitDashboard', icon: IconReceiptTax },
-  { group: 'Observability', to: '/provider-costs', labelKey: 'providerCostDashboard', icon: IconChartBar },
-  { group: 'Observability', to: '/audit-logs', labelKey: 'auditLogs', icon: IconShieldCheck },
-  { group: 'Orchestration', to: '/prompt-templates', labelKey: 'promptTemplates', icon: IconTemplate },
-  { group: 'Orchestration', to: '/agent-configs', labelKey: 'agentConfigs', icon: IconRobot },
-  { group: 'Orchestration', to: '/agent-execute-logs', labelKey: 'agentExecuteLogs', icon: IconActivity },
-  { group: 'Orchestration', to: '/agent-debug', labelKey: 'agentDebug', icon: IconRobot },
-  { group: 'Orchestration', to: '/workflow', labelKey: 'workflow', icon: IconSettingsAutomation },
+  {
+    groupKey: 'navGroups.runtime',
+    to: '/',
+    labelKey: 'nav.dashboard',
+    roles: allRoles,
+    icon: IconGauge,
+  },
+  {
+    groupKey: 'navGroups.platform',
+    to: '/tenants',
+    labelKey: 'nav.tenants',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconActivity,
+  },
+  {
+    groupKey: 'navGroups.platform',
+    to: '/audit-logs',
+    labelKey: 'nav.globalAudit',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconShieldCheck,
+  },
+  {
+    groupKey: 'navGroups.gateway',
+    to: '/providers',
+    labelKey: 'nav.providerHealth',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconApi,
+  },
+  {
+    groupKey: 'navGroups.gateway',
+    to: '/models',
+    labelKey: 'nav.providerManagement',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconBrain,
+  },
+  {
+    groupKey: 'navGroups.gateway',
+    to: '/rate-limits',
+    labelKey: 'nav.rateLimits',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconAdjustmentsHorizontal,
+  },
+  {
+    groupKey: 'navGroups.gateway',
+    to: '/api-keys',
+    labelKey: 'nav.apiKeyScope',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconKey,
+  },
+  {
+    groupKey: 'navGroups.analytics',
+    to: '/provider-costs',
+    labelKey: 'nav.providerAnalytics',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconChartBar,
+  },
+  {
+    groupKey: 'navGroups.analytics',
+    to: '/profit',
+    labelKey: 'nav.billingAnalytics',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconReceiptTax,
+  },
+  {
+    groupKey: 'navGroups.tenant',
+    to: '/users',
+    labelKey: 'nav.users',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconUsers,
+  },
+  {
+    groupKey: 'navGroups.tenant',
+    to: '/api-keys',
+    labelKey: 'nav.apiKeys',
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
+    icon: IconKey,
+  },
+  {
+    groupKey: 'navGroups.tenant',
+    to: '/wallet',
+    labelKey: 'nav.wallet',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconWallet,
+  },
+  {
+    groupKey: 'navGroups.tenant',
+    to: '/wallet/transactions',
+    labelKey: 'nav.walletLogs',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconCoins,
+  },
+  {
+    groupKey: 'navGroups.observability',
+    to: '/usage-logs',
+    labelKey: 'nav.usage',
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
+    icon: IconActivity,
+  },
+  {
+    groupKey: 'navGroups.runtime',
+    to: '/prompt-templates',
+    labelKey: 'nav.promptTemplates',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconChartHistogram,
+  },
+  {
+    groupKey: 'navGroups.runtime',
+    to: '/agent-configs',
+    labelKey: 'nav.agentConfigs',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconRobot,
+  },
+  {
+    groupKey: 'navGroups.runtime',
+    to: '/agent-execute-logs',
+    labelKey: 'nav.agentLogs',
+    roles: [USER_ROLES.TENANT_ADMIN],
+    icon: IconActivity,
+  },
+  {
+    groupKey: 'navGroups.developer',
+    to: '/playground',
+    labelKey: 'nav.playground',
+    roles: [USER_ROLES.DEVELOPER],
+    icon: IconTerminal2,
+  },
+  {
+    groupKey: 'navGroups.developer',
+    to: '/api-docs',
+    labelKey: 'nav.apiDocs',
+    roles: [USER_ROLES.DEVELOPER],
+    icon: IconBook2,
+  },
+  {
+    groupKey: 'navGroups.preview',
+    to: '/workflow',
+    labelKey: 'nav.workflowPreview',
+    roles: [USER_ROLES.SUPER_ADMIN],
+    icon: IconSettingsAutomation,
+    muted: true,
+  },
 ];
+
+const routeRoles: Record<string, UserRole[]> = {
+  '/': allRoles,
+  '/tenants': [USER_ROLES.SUPER_ADMIN],
+  '/users': [USER_ROLES.TENANT_ADMIN],
+  '/providers': [USER_ROLES.SUPER_ADMIN],
+  '/models': [USER_ROLES.SUPER_ADMIN],
+  '/api-keys': allRoles,
+  '/wallet': [USER_ROLES.TENANT_ADMIN],
+  '/wallet/transactions': [USER_ROLES.TENANT_ADMIN],
+  '/invoices': [USER_ROLES.TENANT_ADMIN],
+  '/usage-logs': [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
+  '/token-stats': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
+  '/profit': [USER_ROLES.SUPER_ADMIN],
+  '/provider-costs': [USER_ROLES.SUPER_ADMIN],
+  '/audit-logs': [USER_ROLES.SUPER_ADMIN],
+  '/prompt-templates': [USER_ROLES.TENANT_ADMIN],
+  '/agent-configs': [USER_ROLES.TENANT_ADMIN],
+  '/agent-execute-logs': [USER_ROLES.TENANT_ADMIN],
+  '/agent-debug': [USER_ROLES.TENANT_ADMIN],
+  '/workflow': [USER_ROLES.SUPER_ADMIN],
+  '/rate-limits': [USER_ROLES.SUPER_ADMIN],
+  '/playground': [USER_ROLES.DEVELOPER],
+  '/api-docs': [USER_ROLES.DEVELOPER],
+};
 
 function ConsoleLayout() {
   const [opened, { toggle }] = useDisclosure();
@@ -101,7 +254,14 @@ function ConsoleLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const groups = Array.from(new Set(navItems.map((item) => item.group)));
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const visibleItems = navItems.filter((item) => isRoleAllowed(primaryRole, item.roles));
+  const groups = visibleItems.reduce<string[]>((acc, item) => {
+    if (!acc.includes(item.groupKey)) {
+      acc.push(item.groupKey);
+    }
+    return acc;
+  }, []);
 
   return (
     <AppShell
@@ -120,13 +280,13 @@ function ConsoleLayout() {
                 {t('appName')}
               </Text>
               <Text size="xs" c="dimmed" lh={1.1}>
-                AI Gateway Console
+                {t('appTagline')}
               </Text>
             </Box>
           </Group>
           <Group gap="xs">
             <Badge variant="light" color="gray" radius="sm">
-              Security
+              {t(`roles.${primaryRole}`)}
             </Badge>
             <Text size="sm" c="dimmed">
               {user?.username}
@@ -151,22 +311,25 @@ function ConsoleLayout() {
       <AppShell.Navbar p="sm" className="console-sidebar">
         <AppShell.Section grow component={ScrollArea}>
           <Stack gap={2}>
-            {groups.map((group, index) => (
-              <Box key={group}>
+            {groups.map((groupKey, index) => (
+              <Box key={groupKey}>
                 {index > 0 && <Divider my={8} color="#eef1f4" />}
-                <Text className="nav-section-label">{group}</Text>
-                {navItems
-                  .filter((item) => item.group === group)
-                  .map((item) => (
-                    <NavLink
-                      key={item.to}
-                      label={t(item.labelKey)}
-                      active={location.pathname === item.to}
-                      leftSection={<item.icon size={17} stroke={1.8} />}
-                      onClick={() => navigate(item.to)}
-                      classNames={{ root: 'app-nav-link' }}
-                    />
-                  ))}
+                <Text className="nav-section-label">{t(groupKey)}</Text>
+                {visibleItems
+                  .filter((item) => item.groupKey === groupKey)
+                  .map((item) => {
+                    const active = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+                    return (
+                      <NavLink
+                        key={`${item.to}-${item.labelKey}`}
+                        label={t(item.labelKey)}
+                        active={active}
+                        leftSection={<item.icon size={17} stroke={1.8} />}
+                        onClick={() => navigate(item.to)}
+                        classNames={{ root: item.muted ? 'app-nav-link app-nav-link-muted' : 'app-nav-link' }}
+                      />
+                    );
+                  })}
               </Box>
             ))}
           </Stack>
@@ -187,10 +350,25 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return accessToken ? children : <Navigate to="/login" replace />;
 }
 
+function AuthorizedRoute({ path, children }: { path: string; children: ReactNode }) {
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const allowedRoles = routeRoles[path] ?? allRoles;
+
+  if (!isRoleAllowed(primaryRole, allowedRoles)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function withSuspense(node: ReactNode) {
   return <Suspense fallback={<div className="route-skeleton" />}>{node}</Suspense>;
 }
 
+function secured(path: string, node: ReactNode) {
+  return <AuthorizedRoute path={path}>{withSuspense(node)}</AuthorizedRoute>;
+}
 
 export const router = createBrowserRouter([
   { path: '/login', element: withSuspense(<LoginPage />) },
@@ -202,25 +380,28 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: withSuspense(<DashboardPage />) },
-      { path: 'tenants', element: withSuspense(<TenantPage />) },
-      { path: 'users', element: withSuspense(<UserPage />) },
-      { path: 'providers', element: withSuspense(<ProviderPage />) },
-      { path: 'models', element: withSuspense(<ModelPage />) },
-      { path: 'api-keys', element: withSuspense(<ApiKeyPage />) },
-      { path: 'wallet', element: withSuspense(<WalletPage />) },
-      { path: 'wallet/transactions', element: withSuspense(<WalletTransactionPage />) },
-      { path: 'invoices', element: withSuspense(<InvoicePage />) },
-      { path: 'usage-logs', element: withSuspense(<UsageLogPage />) },
-      { path: 'token-stats', element: withSuspense(<TokenStatsPage />) },
-      { path: 'profit', element: withSuspense(<ProfitDashboardPage />) },
-      { path: 'provider-costs', element: withSuspense(<ProviderCostDashboardPage />) },
-      { path: 'audit-logs', element: withSuspense(<AuditLogPage />) },
-      { path: 'prompt-templates', element: withSuspense(<PromptTemplatePage />) },
-      { path: 'agent-configs', element: withSuspense(<AgentConfigPage />) },
-      { path: 'agent-execute-logs', element: withSuspense(<AgentExecuteLogPage />) },
-      { path: 'agent-debug', element: withSuspense(<AgentDebugPage />) },
-      { path: 'workflow', element: withSuspense(<PlaceholderPage kind="workflow" />) },
+      { index: true, element: secured('/', <DashboardPage />) },
+      { path: 'tenants', element: secured('/tenants', <TenantPage />) },
+      { path: 'users', element: secured('/users', <UserPage />) },
+      { path: 'providers', element: secured('/providers', <ProviderPage />) },
+      { path: 'models', element: secured('/models', <ModelPage />) },
+      { path: 'api-keys', element: secured('/api-keys', <ApiKeyPage />) },
+      { path: 'wallet', element: secured('/wallet', <WalletPage />) },
+      { path: 'wallet/transactions', element: secured('/wallet/transactions', <WalletTransactionPage />) },
+      { path: 'invoices', element: secured('/invoices', <InvoicePage />) },
+      { path: 'usage-logs', element: secured('/usage-logs', <UsageLogPage />) },
+      { path: 'token-stats', element: secured('/token-stats', <TokenStatsPage />) },
+      { path: 'profit', element: secured('/profit', <ProfitDashboardPage />) },
+      { path: 'provider-costs', element: secured('/provider-costs', <ProviderCostDashboardPage />) },
+      { path: 'audit-logs', element: secured('/audit-logs', <AuditLogPage />) },
+      { path: 'prompt-templates', element: secured('/prompt-templates', <PromptTemplatePage />) },
+      { path: 'agent-configs', element: secured('/agent-configs', <AgentConfigPage />) },
+      { path: 'agent-execute-logs', element: secured('/agent-execute-logs', <AgentExecuteLogPage />) },
+      { path: 'agent-debug', element: secured('/agent-debug', <AgentDebugPage />) },
+      { path: 'workflow', element: secured('/workflow', <PlaceholderPage kind="workflow" />) },
+      { path: 'rate-limits', element: secured('/rate-limits', <PlaceholderPage kind="rateLimits" />) },
+      { path: 'playground', element: secured('/playground', <PlaceholderPage kind="playground" />) },
+      { path: 'api-docs', element: secured('/api-docs', <PlaceholderPage kind="apiDocs" />) },
     ],
   },
 ]);

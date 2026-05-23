@@ -11,17 +11,21 @@ interface PlaceholderPageProps {
     | 'walletTransactions'
     | 'usageLogs'
     | 'tokenStats'
-    | 'workflow';
+    | 'workflow'
+    | 'rateLimits'
+    | 'playground'
+    | 'apiDocs';
 }
 
 export default function PlaceholderPage({ kind }: PlaceholderPageProps) {
   const { t } = useTranslation();
+  const baseKey = `placeholder.${kind}`;
 
   return (
     <Stack gap="lg">
       <Stack gap={4}>
-        <Title order={2}>{t(kind)}</Title>
-        <Text c="dimmed">{t('phaseNotice')}</Text>
+        <Title order={2}>{t(`${baseKey}.title`)}</Title>
+        <Text c="dimmed">{t(`${baseKey}.description`)}</Text>
       </Stack>
       <Card className="surface-card" p="lg">
         <Group justify="space-between" align="flex-start">
@@ -31,13 +35,13 @@ export default function PlaceholderPage({ kind }: PlaceholderPageProps) {
             </ThemeIcon>
             <Stack gap={4}>
               <Group gap="xs">
-                <Text fw={650}>{t(kind)}</Text>
-                <Badge variant="light" color="gray" radius="sm">
-                  Reserved
+                <Text fw={650}>{t(`${baseKey}.title`)}</Text>
+                <Badge variant="light" color={kind === 'workflow' ? 'yellow' : 'gray'} radius="sm">
+                  {t(`${baseKey}.badge`)}
                 </Badge>
               </Group>
-              <Text c="dimmed" size="sm" maw={620}>
-                已预留为后续阶段入口。Phase 1 只建立导航、依赖和页面骨架，不实现复杂业务流。
+              <Text c="dimmed" size="sm" maw={720}>
+                {t(`${baseKey}.body`)}
               </Text>
             </Stack>
           </Group>

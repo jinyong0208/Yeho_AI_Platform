@@ -1,52 +1,128 @@
 import { AreaChart } from '@mantine/charts';
-import { Badge, Box, Card, Divider, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
+import { Badge, Box, Card, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import {
   IconActivity,
-  IconBrandOpenai,
-  IconBuilding,
+  IconAlertTriangle,
   IconChartBar,
   IconCoins,
-  IconKey,
+  IconGauge,
+  IconHeartbeat,
+  IconPlayerPlay,
   IconServerCog,
   IconSparkles,
-  IconUsers,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import { billingApi } from '../api/billing';
+import { useTranslation } from 'react-i18next';
+import { analyticsApi, type CostMetric } from '../api/analytics';
 import { gatewayApi } from '../api/gateway';
-import { tenantApi } from '../api/tenants';
-import { usageApi } from '../api/usage';
-import { userApi } from '../api/users';
+import { usageApi, type UsageLog } from '../api/usage';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 
-const formatNumber = (value?: number) => (value ?? 0).toLocaleString();
-const formatCredits = (value?: number) => `${formatNumber(value)} Credits`;
+type CompactRow = {
+  label: string;
+  metric: string;
+  sub?: string;
+};
+
+const averageLatency = (logs: UsageLog[]) => {
+  if (logs.length === 0) {
+    return 0;
+  }
+  return logs.reduce((sum, log) => sum + (log.latencyMs ?? 0), 0) / logs.length;
+};
+
+const toCompactRows = (metrics: CostMetric[] | undefined, requestLabel: string, tokenLabel: string): CompactRow[] =>
+  (metrics ?? []).slice(0, 5).map((metric) => ({
+    label: metric.dimensionName || metric.dimension,
+    metric: metric.credits.toLocaleString(),
+    sub: `${metric.requests.toLocaleString()} ${requestLabel} / ${metric.totalTokens.toLocaleString()} ${tokenLabel}`,
+  }));
+
+const groupLogsByModel = (logs: UsageLog[], requestLabel: string, tokenLabel: string, unknownLabel: string): CompactRow[] => {
+  const grouped = logs.reduce<Record<string, { requests: number; tokens: number; credits: number }>>((acc, log) => {
+    const key = log.modelCode || unknownLabel;
+    acc[key] ??= { requests: 0, tokens: 0, credits: 0 };
+    acc[key].requests += 1;
+    acc[key].tokens += log.totalTokens ?? 0;
+    acc[key].credits += log.chargeCredits ?? 0;
+    return acc;
+  }, {});
+
+  return Object.entries(grouped)
+    .sort(([, left], [, right]) => right.credits - left.credits)
+    .slice(0, 5)
+    .map(([label, value]) => ({
+      label,
+      metric: value.credits.toLocaleString(),
+      sub: `${value.requests.toLocaleString()} ${requestLabel} / ${value.tokens.toLocaleString()} ${tokenLabel}`,
+    }));
+};
 
 export default function DashboardPage() {
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
-  const providersQuery = useQuery({ queryKey: ['providers'], queryFn: gatewayApi.providers });
-  const modelsQuery = useQuery({ queryKey: ['models'], queryFn: gatewayApi.models });
-  const usageSummaryQuery = useQuery({ queryKey: ['usage-summary'], queryFn: () => usageApi.summary() });
-  const logsQuery = useQuery({ queryKey: ['usage-logs', 'dashboard'], queryFn: () => usageApi.logs({ limit: 5 }) });
-  const tenantId = tenantsQuery.data?.[0]?.id;
-  const usersQuery = useQuery({
-    queryKey: ['tenant-users', tenantId, 'dashboard'],
-    queryFn: () => userApi.list(tenantId!),
-    enabled: Boolean(tenantId),
+  const { t, i18n } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const scopedTenantId = primaryRole === USER_ROLES.SUPER_ADMIN ? undefined : user?.tenantId;
+  const canReadPlatformAnalytics = primaryRole === USER_ROLES.SUPER_ADMIN;
+  const numberFormatter = new Intl.NumberFormat(i18n.language);
+  const decimalFormatter = new Intl.NumberFormat(i18n.language, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
-  const walletQuery = useQuery({
-    queryKey: ['wallet', tenantId, 'dashboard'],
-    queryFn: () => billingApi.wallet(tenantId!),
-    enabled: Boolean(tenantId),
+
+  const usageSummaryQuery = useQuery({
+    queryKey: ['usage-summary', scopedTenantId ?? 'platform'],
+    queryFn: () => usageApi.summary(scopedTenantId ? { tenantId: scopedTenantId } : {}),
+    enabled: canReadPlatformAnalytics || Boolean(scopedTenantId),
+  });
+  const logsQuery = useQuery({
+    queryKey: ['usage-logs', 'dashboard', scopedTenantId ?? 'platform'],
+    queryFn: () => usageApi.logs({ tenantId: scopedTenantId, limit: 8 }),
+    enabled: canReadPlatformAnalytics || Boolean(scopedTenantId),
+  });
+  const providersQuery = useQuery({
+    queryKey: ['providers', 'dashboard-health'],
+    queryFn: gatewayApi.providers,
+    enabled: canReadPlatformAnalytics,
+  });
+  const analyticsQuery = useQuery({
+    queryKey: ['cost-summary', 'dashboard', 7],
+    queryFn: () => analyticsApi.costSummary(7),
+    enabled: canReadPlatformAnalytics,
   });
 
   const summary = usageSummaryQuery.data;
-  const tokenData = [
-    { metric: 'Input', tokens: summary?.inputTokens ?? 0 },
-    { metric: 'Output', tokens: summary?.outputTokens ?? 0 },
-    { metric: 'Total', tokens: summary?.totalTokens ?? 0 },
-  ];
   const logs = logsQuery.data ?? [];
+  const totalRequests = summary?.requestCount ?? 0;
+  const failureCount = summary?.failureCount ?? 0;
+  const successCount = summary?.successCount ?? 0;
+  const errorRate = totalRequests > 0 ? failureCount / totalRequests : 0;
+  const gatewayHealthy = errorRate < 0.05;
+  const avgLatency = averageLatency(logs);
+  const qps = totalRequests / 60;
+  const providers = providersQuery.data ?? [];
+  const healthyProviders = providers.filter((provider) => provider.healthStatus === 'HEALTHY').length;
+  const providerHealthText = canReadPlatformAnalytics
+    ? `${numberFormatter.format(healthyProviders)} / ${numberFormatter.format(providers.length)}`
+    : t('dashboardPage.managedProviderHealth');
+  const burnTrend =
+    analyticsQuery.data?.daily?.slice(-7).map((row) => ({
+      day: row.dimensionName || row.dimension,
+      credits: row.credits,
+    })) ?? [{ day: t('dashboardPage.chart.total'), credits: summary?.chargeCredits ?? 0 }];
+  const requestAbbr = t('common.requestAbbr');
+  const tokenAbbr = t('common.tokenAbbr');
+  const topModels = canReadPlatformAnalytics
+    ? toCompactRows(analyticsQuery.data?.models, requestAbbr, tokenAbbr)
+    : groupLogsByModel(logs, requestAbbr, tokenAbbr, t('common.unknownModel'));
+  const topTenants = toCompactRows(analyticsQuery.data?.tenants, requestAbbr, tokenAbbr);
+
+  const formatNumber = (value?: number) => numberFormatter.format(value ?? 0);
+  const formatCredits = (value?: number) => `${formatNumber(value)} ${t('common.credits')}`;
+  const formatPercent = (value: number) => `${decimalFormatter.format(value * 100)}%`;
+  const formatLatency = (value: number) => `${numberFormatter.format(Math.round(value))} ms`;
 
   return (
     <Stack gap="lg">
@@ -57,47 +133,78 @@ export default function DashboardPage() {
               <IconSparkles size={16} />
             </ThemeIcon>
             <Badge color="gray" variant="light" radius="sm">
-              Phase 4
+              {t('dashboardPage.badge')}
             </Badge>
           </Group>
-          <Title order={2}>AI Gateway Console</Title>
-          <Text c="dimmed" maw={700}>
-            统一查看租户、模型网关、Credits 钱包和调用观测数据，第一阶段闭环已经从骨架进入可操作状态。
+          <Title order={2}>{t('dashboardPage.title')}</Title>
+          <Text c="dimmed" maw={760}>
+            {t('dashboardPage.description')}
           </Text>
         </Stack>
-        <Badge variant="outline" color="teal" radius="sm">
-          Gateway online
+        <Badge variant="outline" color={gatewayHealthy ? 'teal' : 'red'} radius="sm">
+          {gatewayHealthy ? t('dashboardPage.gatewayOnline') : t('dashboardPage.gatewayAttention')}
         </Badge>
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
         <MetricCard
-          icon={<IconBuilding size={20} />}
-          label="租户"
-          value={formatNumber(tenantsQuery.data?.length)}
-          hint="Workspace boundary"
-          color="teal"
-        />
-        <MetricCard
-          icon={<IconUsers size={20} />}
-          label="用户"
-          value={formatNumber(usersQuery.data?.length)}
-          hint="Default tenant members"
-          color="blue"
+          icon={gatewayHealthy ? <IconHeartbeat size={20} /> : <IconAlertTriangle size={20} />}
+          label={t('dashboardPage.metrics.gatewayHealth')}
+          value={gatewayHealthy ? t('dashboardPage.gatewayOnline') : t('dashboardPage.gatewayAttention')}
+          hint={t('dashboardPage.hints.health')}
+          color={gatewayHealthy ? 'teal' : 'red'}
         />
         <MetricCard
           icon={<IconServerCog size={20} />}
-          label="供应商"
-          value={formatNumber(providersQuery.data?.length)}
-          hint="Provider registry"
+          label={t('dashboardPage.metrics.providerHealth')}
+          value={providerHealthText}
+          hint={t('dashboardPage.hints.providerHealth')}
           color="cyan"
         />
         <MetricCard
-          icon={<IconBrandOpenai size={20} />}
-          label="模型"
-          value={formatNumber(modelsQuery.data?.length)}
-          hint="Router model codes"
+          icon={<IconGauge size={20} />}
+          label={t('dashboardPage.metrics.qps')}
+          value={decimalFormatter.format(qps)}
+          hint={t('dashboardPage.hints.qps')}
+          color="blue"
+        />
+        <MetricCard
+          icon={<IconActivity size={20} />}
+          label={t('dashboardPage.metrics.errorRate')}
+          value={formatPercent(errorRate)}
+          hint={t('dashboardPage.hints.errorRate')}
+          color={errorRate > 0.05 ? 'red' : 'teal'}
+        />
+      </SimpleGrid>
+
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+        <MetricCard
+          icon={<IconPlayerPlay size={20} />}
+          label={t('dashboardPage.metrics.successFailure')}
+          value={`${formatNumber(successCount)} / ${formatNumber(failureCount)}`}
+          hint={t('dashboardPage.hints.successFailure')}
           color="indigo"
+        />
+        <MetricCard
+          icon={<IconChartBar size={20} />}
+          label={t('dashboardPage.metrics.avgLatency')}
+          value={formatLatency(avgLatency)}
+          hint={t('dashboardPage.hints.latency')}
+          color="violet"
+        />
+        <MetricCard
+          icon={<IconCoins size={20} />}
+          label={t('dashboardPage.metrics.creditsBurn')}
+          value={formatCredits(summary?.chargeCredits)}
+          hint={t('dashboardPage.hints.credits')}
+          color="yellow"
+        />
+        <MetricCard
+          icon={<IconActivity size={20} />}
+          label={t('common.requests')}
+          value={formatNumber(totalRequests)}
+          hint={t('common.tokens')}
+          color="gray"
         />
       </SimpleGrid>
 
@@ -105,20 +212,20 @@ export default function DashboardPage() {
         <Card className="surface-card wide-panel" p="lg">
           <Group justify="space-between" mb="md">
             <Stack gap={2}>
-              <Title order={3}>Token Mix</Title>
+              <Title order={3}>{t('dashboardPage.hints.burnTrend')}</Title>
               <Text size="sm" c="dimmed">
-                当前网关累计输入、输出和总 Token。
+                {t('dashboardPage.metrics.creditsBurn')}
               </Text>
             </Stack>
             <Badge color="gray" variant="light" radius="sm">
-              {formatNumber(summary?.requestCount)} requests
+              {t('dashboardPage.last7Days')}
             </Badge>
           </Group>
           <AreaChart
             h={300}
-            data={tokenData}
-            dataKey="metric"
-            series={[{ name: 'tokens', color: 'teal.6' }]}
+            data={burnTrend}
+            dataKey="day"
+            series={[{ name: 'credits', color: 'teal.6' }]}
             curveType="monotone"
             withGradient
             withDots
@@ -127,27 +234,23 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="surface-card" p="lg">
-          <Stack gap="md">
-            <Group gap="xs">
-              <ThemeIcon variant="light" color="yellow" radius="sm">
-                <IconCoins size={18} />
-              </ThemeIcon>
-              <Title order={3}>Billing</Title>
-            </Group>
-            <Stack gap="sm">
-              <CompactMetric label="可用余额" value={formatCredits(walletQuery.data?.balanceCredits)} />
-              <CompactMetric label="累计消耗" value={formatCredits(walletQuery.data?.totalUsedCredits)} />
-              <CompactMetric label="本期扣费" value={formatCredits(summary?.chargeCredits)} />
-              <CompactMetric label="成功 / 失败" value={`${formatNumber(summary?.successCount)} / ${formatNumber(summary?.failureCount)}`} />
-            </Stack>
-            <Divider color="#eef1f4" />
-            <Group gap="xs" c="dimmed">
-              <IconKey size={16} />
-              <Text size="sm">Demo Key 已接入网关调用链。</Text>
-            </Group>
-          </Stack>
+          <CompactList
+            title={t('dashboardPage.metrics.topModels')}
+            emptyText={t('dashboardPage.empty.models')}
+            rows={topModels}
+          />
         </Card>
       </SimpleGrid>
+
+      {canReadPlatformAnalytics && (
+        <Card className="surface-card" p="lg">
+          <CompactList
+            title={t('dashboardPage.metrics.topTenants')}
+            emptyText={t('dashboardPage.empty.tenants')}
+            rows={topTenants}
+          />
+        </Card>
+      )}
 
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
@@ -155,10 +258,10 @@ export default function DashboardPage() {
             <ThemeIcon variant="light" color="gray" radius="sm">
               <IconActivity size={18} />
             </ThemeIcon>
-            <Title order={3}>Recent Gateway Calls</Title>
+            <Title order={3}>{t('dashboardPage.metrics.recentCalls')}</Title>
           </Group>
           <Badge color="gray" variant="light" radius="sm">
-            live logs
+            {t('common.liveLogs')}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -166,9 +269,9 @@ export default function DashboardPage() {
             <Group key={log.id} className="list-row" p="md" justify="space-between" wrap="nowrap">
               <Box>
                 <Group gap="xs">
-                  <Text fw={650}>{log.modelCode || 'unknown model'}</Text>
+                  <Text fw={650}>{log.modelCode || t('common.unknownModel')}</Text>
                   <Badge color={log.success ? 'teal' : 'red'} variant="light" radius="sm">
-                    {log.success ? 'SUCCESS' : 'FAILED'}
+                    {log.success ? t('common.success') : t('common.failed')}
                   </Badge>
                   {log.providerCode && (
                     <Badge color="gray" variant="light" radius="sm">
@@ -181,11 +284,16 @@ export default function DashboardPage() {
                 </Text>
               </Box>
               <Group gap="lg" visibleFrom="sm">
-                <CompactStat icon={<IconChartBar size={15} />} label="tokens" value={formatNumber(log.totalTokens)} />
-                <CompactStat icon={<IconCoins size={15} />} label="credits" value={formatNumber(log.chargeCredits)} />
+                <CompactStat icon={<IconChartBar size={15} />} label={t('common.tokens')} value={formatNumber(log.totalTokens)} />
+                <CompactStat icon={<IconCoins size={15} />} label={t('common.credits')} value={formatNumber(log.chargeCredits)} />
               </Group>
             </Group>
           ))}
+          {logs.length === 0 && (
+            <Box p="lg" ta="center">
+              <Text c="dimmed">{t('dashboardPage.empty.calls')}</Text>
+            </Box>
+          )}
         </Stack>
       </Card>
     </Stack>
@@ -227,16 +335,35 @@ function MetricCard({
   );
 }
 
-function CompactMetric({ label, value }: { label: string; value: string }) {
+function CompactList({ title, rows, emptyText }: { title: string; rows: CompactRow[]; emptyText: string }) {
   return (
-    <Group justify="space-between" wrap="nowrap">
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Text size="sm" fw={700}>
-        {value}
-      </Text>
-    </Group>
+    <Stack gap="sm">
+      <Title order={3}>{title}</Title>
+      <Stack gap={0} className="subtle-list">
+        {rows.map((row) => (
+          <Group key={row.label} className="list-row" p="sm" justify="space-between" wrap="nowrap">
+            <Box>
+              <Text fw={650} size="sm">
+                {row.label}
+              </Text>
+              {row.sub && (
+                <Text size="xs" c="dimmed">
+                  {row.sub}
+                </Text>
+              )}
+            </Box>
+            <Badge color="teal" variant="light" radius="sm">
+              {row.metric}
+            </Badge>
+          </Group>
+        ))}
+        {rows.length === 0 && (
+          <Box p="lg" ta="center">
+            <Text c="dimmed">{emptyText}</Text>
+          </Box>
+        )}
+      </Stack>
+    </Stack>
   );
 }
 

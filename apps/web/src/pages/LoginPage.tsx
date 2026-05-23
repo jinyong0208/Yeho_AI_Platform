@@ -43,15 +43,15 @@ export default function LoginPage() {
             <Stack gap={2} align="center">
               <Title order={1}>{t('appName')}</Title>
               <Text c="dimmed" size="sm">
-                AI Gateway Console
+                {t('appTagline')}
               </Text>
             </Stack>
             <Group gap={6}>
               <Badge variant="light" color="gray" radius="sm">
-                OpenAI-compatible
+                {t('loginPage.openAiCompatible')}
               </Badge>
               <Badge variant="light" color="teal" radius="sm">
-                Multi-tenant
+                {t('loginPage.multiTenant')}
               </Badge>
             </Group>
           </Stack>
@@ -71,8 +71,8 @@ export default function LoginPage() {
                 } catch {
                   notifications.show({
                     color: 'red',
-                    title: '登录失败',
-                    message: '请检查租户、用户名或密码。',
+                    title: t('loginPage.loginFailedTitle'),
+                    message: t('loginPage.loginFailedMessage'),
                   });
                 }
               })}
