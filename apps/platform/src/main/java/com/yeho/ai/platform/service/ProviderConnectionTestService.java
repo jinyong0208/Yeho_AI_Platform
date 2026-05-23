@@ -144,7 +144,11 @@ public class ProviderConnectionTestService {
                 select model_code
                 from ai_model
                 where provider_id = ? and status = 'ACTIVE'
-                order by id
+                order by case
+                             when lower(model_code) like '%embedding%' then 1
+                             else 0
+                         end,
+                         id
                 limit 1
                 """, providerId);
         if (rows.isEmpty()) {
