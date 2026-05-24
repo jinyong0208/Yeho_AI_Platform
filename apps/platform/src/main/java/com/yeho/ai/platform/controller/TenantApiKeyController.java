@@ -4,6 +4,7 @@ import com.yeho.ai.platform.common.ApiResponse;
 import com.yeho.ai.platform.dto.gateway.ApiKeyCreateRequest;
 import com.yeho.ai.platform.dto.gateway.ApiKeyCreateResponse;
 import com.yeho.ai.platform.dto.gateway.ApiKeyResponse;
+import com.yeho.ai.platform.dto.gateway.ApiKeyScopeUpdateRequest;
 import com.yeho.ai.platform.security.AuthenticatedUser;
 import com.yeho.ai.platform.service.TenantAccessService;
 import com.yeho.ai.platform.service.TenantApiKeyAdminService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,5 +59,16 @@ public class TenantApiKeyController {
         tenantAccessService.assertTenantAccess(user, tenantId);
         tenantApiKeyAdminService.revoke(tenantId, id);
         return ApiResponse.ok(null);
+    }
+
+    @PutMapping("/{id}/scopes")
+    public ApiResponse<ApiKeyResponse> updateScopes(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @PathVariable Long tenantId,
+        @PathVariable Long id,
+        @Valid @RequestBody ApiKeyScopeUpdateRequest request
+    ) {
+        tenantAccessService.assertTenantAccess(user, tenantId);
+        return ApiResponse.ok(tenantApiKeyAdminService.updateScopes(tenantId, id, request));
     }
 }

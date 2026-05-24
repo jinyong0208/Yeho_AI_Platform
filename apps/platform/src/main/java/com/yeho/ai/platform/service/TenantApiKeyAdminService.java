@@ -5,6 +5,7 @@ import com.yeho.ai.platform.common.NotFoundException;
 import com.yeho.ai.platform.dto.gateway.ApiKeyCreateRequest;
 import com.yeho.ai.platform.dto.gateway.ApiKeyCreateResponse;
 import com.yeho.ai.platform.dto.gateway.ApiKeyResponse;
+import com.yeho.ai.platform.dto.gateway.ApiKeyScopeUpdateRequest;
 import com.yeho.ai.platform.entity.Tenant;
 import com.yeho.ai.platform.entity.TenantApiKey;
 import com.yeho.ai.platform.mapper.TenantApiKeyMapper;
@@ -77,6 +78,19 @@ public class TenantApiKeyAdminService {
         }
         apiKey.setStatus("REVOKED");
         tenantApiKeyMapper.updateById(apiKey);
+    }
+
+    @Transactional
+    public ApiKeyResponse updateScopes(Long tenantId, Long id, ApiKeyScopeUpdateRequest request) {
+        TenantApiKey apiKey = tenantApiKeyMapper.selectOne(new LambdaQueryWrapper<TenantApiKey>()
+            .eq(TenantApiKey::getTenantId, tenantId)
+            .eq(TenantApiKey::getId, id));
+        if (apiKey == null) {
+            throw new NotFoundException("API key not found");
+        }
+        apiKey.setScopes(apiKeyScopeService.normalizeScopes(request.getScopes()));
+        tenantApiKeyMapper.updateById(apiKey);
+        return toResponse(apiKey);
     }
 
     private ApiKeyResponse toResponse(TenantApiKey apiKey) {

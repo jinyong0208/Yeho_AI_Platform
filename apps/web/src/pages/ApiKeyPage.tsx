@@ -24,7 +24,16 @@ import { useDisclosure } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconChartHistogram, IconCircleCheck, IconCircleOff, IconGauge, IconKey, IconPlus, IconTrash } from '@tabler/icons-react';
+import {
+  IconChartHistogram,
+  IconCircleCheck,
+  IconCircleOff,
+  IconGauge,
+  IconKey,
+  IconPlus,
+  IconShieldCheck,
+  IconTrash,
+} from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gatewayApi, type ApiKeyUsageSummary, type TenantApiKeyCreated, type TenantApiKeyResponse } from '../api/gateway';
@@ -60,6 +69,7 @@ export default function ApiKeyPage() {
   const [opened, { open, close }] = useDisclosure(false);
   const [limitOpened, { open: openLimit, close: closeLimit }] = useDisclosure(false);
   const [usageOpened, { open: openUsage, close: closeUsage }] = useDisclosure(false);
+  const [scopeOpened, { open: openScope, close: closeScope }] = useDisclosure(false);
   const queryClient = useQueryClient();
   const tenantsQuery = useQuery({ queryKey: ['tenants', 'api-keys'], queryFn: tenantApi.list, enabled: canSelectTenant });
   const tenants = canSelectTenant
@@ -81,6 +91,7 @@ export default function ApiKeyPage() {
       maxConcurrent: null as number | null,
     },
   });
+  const scopeForm = useForm({ initialValues: { scopes: [] as string[] } });
 
   useEffect(() => {
     if (!selectedTenantId && tenants.length > 0) {
@@ -131,6 +142,17 @@ export default function ApiKeyPage() {
       setSelectedApiKey(null);
     },
   });
+  const updateScopeMutation = useMutation({
+    mutationFn: (values: typeof scopeForm.values) =>
+      gatewayApi.updateApiKeyScopes(selectedTenantId as string, selectedApiKey?.id as string, values),
+    onSuccess: () => {
+      notifications.show({ color: 'teal', title: t('apiKeyPage.scopeSavedTitle'), message: t('apiKeyPage.scopeSavedMessage') });
+      queryClient.invalidateQueries({ queryKey: ['api-keys', selectedTenantId] });
+      closeScope();
+      setSelectedApiKey(null);
+      scopeForm.reset();
+    },
+  });
   const apiKeys = apiKeysQuery.data ?? [];
 
   const openLimitModal = async (apiKey: TenantApiKeyResponse) => {
@@ -143,6 +165,12 @@ export default function ApiKeyPage() {
       maxConcurrent: limit?.maxConcurrent ?? null,
     });
     openLimit();
+  };
+
+  const openScopeModal = (apiKey: TenantApiKeyResponse) => {
+    setSelectedApiKey(apiKey);
+    scopeForm.setValues({ scopes: apiKey.scopes ?? [] });
+    openScope();
   };
 
   const openDisableConfirm = (apiKey: TenantApiKeyResponse) => {
@@ -268,6 +296,16 @@ export default function ApiKeyPage() {
                     <IconGauge size={16} />
                   </ActionIcon>
                 </Tooltip>
+                <Tooltip label={t('apiKeyPage.editScopes')}>
+                  <ActionIcon
+                    variant="subtle"
+                    color="teal"
+                    aria-label={t('apiKeyPage.editScopesAria')}
+                    onClick={() => openScopeModal(apiKey)}
+                  >
+                    <IconShieldCheck size={16} />
+                  </ActionIcon>
+                </Tooltip>
                 {apiKey.status === 'ACTIVE' ? (
                   <Tooltip label={t('apiKeyPage.disable')}>
                     <ActionIcon
@@ -357,6 +395,31 @@ export default function ApiKeyPage() {
             <NumberInput label={t('rateLimitPage.fields.maxConcurrent')} min={0} {...limitForm.getInputProps('maxConcurrent')} />
             <Button color="dark" type="submit" loading={updateLimitMutation.isPending} disabled={!selectedApiKey}>
               {t('apiKeyPage.saveRateLimit')}
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal
+        opened={scopeOpened}
+        onClose={() => {
+          closeScope();
+          setSelectedApiKey(null);
+          scopeForm.reset();
+        }}
+        title={`${t('apiKeyPage.scopeTitle')}${selectedApiKey ? ` - ${selectedApiKey.name}` : ''}`}
+        centered
+      >
+        <form onSubmit={scopeForm.onSubmit((values) => updateScopeMutation.mutate(values))}>
+          <Stack>
+            <MultiSelect
+              label={t('apiKeyPage.scopes')}
+              data={scopeOptions}
+              required
+              {...scopeForm.getInputProps('scopes')}
+            />
+            <Button color="dark" type="submit" loading={updateScopeMutation.isPending} disabled={!selectedApiKey}>
+              {t('apiKeyPage.saveScopes')}
             </Button>
           </Stack>
         </form>

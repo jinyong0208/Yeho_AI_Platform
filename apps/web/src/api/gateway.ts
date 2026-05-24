@@ -178,6 +178,8 @@ export const gatewayApi = {
     unwrapData(await apiClient.get(`/tenants/${tenantId}/api-keys`)),
   createApiKey: async (tenantId: Id, payload: { name: string; scopes?: string[] }): Promise<TenantApiKeyCreated> =>
     unwrapData(await apiClient.post(`/tenants/${tenantId}/api-keys`, payload)),
+  updateApiKeyScopes: async (tenantId: Id, keyId: Id, payload: { scopes: string[] }): Promise<TenantApiKeyResponse> =>
+    unwrapData(await apiClient.put(`/tenants/${tenantId}/api-keys/${keyId}/scopes`, payload)),
   revokeApiKey: async (tenantId: Id, keyId: Id) => {
     await apiClient.delete(`/tenants/${tenantId}/api-keys/${keyId}`);
   },
