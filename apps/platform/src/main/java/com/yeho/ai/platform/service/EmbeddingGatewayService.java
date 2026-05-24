@@ -11,6 +11,7 @@ import java.security.MessageDigest;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -51,10 +52,11 @@ public class EmbeddingGatewayService {
         ApiKeyIdentity apiKey = authenticate(authorization);
         requireScope(apiKey);
         List<String> inputs = normalizeInput(request.input());
+        validateDimensions(request.dimensions());
         ModelRoute model = resolveModel(request.model());
 
         try {
-            EmbeddingResponse response = callProvider(model, request.model(), inputs);
+            EmbeddingResponse response = callProvider(model, request, inputs);
             recordUsage(apiKey, model, requestId, startedAt, true, response.usage().totalTokens(), null, null);
             return response;
         } catch (ResponseStatusException ex) {
@@ -145,6 +147,12 @@ public class EmbeddingGatewayService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "input must be a string or string array");
     }
 
+    private void validateDimensions(Integer dimensions) {
+        if (dimensions != null && dimensions < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "dimensions must be greater than 0");
+        }
+    }
+
     private ModelRoute resolveModel(String modelCode) {
         if (modelCode == null || modelCode.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "model is required");
@@ -179,7 +187,7 @@ public class EmbeddingGatewayService {
         );
     }
 
-    private EmbeddingResponse callProvider(ModelRoute model, String requestedModel, List<String> inputs) throws Exception {
+    private EmbeddingResponse callProvider(ModelRoute model, EmbeddingRequest request, List<String> inputs) throws Exception {
         String providerCode = model.providerCode().toUpperCase(Locale.ROOT);
         if (!"QWEN".equals(providerCode)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Embedding is currently supported for Qwen provider only");
@@ -187,10 +195,15 @@ public class EmbeddingGatewayService {
 
         String providerKey = decryptSecret(model.encryptedApiKey());
         String endpoint = trimTrailingSlash(model.baseUrl()) + "/embeddings";
-        Map<String, Object> providerRequest = Map.of(
-                "model", requestedModel,
-                "input", inputs.size() == 1 ? inputs.get(0) : inputs
-        );
+        Map<String, Object> providerRequest = new LinkedHashMap<>();
+        providerRequest.put("model", request.model());
+        providerRequest.put("input", inputs.size() == 1 ? inputs.get(0) : inputs);
+        if (request.dimensions() != null) {
+            providerRequest.put("dimensions", request.dimensions());
+        }
+        if (StringUtils.hasText(request.encodingFormat())) {
+            providerRequest.put("encoding_format", request.encodingFormat());
+        }
 
         String body = RestClient.builder()
                 .baseUrl(endpoint)
@@ -210,6 +223,12 @@ public class EmbeddingGatewayService {
             for (JsonNode value : item.path("embedding")) {
                 embedding.add(value.asDouble());
             }
+            if (request.dimensions() != null && embedding.size() != request.dimensions()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        "Embedding dimension mismatch: expected " + request.dimensions() + " but provider returned " + embedding.size()
+                );
+            }
             data.add(new EmbeddingResponse.EmbeddingData(
                     item.path("object").asText("embedding"),
                     embedding,
@@ -223,7 +242,7 @@ public class EmbeddingGatewayService {
         return new EmbeddingResponse(
                 root.path("object").asText("list"),
                 data,
-                root.path("model").asText(requestedModel),
+                root.path("model").asText(request.model()),
                 new EmbeddingResponse.Usage(Math.toIntExact(promptTokens), Math.toIntExact(totalTokens))
         );
     }

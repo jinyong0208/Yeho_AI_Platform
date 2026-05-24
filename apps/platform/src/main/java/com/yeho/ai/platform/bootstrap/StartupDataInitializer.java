@@ -28,6 +28,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -239,9 +240,13 @@ public class StartupDataInitializer implements ApplicationRunner {
         }
 
         provider.setProviderName(providerName);
-        provider.setBaseUrl(baseUrl);
-        provider.setApiKeyEncrypted(secretCryptoService.encrypt(apiKeyPlain));
-        provider.setStatus("ACTIVE");
+        if (!StringUtils.hasText(provider.getBaseUrl())) {
+            provider.setBaseUrl(baseUrl);
+        }
+        if (!StringUtils.hasText(provider.getApiKeyEncrypted())) {
+            provider.setApiKeyEncrypted(secretCryptoService.encrypt(apiKeyPlain));
+        }
+        provider.setStatus(StringUtils.hasText(provider.getStatus()) ? provider.getStatus() : "ACTIVE");
         provider.setTimeoutMs(provider.getTimeoutMs() == null ? 120000 : provider.getTimeoutMs());
         provider.setRetryCount(provider.getRetryCount() == null ? 0 : provider.getRetryCount());
         provider.setCircuitFailureThreshold(provider.getCircuitFailureThreshold() == null ? 5 : provider.getCircuitFailureThreshold());
