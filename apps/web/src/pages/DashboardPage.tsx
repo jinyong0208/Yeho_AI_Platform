@@ -27,10 +27,13 @@ type CompactRow = {
 };
 
 const averageLatency = (logs: UsageLog[]) => {
-  if (logs.length === 0) {
+  const latencies = logs
+    .map((log) => Number(log.latencyMs ?? 0))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  if (latencies.length === 0) {
     return 0;
   }
-  return logs.reduce((sum, log) => sum + (log.latencyMs ?? 0), 0) / logs.length;
+  return latencies.reduce((sum, value) => sum + value, 0) / latencies.length;
 };
 
 const toCompactRows = (metrics: CostMetric[] | undefined, requestLabel: string, tokenLabel: string): CompactRow[] =>
@@ -122,7 +125,15 @@ export default function DashboardPage() {
   const formatNumber = (value?: number) => numberFormatter.format(value ?? 0);
   const formatCredits = (value?: number) => `${formatNumber(value)} ${t('common.credits')}`;
   const formatPercent = (value: number) => `${decimalFormatter.format(value * 100)}%`;
-  const formatLatency = (value: number) => `${numberFormatter.format(Math.round(value))} ms`;
+  const formatLatency = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) {
+      return t('common.noData');
+    }
+    if (value >= 1000) {
+      return `${decimalFormatter.format(value / 1000)} s`;
+    }
+    return `${numberFormatter.format(Math.round(value))} ms`;
+  };
 
   return (
     <Stack gap="lg">

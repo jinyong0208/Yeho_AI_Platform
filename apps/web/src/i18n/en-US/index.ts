@@ -208,6 +208,7 @@ const enUS = {
     unknownModel: 'Unknown model',
     liveLogs: 'Live logs',
     notEnabled: 'Not enabled',
+    noData: 'No data',
     preview: 'Preview',
     statusLabels: {
       ACTIVE: 'Active',

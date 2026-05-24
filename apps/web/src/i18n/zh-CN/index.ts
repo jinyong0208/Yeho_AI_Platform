@@ -208,6 +208,7 @@ const zhCN = {
     unknownModel: '未知模型',
     liveLogs: '实时调用',
     notEnabled: '尚未启用',
+    noData: '暂无数据',
     preview: '预览',
     statusLabels: {
       ACTIVE: '启用',
