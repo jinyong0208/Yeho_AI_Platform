@@ -27,6 +27,7 @@ import {
   IconActivity,
   IconAdjustmentsHorizontal,
   IconApi,
+  IconApps,
   IconBook2,
   IconBrain,
   IconChartBar,
@@ -54,6 +55,7 @@ const UserPage = lazy(() => import('../pages/UserPage'));
 const ProviderPage = lazy(() => import('../pages/ProviderPage'));
 const ModelPage = lazy(() => import('../pages/ModelPage'));
 const ApiKeyPage = lazy(() => import('../pages/ApiKeyPage'));
+const BusinessSystemPage = lazy(() => import('../pages/BusinessSystemPage'));
 const WalletPage = lazy(() => import('../pages/WalletPage'));
 const WalletTransactionPage = lazy(() => import('../pages/WalletTransactionPage'));
 const InvoicePage = lazy(() => import('../pages/InvoicePage'));
@@ -160,6 +162,13 @@ const navItems: NavItem[] = [
   },
   {
     groupKey: 'navGroups.tenant',
+    to: '/business-systems',
+    labelKey: 'nav.businessSystems',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
+    icon: IconApps,
+  },
+  {
+    groupKey: 'navGroups.tenant',
     to: '/api-keys',
     labelKey: 'nav.apiKeys',
     roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
@@ -249,6 +258,7 @@ const routeRoles: Record<string, UserRole[]> = {
   '/': allRoles,
   '/tenants': [USER_ROLES.SUPER_ADMIN],
   '/users': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
+  '/business-systems': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/providers': [USER_ROLES.SUPER_ADMIN],
   '/models': [USER_ROLES.SUPER_ADMIN],
   '/api-keys': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
@@ -417,6 +427,7 @@ export const router = createBrowserRouter([
       { index: true, element: secured('/', <DashboardPage />) },
       { path: 'tenants', element: secured('/tenants', <TenantPage />) },
       { path: 'users', element: secured('/users', <UserPage />) },
+      { path: 'business-systems', element: secured('/business-systems', <BusinessSystemPage />) },
       { path: 'providers', element: secured('/providers', <ProviderPage />) },
       { path: 'models', element: secured('/models', <ModelPage />) },
       { path: 'api-keys', element: secured('/api-keys', <ApiKeyPage />) },

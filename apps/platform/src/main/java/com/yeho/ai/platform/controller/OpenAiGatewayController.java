@@ -1,6 +1,7 @@
 package com.yeho.ai.platform.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
 import com.yeho.ai.platform.dto.openai.ChatCompletionResponse;
 import com.yeho.ai.platform.service.AiGatewayService;
@@ -25,15 +26,19 @@ public class OpenAiGatewayController {
     public StreamingResponseBody chatCompletions(
         @RequestBody ChatCompletionRequest request,
         @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-Yeho-System-Code", required = false) String systemCode,
+        @RequestHeader(value = "X-Yeho-Data-Domain", required = false) String dataDomain,
+        @RequestHeader(value = "X-Yeho-Agent-Code", required = false) String agentCode,
         HttpServletResponse servletResponse
     ) {
+        GatewayRequestContext gatewayContext = GatewayRequestContext.of(systemCode, dataDomain, agentCode);
         if (Boolean.TRUE.equals(request.getStream())) {
             servletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
             servletResponse.setHeader("Cache-Control", "no-cache");
-            return aiGatewayService.streamChatCompletions(request, authorization);
+            return aiGatewayService.streamChatCompletions(request, authorization, gatewayContext);
         }
         servletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ChatCompletionResponse chatResponse = aiGatewayService.chatCompletions(request, authorization);
+        ChatCompletionResponse chatResponse = aiGatewayService.chatCompletions(request, authorization, gatewayContext);
         return outputStream -> objectMapper.writeValue(outputStream, chatResponse);
     }
 }

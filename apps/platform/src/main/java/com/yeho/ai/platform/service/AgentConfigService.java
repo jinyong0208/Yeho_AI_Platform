@@ -66,6 +66,9 @@ public class AgentConfigService {
         if (request.tenantId() != null) {
             config.setTenantId(request.tenantId());
         }
+        config.setSystemCode(normalizeCode(request.systemCode()));
+        config.setDataDomain(normalizeCode(request.dataDomain()));
+        config.setAllowedDataDomains(normalizeCsv(request.allowedDataDomains()));
         config.setAgentCode(request.agentCode());
         config.setAgentName(request.agentName());
         config.setDescription(request.description());
@@ -94,10 +97,30 @@ public class AgentConfigService {
         return status.trim().toUpperCase();
     }
 
+    private String normalizeCode(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase();
+    }
+
+    private String normalizeCsv(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .map(String::toLowerCase)
+                .distinct()
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
     private AgentConfigResponse toResponse(AgentConfig config) {
         return new AgentConfigResponse(
                 config.getId(),
                 config.getTenantId(),
+                config.getSystemCode(),
+                config.getDataDomain(),
+                config.getAllowedDataDomains(),
                 config.getAgentCode(),
                 config.getAgentName(),
                 config.getDescription(),

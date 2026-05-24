@@ -1,6 +1,7 @@
 package com.yeho.ai.platform.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
 import com.yeho.ai.platform.dto.openai.ChatCompletionChunkResponse;
 import com.yeho.ai.platform.dto.openai.ChatCompletionResponse;
@@ -44,6 +45,15 @@ public class AiGatewayService {
     private final ObjectMapper objectMapper;
 
     public ChatCompletionResponse chatCompletions(ChatCompletionRequest request, String authorizationHeader) {
+        return chatCompletions(request, authorizationHeader, GatewayRequestContext.empty());
+    }
+
+    public ChatCompletionResponse chatCompletions(
+        ChatCompletionRequest request,
+        String authorizationHeader,
+        GatewayRequestContext gatewayContext
+    ) {
+        GatewayRequestContext requestContext = gatewayContext == null ? GatewayRequestContext.empty() : gatewayContext;
         long startTime = System.currentTimeMillis();
         String requestId = StringUtils.hasText(RequestContext.getRequestId())
             ? RequestContext.getRequestId()
@@ -74,6 +84,7 @@ public class AiGatewayService {
             tenantId = tenantApiKey.getTenantId();
             apiKeyId = tenantApiKey.getId();
             apiKeyScopeService.requireScope(tenantApiKey, ApiKeyScopeService.CHAT_COMPLETION);
+            apiKeyScopeService.requireBusinessContext(tenantApiKey, requestContext);
 
             route = modelRouter.route(request.getModel());
             providerCode = route.provider().getProviderCode();
@@ -122,7 +133,9 @@ public class AiGatewayService {
                 true,
                 null,
                 null,
-                request
+                request,
+                tenantApiKey == null ? null : tenantApiKey.getScopes(),
+                requestContext
             );
             return buildResponse(request, route.model(), adapterResponse);
         } catch (GatewayException ex) {
@@ -148,9 +161,10 @@ public class AiGatewayService {
                 ex.getCode(),
                 ex.getMessage(),
                 request,
-                tenantApiKey == null ? null : tenantApiKey.getScopes()
+                tenantApiKey == null ? null : tenantApiKey.getScopes(),
+                requestContext
             );
-            if ("insufficient_scope".equals(ex.getCode()) && tenantApiKey != null) {
+            if (("insufficient_scope".equals(ex.getCode()) || "insufficient_context_scope".equals(ex.getCode())) && tenantApiKey != null) {
                 recordGatewayAudit(tenantApiKey, requestId, "API_KEY_SCOPE", 403, ex.getMessage());
             }
             throw ex;
@@ -177,7 +191,8 @@ public class AiGatewayService {
                 "provider_error",
                 ex.getMessage(),
                 request,
-                tenantApiKey == null ? null : tenantApiKey.getScopes()
+                tenantApiKey == null ? null : tenantApiKey.getScopes(),
+                requestContext
             );
             throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion failed", ex);
         } finally {
@@ -186,6 +201,15 @@ public class AiGatewayService {
     }
 
     public StreamingResponseBody streamChatCompletions(ChatCompletionRequest request, String authorizationHeader) {
+        return streamChatCompletions(request, authorizationHeader, GatewayRequestContext.empty());
+    }
+
+    public StreamingResponseBody streamChatCompletions(
+        ChatCompletionRequest request,
+        String authorizationHeader,
+        GatewayRequestContext gatewayContext
+    ) {
+        GatewayRequestContext requestContext = gatewayContext == null ? GatewayRequestContext.empty() : gatewayContext;
         long startTime = System.currentTimeMillis();
         String requestId = StringUtils.hasText(RequestContext.getRequestId())
             ? RequestContext.getRequestId()
@@ -208,6 +232,7 @@ public class AiGatewayService {
             tenantId = tenantApiKey.getTenantId();
             apiKeyId = tenantApiKey.getId();
             apiKeyScopeService.requireScope(tenantApiKey, ApiKeyScopeService.CHAT_COMPLETION);
+            apiKeyScopeService.requireBusinessContext(tenantApiKey, requestContext);
 
             route = modelRouter.route(request.getModel());
             providerCode = route.provider().getProviderCode();
@@ -243,7 +268,8 @@ public class AiGatewayService {
                 modelCode,
                 reservedCredits,
                 rateLimitLease,
-                tenantApiKey.getScopes()
+                tenantApiKey.getScopes(),
+                requestContext
             );
             return outputStream -> writeStreamingResponse(context, outputStream);
         } catch (GatewayException ex) {
@@ -270,9 +296,10 @@ public class AiGatewayService {
                 ex.getCode(),
                 ex.getMessage(),
                 request,
-                tenantApiKey == null ? null : tenantApiKey.getScopes()
+                tenantApiKey == null ? null : tenantApiKey.getScopes(),
+                requestContext
             );
-            if ("insufficient_scope".equals(ex.getCode()) && tenantApiKey != null) {
+            if (("insufficient_scope".equals(ex.getCode()) || "insufficient_context_scope".equals(ex.getCode())) && tenantApiKey != null) {
                 recordGatewayAudit(tenantApiKey, requestId, "API_KEY_SCOPE", 403, ex.getMessage());
             }
             throw ex;
@@ -300,7 +327,8 @@ public class AiGatewayService {
                 "provider_error",
                 ex.getMessage(),
                 request,
-                tenantApiKey == null ? null : tenantApiKey.getScopes()
+                tenantApiKey == null ? null : tenantApiKey.getScopes(),
+                requestContext
             );
             throw new GatewayException(HttpStatus.BAD_GATEWAY, "provider_error", "Chat completion stream failed", ex);
         }
@@ -406,7 +434,8 @@ public class AiGatewayService {
                 null,
                 null,
                 context.request(),
-                context.apiKeyScopes()
+                context.apiKeyScopes(),
+                context.gatewayRequestContext()
             );
             writeChunk(outputStream, completionId, created, context.modelCode(), null, null, usage.finishReason);
             writeDone(outputStream);
@@ -441,7 +470,8 @@ public class AiGatewayService {
                 code,
                 ex.getMessage(),
                 context.request(),
-                context.apiKeyScopes()
+                context.apiKeyScopes(),
+                context.gatewayRequestContext()
             );
             writeStreamError(outputStream, code, ex.getMessage());
         } finally {
@@ -518,7 +548,8 @@ public class AiGatewayService {
         String modelCode,
         long reservedCredits,
         RateLimitService.RateLimitLease rateLimitLease,
-        String apiKeyScopes
+        String apiKeyScopes,
+        GatewayRequestContext gatewayRequestContext
     ) {
     }
 

@@ -57,6 +57,14 @@ const scopeOptions = [
   { value: 'admin:*', label: 'admin:*' },
 ];
 
+const splitCsv = (value: string) =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const joinCodes = (values?: string[]) => (values && values.length > 0 ? values.join(', ') : '');
+
 export default function ApiKeyPage() {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
@@ -82,7 +90,14 @@ export default function ApiKeyPage() {
     queryFn: () => gatewayApi.apiKeys(selectedTenantId as string),
     enabled: Boolean(selectedTenantId),
   });
-  const form = useForm({ initialValues: { name: '', scopes: ['chat:completion'] as string[] } });
+  const form = useForm({
+    initialValues: {
+      name: '',
+      scopes: ['chat:completion'] as string[],
+      allowedSystemCodes: '',
+      allowedDataDomains: '',
+    },
+  });
   const limitForm = useForm({
     initialValues: {
       rpmLimit: null as number | null,
@@ -91,7 +106,13 @@ export default function ApiKeyPage() {
       maxConcurrent: null as number | null,
     },
   });
-  const scopeForm = useForm({ initialValues: { scopes: [] as string[] } });
+  const scopeForm = useForm({
+    initialValues: {
+      scopes: [] as string[],
+      allowedSystemCodes: '',
+      allowedDataDomains: '',
+    },
+  });
 
   useEffect(() => {
     if (!selectedTenantId && tenants.length > 0) {
@@ -100,7 +121,13 @@ export default function ApiKeyPage() {
   }, [selectedTenantId, tenants]);
 
   const createMutation = useMutation({
-    mutationFn: (values: { name: string; scopes: string[] }) => gatewayApi.createApiKey(selectedTenantId as string, values),
+    mutationFn: (values: typeof form.values) =>
+      gatewayApi.createApiKey(selectedTenantId as string, {
+        name: values.name,
+        scopes: values.scopes,
+        allowedSystemCodes: splitCsv(values.allowedSystemCodes),
+        allowedDataDomains: splitCsv(values.allowedDataDomains),
+      }),
     onSuccess: (apiKey) => {
       setCreatedKey(apiKey);
       notifications.show({ color: 'teal', title: t('apiKeyPage.createdTitle'), message: t('apiKeyPage.createdMessage') });
@@ -144,7 +171,11 @@ export default function ApiKeyPage() {
   });
   const updateScopeMutation = useMutation({
     mutationFn: (values: typeof scopeForm.values) =>
-      gatewayApi.updateApiKeyScopes(selectedTenantId as string, selectedApiKey?.id as string, values),
+      gatewayApi.updateApiKeyScopes(selectedTenantId as string, selectedApiKey?.id as string, {
+        scopes: values.scopes,
+        allowedSystemCodes: splitCsv(values.allowedSystemCodes),
+        allowedDataDomains: splitCsv(values.allowedDataDomains),
+      }),
     onSuccess: () => {
       notifications.show({ color: 'teal', title: t('apiKeyPage.scopeSavedTitle'), message: t('apiKeyPage.scopeSavedMessage') });
       queryClient.invalidateQueries({ queryKey: ['api-keys', selectedTenantId] });
@@ -169,7 +200,11 @@ export default function ApiKeyPage() {
 
   const openScopeModal = (apiKey: TenantApiKeyResponse) => {
     setSelectedApiKey(apiKey);
-    scopeForm.setValues({ scopes: apiKey.scopes ?? [] });
+    scopeForm.setValues({
+      scopes: apiKey.scopes ?? [],
+      allowedSystemCodes: joinCodes(apiKey.allowedSystemCodes),
+      allowedDataDomains: joinCodes(apiKey.allowedDataDomains),
+    });
     openScope();
   };
 
@@ -268,6 +303,16 @@ export default function ApiKeyPage() {
                         {scope}
                       </Badge>
                     ))}
+                    {(apiKey.allowedSystemCodes ?? []).map((systemCode: string) => (
+                      <Badge key={`system-${systemCode}`} color="blue" variant="light" radius="sm">
+                        {t('apiKeyPage.systemCodeBadge', { code: systemCode })}
+                      </Badge>
+                    ))}
+                    {(apiKey.allowedDataDomains ?? []).map((dataDomain: string) => (
+                      <Badge key={`domain-${dataDomain}`} color="violet" variant="light" radius="sm">
+                        {t('apiKeyPage.dataDomainBadge', { code: dataDomain })}
+                      </Badge>
+                    ))}
                   </Group>
                 </Box>
               </Group>
@@ -362,6 +407,18 @@ export default function ApiKeyPage() {
             <Stack>
               <TextInput label={t('name')} required {...form.getInputProps('name')} />
               <MultiSelect label={t('apiKeyPage.scopes')} data={scopeOptions} required {...form.getInputProps('scopes')} />
+              <TextInput
+                label={t('apiKeyPage.allowedSystemCodes')}
+                description={t('apiKeyPage.allowedSystemCodesHint')}
+                placeholder={t('apiKeyPage.allowedSystemCodesPlaceholder')}
+                {...form.getInputProps('allowedSystemCodes')}
+              />
+              <TextInput
+                label={t('apiKeyPage.allowedDataDomains')}
+                description={t('apiKeyPage.allowedDataDomainsHint')}
+                placeholder={t('apiKeyPage.allowedDataDomainsPlaceholder')}
+                {...form.getInputProps('allowedDataDomains')}
+              />
               <Button color="dark" type="submit" loading={createMutation.isPending}>
                 {t('create')}
               </Button>
@@ -417,6 +474,18 @@ export default function ApiKeyPage() {
               data={scopeOptions}
               required
               {...scopeForm.getInputProps('scopes')}
+            />
+            <TextInput
+              label={t('apiKeyPage.allowedSystemCodes')}
+              description={t('apiKeyPage.allowedSystemCodesHint')}
+              placeholder={t('apiKeyPage.allowedSystemCodesPlaceholder')}
+              {...scopeForm.getInputProps('allowedSystemCodes')}
+            />
+            <TextInput
+              label={t('apiKeyPage.allowedDataDomains')}
+              description={t('apiKeyPage.allowedDataDomainsHint')}
+              placeholder={t('apiKeyPage.allowedDataDomainsPlaceholder')}
+              {...scopeForm.getInputProps('allowedDataDomains')}
             />
             <Button color="dark" type="submit" loading={updateScopeMutation.isPending} disabled={!selectedApiKey}>
               {t('apiKeyPage.saveScopes')}

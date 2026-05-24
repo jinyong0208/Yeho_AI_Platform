@@ -54,6 +54,9 @@ export function AgentConfigPage() {
   const form = useForm({
     initialValues: {
       tenantId: '',
+      systemCode: '',
+      dataDomain: '',
+      allowedDataDomains: '',
       agentCode: '',
       agentName: '',
       description: '',
@@ -114,6 +117,9 @@ export function AgentConfigPage() {
     setEditing(config ?? null);
     form.setValues({
       tenantId: String(config?.tenantId ?? tenantId ?? ''),
+      systemCode: config?.systemCode ?? '',
+      dataDomain: config?.dataDomain ?? '',
+      allowedDataDomains: config?.allowedDataDomains ?? '',
       agentCode: config?.agentCode ?? '',
       agentName: config?.agentName ?? '',
       description: config?.description ?? '',
@@ -155,6 +161,8 @@ export function AgentConfigPage() {
           <Table verticalSpacing="sm">
             <Table.Thead>
               <Table.Tr>
+                <Table.Th>{t('agentConfigPage.systemCode')}</Table.Th>
+                <Table.Th>{t('agentConfigPage.dataDomain')}</Table.Th>
                 <Table.Th>{t('code')}</Table.Th>
                 <Table.Th>{t('name')}</Table.Th>
                 <Table.Th>{t('agentConfigPage.defaultModel')}</Table.Th>
@@ -167,6 +175,8 @@ export function AgentConfigPage() {
             <Table.Tbody>
               {(configs.data ?? []).map((config) => (
                 <Table.Tr key={config.id}>
+                  <Table.Td>{config.systemCode || '-'}</Table.Td>
+                  <Table.Td>{config.dataDomain || '-'}</Table.Td>
                   <Table.Td>
                     <Text fw={700}>{config.agentCode}</Text>
                   </Table.Td>
@@ -193,7 +203,7 @@ export function AgentConfigPage() {
               ))}
               {(configs.data ?? []).length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>
+                  <Table.Td colSpan={9}>
                     <Text c="dimmed" ta="center" py="xl">
                       {t('agentConfigPage.empty')}
                     </Text>
@@ -214,6 +224,22 @@ export function AgentConfigPage() {
               disabled={!canSelectTenant}
               required
               {...form.getInputProps('tenantId')}
+            />
+            <TextInput
+              label={t('agentConfigPage.systemCode')}
+              placeholder={t('agentConfigPage.systemCodePlaceholder')}
+              {...form.getInputProps('systemCode')}
+            />
+            <TextInput
+              label={t('agentConfigPage.dataDomain')}
+              placeholder={t('agentConfigPage.dataDomainPlaceholder')}
+              {...form.getInputProps('dataDomain')}
+            />
+            <TextInput
+              label={t('agentConfigPage.allowedDataDomains')}
+              description={t('agentConfigPage.allowedDataDomainsHint')}
+              placeholder={t('agentConfigPage.allowedDataDomainsPlaceholder')}
+              {...form.getInputProps('allowedDataDomains')}
             />
             <TextInput label={t('code')} required {...form.getInputProps('agentCode')} />
             <TextInput label={t('name')} required {...form.getInputProps('agentName')} />

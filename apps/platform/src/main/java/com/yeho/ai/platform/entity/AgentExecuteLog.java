@@ -15,6 +15,8 @@ public class AgentExecuteLog {
     private String requestId;
     private Long tenantId;
     private Long agentConfigId;
+    private String systemCode;
+    private String dataDomain;
     private String agentCode;
     private String model;
     private Long latencyMs;

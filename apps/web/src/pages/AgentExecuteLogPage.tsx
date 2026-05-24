@@ -85,6 +85,8 @@ export function AgentExecuteLogPage() {
               <Table.Tr>
                 <Table.Th>{t('agentLogPage.requestId')}</Table.Th>
                 <Table.Th>{t('agentLogPage.traceId')}</Table.Th>
+                <Table.Th>{t('agentLogPage.systemCode')}</Table.Th>
+                <Table.Th>{t('agentLogPage.dataDomain')}</Table.Th>
                 <Table.Th>{t('agentLogPage.agent')}</Table.Th>
                 <Table.Th>{t('agentLogPage.model')}</Table.Th>
                 <Table.Th>{t('agentLogPage.latency')}</Table.Th>
@@ -103,6 +105,8 @@ export function AgentExecuteLogPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td>{log.traceId ?? '-'}</Table.Td>
+                  <Table.Td>{log.systemCode ?? '-'}</Table.Td>
+                  <Table.Td>{log.dataDomain ?? '-'}</Table.Td>
                   <Table.Td>{log.agentCode ?? '-'}</Table.Td>
                   <Table.Td>{log.model ?? '-'}</Table.Td>
                   <Table.Td>{log.latencyMs ?? 0} ms</Table.Td>
@@ -118,7 +122,7 @@ export function AgentExecuteLogPage() {
               ))}
               {rows.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={9}>
+                  <Table.Td colSpan={11}>
                     <Text c="dimmed" ta="center" py="xl">
                       {t('agentLogPage.empty')}
                     </Text>

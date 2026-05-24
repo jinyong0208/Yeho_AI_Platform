@@ -70,6 +70,9 @@ public class AgentConfigController {
     private AgentConfigRequest withTenant(AgentConfigRequest request, Long tenantId) {
         return new AgentConfigRequest(
                 tenantId,
+                request.systemCode(),
+                request.dataDomain(),
+                request.allowedDataDomains(),
                 request.agentCode(),
                 request.agentName(),
                 request.description(),

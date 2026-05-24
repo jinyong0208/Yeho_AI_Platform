@@ -8,19 +8,15 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("tenant_api_key")
-public class TenantApiKey {
+@TableName("business_system")
+public class BusinessSystem {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private Long tenantId;
-    private String apiKeyHash;
-    private String apiKeyPrefix;
-    private String name;
-    private String scopes;
-    private String allowedSystemCodes;
-    private String allowedDataDomains;
+    private String systemCode;
+    private String systemName;
+    private String description;
     private String status;
-    private LocalDateTime expiredAt;
     private LocalDateTime createdAt;
-    private LocalDateTime lastUsedAt;
+    private LocalDateTime updatedAt;
 }

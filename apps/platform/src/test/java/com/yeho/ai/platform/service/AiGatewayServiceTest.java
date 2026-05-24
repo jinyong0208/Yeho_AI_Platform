@@ -2,6 +2,7 @@ package com.yeho.ai.platform.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeho.ai.platform.common.RequestContext;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
 import com.yeho.ai.platform.dto.openai.ChatCompletionResponse;
 import com.yeho.ai.platform.dto.openai.ChatMessage;
@@ -150,7 +151,9 @@ class AiGatewayServiceTest {
             eq(true),
             isNull(),
             isNull(),
-            eq(request)
+            eq(request),
+            eq("chat:completion"),
+            eq(GatewayRequestContext.empty())
         );
     }
 
@@ -212,7 +215,8 @@ class AiGatewayServiceTest {
             eq("rate_limit_rpm_exceeded"),
             eq("Rate limit exceeded"),
             eq(request),
-            eq("chat:completion")
+            eq("chat:completion"),
+            eq(GatewayRequestContext.empty())
         );
     }
 

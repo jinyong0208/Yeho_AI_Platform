@@ -9,6 +9,8 @@ public record ApiKeyResponse(
     String apiKeyPrefix,
     String name,
     Set<String> scopes,
+    Set<String> allowedSystemCodes,
+    Set<String> allowedDataDomains,
     String status,
     LocalDateTime expiredAt,
     LocalDateTime createdAt,

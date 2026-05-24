@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeho.ai.platform.common.RequestContext;
 import com.yeho.ai.platform.dto.gateway.EmbeddingRequest;
 import com.yeho.ai.platform.dto.gateway.EmbeddingResponse;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.lang.reflect.Method;
@@ -45,25 +46,31 @@ public class EmbeddingGatewayService {
     }
 
     public EmbeddingResponse embeddings(String authorization, EmbeddingRequest request) {
+        return embeddings(authorization, request, GatewayRequestContext.empty());
+    }
+
+    public EmbeddingResponse embeddings(String authorization, EmbeddingRequest request, GatewayRequestContext gatewayContext) {
+        GatewayRequestContext requestContext = gatewayContext == null ? GatewayRequestContext.empty() : gatewayContext;
         long startedAt = System.currentTimeMillis();
         String requestId = StringUtils.hasText(RequestContext.getRequestId())
                 ? RequestContext.getRequestId()
                 : UUID.randomUUID().toString();
         ApiKeyIdentity apiKey = authenticate(authorization);
         requireScope(apiKey);
+        requireBusinessContext(apiKey, requestContext);
         List<String> inputs = normalizeInput(request.input());
         validateDimensions(request.dimensions());
         ModelRoute model = resolveModel(request.model());
 
         try {
             EmbeddingResponse response = callProvider(model, request, inputs);
-            recordUsage(apiKey, model, requestId, startedAt, true, response.usage().totalTokens(), null, null);
+            recordUsage(apiKey, model, requestId, startedAt, true, response.usage().totalTokens(), null, null, requestContext);
             return response;
         } catch (ResponseStatusException ex) {
-            recordUsage(apiKey, model, requestId, startedAt, false, 0L, String.valueOf(ex.getStatusCode().value()), ex.getReason());
+            recordUsage(apiKey, model, requestId, startedAt, false, 0L, String.valueOf(ex.getStatusCode().value()), ex.getReason(), requestContext);
             throw ex;
         } catch (Exception ex) {
-            recordUsage(apiKey, model, requestId, startedAt, false, 0L, "PROVIDER_ERROR", ex.getMessage());
+            recordUsage(apiKey, model, requestId, startedAt, false, 0L, "PROVIDER_ERROR", ex.getMessage(), requestContext);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Embedding provider request failed");
         }
     }
@@ -72,7 +79,7 @@ public class EmbeddingGatewayService {
         String apiKey = extractBearer(authorization);
         String apiKeyHash = sha256(apiKey);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                select id, tenant_id, scopes
+                select id, tenant_id, scopes, allowed_system_codes, allowed_data_domains
                 from tenant_api_key
                 where api_key_hash = ? and status = 'ACTIVE'
                   and (expired_at is null or expired_at > now())
@@ -85,7 +92,9 @@ public class EmbeddingGatewayService {
         return new ApiKeyIdentity(
                 asLong(row.get("id")),
                 asLong(row.get("tenant_id")),
-                String.valueOf(row.getOrDefault("scopes", ""))
+                stringValue(row.get("scopes")),
+                stringValue(row.get("allowed_system_codes")),
+                stringValue(row.get("allowed_data_domains"))
         );
     }
 
@@ -111,6 +120,24 @@ public class EmbeddingGatewayService {
         }
     }
 
+    private void requireBusinessContext(ApiKeyIdentity apiKey, GatewayRequestContext context) {
+        requireAllowedValue(apiKey.allowedSystemCodes(), context.systemCode(), "X-Yeho-System-Code", "system_code");
+        requireAllowedValue(apiKey.allowedDataDomains(), context.dataDomain(), "X-Yeho-Data-Domain", "data_domain");
+    }
+
+    private void requireAllowedValue(String allowedCsv, String actualValue, String headerName, String fieldName) {
+        List<String> allowedValues = splitCodes(allowedCsv);
+        if (allowedValues.isEmpty() || allowedValues.contains("*")) {
+            return;
+        }
+        if (!StringUtils.hasText(actualValue)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "API key requires " + headerName);
+        }
+        if (!allowedValues.contains(actualValue.trim().toLowerCase(Locale.ROOT))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "API key is not allowed for this " + fieldName);
+        }
+    }
+
     private List<String> splitScopes(String scopes) {
         if (scopes == null || scopes.isBlank()) {
             return List.of();
@@ -118,6 +145,17 @@ public class EmbeddingGatewayService {
         return List.of(scopes.split(",")).stream()
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private List<String> splitCodes(String codes) {
+        if (codes == null || codes.isBlank()) {
+            return List.of();
+        }
+        return List.of(codes.split(",")).stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(value -> value.toLowerCase(Locale.ROOT))
                 .toList();
     }
 
@@ -261,15 +299,17 @@ public class EmbeddingGatewayService {
             boolean success,
             long totalTokens,
             String errorCode,
-            String errorMessage
+            String errorMessage,
+            GatewayRequestContext gatewayContext
     ) {
         long latencyMs = Math.max(0, System.currentTimeMillis() - startedAt);
         jdbcTemplate.update("""
                 insert into ai_usage_log (
-                    id, tenant_id, api_key_id, provider_code, model_code, request_id, price_version_id,
+                    id, tenant_id, api_key_id, provider_code, model_code, request_id,
+                    system_code, data_domain, agent_code, price_version_id,
                     input_tokens, output_tokens, total_tokens, real_cost, charge_credits, profit,
                     latency_ms, success, error_code, error_message, api_key_scopes, created_at
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
                 """,
                 IdWorker.getId(),
                 apiKey.tenantId(),
@@ -277,6 +317,9 @@ public class EmbeddingGatewayService {
                 model.providerCode(),
                 model.modelCode(),
                 requestId,
+                gatewayContext == null ? null : gatewayContext.systemCode(),
+                gatewayContext == null ? null : gatewayContext.dataDomain(),
+                gatewayContext == null ? null : gatewayContext.agentCode(),
                 model.priceVersionId(),
                 totalTokens,
                 totalTokens,
@@ -346,7 +389,17 @@ public class EmbeddingGatewayService {
         return Integer.parseInt(String.valueOf(value));
     }
 
-    private record ApiKeyIdentity(Long apiKeyId, Long tenantId, String scopes) {
+    private String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private record ApiKeyIdentity(
+            Long apiKeyId,
+            Long tenantId,
+            String scopes,
+            String allowedSystemCodes,
+            String allowedDataDomains
+    ) {
     }
 
     private record ModelRoute(

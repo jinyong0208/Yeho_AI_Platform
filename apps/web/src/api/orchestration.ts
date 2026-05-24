@@ -26,6 +26,9 @@ export type PromptVersion = {
 export type AgentConfig = {
   id: number;
   tenantId: number;
+  systemCode?: string;
+  dataDomain?: string;
+  allowedDataDomains?: string;
   agentCode: string;
   agentName: string;
   description?: string;
@@ -43,6 +46,8 @@ export type AgentExecuteLog = {
   requestId: string;
   tenantId: number;
   agentConfigId?: number;
+  systemCode?: string;
+  dataDomain?: string;
   agentCode?: string;
   model?: string;
   latencyMs?: number;

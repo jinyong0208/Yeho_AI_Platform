@@ -6,6 +6,9 @@ import java.time.LocalDateTime;
 public record AgentConfigResponse(
         Long id,
         Long tenantId,
+        String systemCode,
+        String dataDomain,
+        String allowedDataDomains,
         String agentCode,
         String agentName,
         String description,

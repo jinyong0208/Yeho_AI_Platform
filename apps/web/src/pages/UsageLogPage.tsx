@@ -132,6 +132,21 @@ export default function UsageLogPage() {
                         {log.providerCode}
                       </Badge>
                     )}
+                    {log.systemCode && (
+                      <Badge color="blue" variant="light" radius="sm">
+                        {t('usageLogPage.systemCode')} {log.systemCode}
+                      </Badge>
+                    )}
+                    {log.dataDomain && (
+                      <Badge color="violet" variant="light" radius="sm">
+                        {t('usageLogPage.dataDomain')} {log.dataDomain}
+                      </Badge>
+                    )}
+                    {log.agentCode && (
+                      <Badge color="grape" variant="light" radius="sm">
+                        Agent {log.agentCode}
+                      </Badge>
+                    )}
                   </Group>
                   <Text size="xs" c="dimmed">
                     {log.requestId} · {log.createdAt}

@@ -7,6 +7,8 @@ public record AgentExecuteLogResponse(
         String requestId,
         Long tenantId,
         Long agentConfigId,
+        String systemCode,
+        String dataDomain,
         String agentCode,
         String model,
         Long latencyMs,

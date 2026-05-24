@@ -25,6 +25,9 @@ public class UsageQueryService {
         Long apiKeyId,
         String providerCode,
         String modelCode,
+        String systemCode,
+        String dataDomain,
+        String agentCode,
         Boolean success,
         LocalDateTime from,
         LocalDateTime to,
@@ -35,6 +38,9 @@ public class UsageQueryService {
                 apiKeyId,
                 providerCode,
                 modelCode,
+                systemCode,
+                dataDomain,
+                agentCode,
                 success,
                 from,
                 to,
@@ -51,6 +57,9 @@ public class UsageQueryService {
         Long apiKeyId,
         String providerCode,
         String modelCode,
+        String systemCode,
+        String dataDomain,
+        String agentCode,
         LocalDateTime from,
         LocalDateTime to
     ) {
@@ -59,6 +68,9 @@ public class UsageQueryService {
             apiKeyId,
             providerCode,
             modelCode,
+            systemCode,
+            dataDomain,
+            agentCode,
             null,
             from,
             to,
@@ -97,6 +109,9 @@ public class UsageQueryService {
         Long apiKeyId,
         String providerCode,
         String modelCode,
+        String systemCode,
+        String dataDomain,
+        String agentCode,
         Boolean success,
         LocalDateTime from,
         LocalDateTime to,
@@ -115,6 +130,15 @@ public class UsageQueryService {
         }
         if (StringUtils.hasText(modelCode)) {
             wrapper.eq(AiUsageLog::getModelCode, modelCode);
+        }
+        if (StringUtils.hasText(systemCode)) {
+            wrapper.eq(AiUsageLog::getSystemCode, systemCode);
+        }
+        if (StringUtils.hasText(dataDomain)) {
+            wrapper.eq(AiUsageLog::getDataDomain, dataDomain);
+        }
+        if (StringUtils.hasText(agentCode)) {
+            wrapper.eq(AiUsageLog::getAgentCode, agentCode);
         }
         if (success != null) {
             wrapper.eq(AiUsageLog::getSuccess, success);
@@ -139,6 +163,9 @@ public class UsageQueryService {
             log.getProviderCode(),
             log.getModelCode(),
             log.getRequestId(),
+            log.getSystemCode(),
+            log.getDataDomain(),
+            log.getAgentCode(),
             log.getInputTokens(),
             log.getOutputTokens(),
             log.getTotalTokens(),

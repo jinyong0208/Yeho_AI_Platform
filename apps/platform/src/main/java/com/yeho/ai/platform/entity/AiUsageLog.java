@@ -19,6 +19,9 @@ public class AiUsageLog {
     private String providerCode;
     private String modelCode;
     private String requestId;
+    private String systemCode;
+    private String dataDomain;
+    private String agentCode;
     private String apiKeyScopes;
     private Long priceVersionId;
     private Integer inputTokens;

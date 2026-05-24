@@ -7,6 +7,9 @@ export type UsageLog = {
   providerCode?: string | null;
   modelCode?: string | null;
   requestId: string;
+  systemCode?: string | null;
+  dataDomain?: string | null;
+  agentCode?: string | null;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -39,6 +42,9 @@ export type UsageQuery = {
   apiKeyId?: string | null;
   providerCode?: string | null;
   modelCode?: string | null;
+  systemCode?: string | null;
+  dataDomain?: string | null;
+  agentCode?: string | null;
   success?: boolean | null;
   limit?: number;
 };

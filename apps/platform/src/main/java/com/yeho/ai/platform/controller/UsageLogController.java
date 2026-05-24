@@ -33,6 +33,9 @@ public class UsageLogController {
         @RequestParam(required = false) Long apiKeyId,
         @RequestParam(required = false) String providerCode,
         @RequestParam(required = false) String modelCode,
+        @RequestParam(required = false) String systemCode,
+        @RequestParam(required = false) String dataDomain,
+        @RequestParam(required = false) String agentCode,
         @RequestParam(required = false) Boolean success,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
@@ -43,6 +46,9 @@ public class UsageLogController {
             apiKeyId,
             providerCode,
             modelCode,
+            systemCode,
+            dataDomain,
+            agentCode,
             success,
             from,
             to,
@@ -57,6 +63,9 @@ public class UsageLogController {
         @RequestParam(required = false) Long apiKeyId,
         @RequestParam(required = false) String providerCode,
         @RequestParam(required = false) String modelCode,
+        @RequestParam(required = false) String systemCode,
+        @RequestParam(required = false) String dataDomain,
+        @RequestParam(required = false) String agentCode,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
     ) {
@@ -65,6 +74,9 @@ public class UsageLogController {
             apiKeyId,
             providerCode,
             modelCode,
+            systemCode,
+            dataDomain,
+            agentCode,
             from,
             to
         ));

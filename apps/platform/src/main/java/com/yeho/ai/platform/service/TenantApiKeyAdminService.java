@@ -41,6 +41,8 @@ public class TenantApiKeyAdminService {
         apiKey.setApiKeyPrefix(apiKeyHashService.prefix(plainKey));
         apiKey.setName(request.getName());
         apiKey.setScopes(apiKeyScopeService.normalizeScopes(request.getScopes()));
+        apiKey.setAllowedSystemCodes(apiKeyScopeService.normalizeCodes(request.getAllowedSystemCodes()));
+        apiKey.setAllowedDataDomains(apiKeyScopeService.normalizeCodes(request.getAllowedDataDomains()));
         apiKey.setStatus("ACTIVE");
         apiKey.setExpiredAt(request.getExpiredAt());
         apiKey.setCreatedAt(now);
@@ -52,6 +54,8 @@ public class TenantApiKeyAdminService {
             apiKey.getApiKeyPrefix(),
             apiKey.getName(),
             apiKeyScopeService.parseScopes(apiKey.getScopes()),
+            apiKeyScopeService.parseCodes(apiKey.getAllowedSystemCodes()),
+            apiKeyScopeService.parseCodes(apiKey.getAllowedDataDomains()),
             apiKey.getStatus(),
             apiKey.getExpiredAt(),
             apiKey.getCreatedAt()
@@ -89,6 +93,12 @@ public class TenantApiKeyAdminService {
             throw new NotFoundException("API key not found");
         }
         apiKey.setScopes(apiKeyScopeService.normalizeScopes(request.getScopes()));
+        if (request.getAllowedSystemCodes() != null) {
+            apiKey.setAllowedSystemCodes(apiKeyScopeService.normalizeCodes(request.getAllowedSystemCodes()));
+        }
+        if (request.getAllowedDataDomains() != null) {
+            apiKey.setAllowedDataDomains(apiKeyScopeService.normalizeCodes(request.getAllowedDataDomains()));
+        }
         tenantApiKeyMapper.updateById(apiKey);
         return toResponse(apiKey);
     }
@@ -100,6 +110,8 @@ public class TenantApiKeyAdminService {
             apiKey.getApiKeyPrefix(),
             apiKey.getName(),
             apiKeyScopeService.parseScopes(apiKey.getScopes()),
+            apiKeyScopeService.parseCodes(apiKey.getAllowedSystemCodes()),
+            apiKeyScopeService.parseCodes(apiKey.getAllowedDataDomains()),
             apiKey.getStatus(),
             apiKey.getExpiredAt(),
             apiKey.getCreatedAt(),

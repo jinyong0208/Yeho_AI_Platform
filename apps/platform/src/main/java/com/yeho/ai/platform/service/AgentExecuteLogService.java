@@ -38,6 +38,8 @@ public class AgentExecuteLogService {
                 log.getRequestId(),
                 log.getTenantId(),
                 log.getAgentConfigId(),
+                log.getSystemCode(),
+                log.getDataDomain(),
                 log.getAgentCode(),
                 log.getModel(),
                 log.getLatencyMs(),

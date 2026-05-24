@@ -14,4 +14,8 @@ public class ApiKeyCreateRequest {
     private LocalDateTime expiredAt;
 
     private Set<String> scopes;
+
+    private Set<String> allowedSystemCodes;
+
+    private Set<String> allowedDataDomains;
 }

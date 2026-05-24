@@ -1,6 +1,7 @@
 package com.yeho.ai.platform.service;
 
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.entity.AiModel;
 import com.yeho.ai.platform.entity.AiUsageLog;
 import com.yeho.ai.platform.mapper.AiUsageLogMapper;
@@ -54,7 +55,8 @@ public class AiUsageLogService {
             errorCode,
             errorMessage,
             request,
-            null
+            null,
+            GatewayRequestContext.empty()
         );
     }
 
@@ -78,6 +80,49 @@ public class AiUsageLogService {
         ChatCompletionRequest request,
         String apiKeyScopes
     ) {
+        record(
+            tenantId,
+            userId,
+            apiKeyId,
+            providerCode,
+            modelCode,
+            requestId,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            chargeCredits,
+            model,
+            latencyMs,
+            success,
+            errorCode,
+            errorMessage,
+            request,
+            apiKeyScopes,
+            GatewayRequestContext.empty()
+        );
+    }
+
+    @Transactional
+    public void record(
+        Long tenantId,
+        Long userId,
+        Long apiKeyId,
+        String providerCode,
+        String modelCode,
+        String requestId,
+        int inputTokens,
+        int outputTokens,
+        int totalTokens,
+        long chargeCredits,
+        AiModel model,
+        long latencyMs,
+        boolean success,
+        String errorCode,
+        String errorMessage,
+        ChatCompletionRequest request,
+        String apiKeyScopes,
+        GatewayRequestContext gatewayContext
+    ) {
         AiUsageLog log = new AiUsageLog();
         log.setTenantId(tenantId);
         log.setUserId(userId);
@@ -85,6 +130,9 @@ public class AiUsageLogService {
         log.setProviderCode(providerCode);
         log.setModelCode(modelCode);
         log.setRequestId(requestId);
+        log.setSystemCode(gatewayContext == null ? null : gatewayContext.systemCode());
+        log.setDataDomain(gatewayContext == null ? null : gatewayContext.dataDomain());
+        log.setAgentCode(gatewayContext == null ? null : gatewayContext.agentCode());
         log.setApiKeyScopes(apiKeyScopes);
         log.setPriceVersionId(model == null ? null : model.getCurrentPriceVersionId());
         log.setInputTokens(inputTokens);

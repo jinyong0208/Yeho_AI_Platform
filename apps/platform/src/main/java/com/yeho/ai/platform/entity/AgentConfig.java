@@ -14,6 +14,9 @@ public class AgentConfig {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private Long tenantId;
+    private String systemCode;
+    private String dataDomain;
+    private String allowedDataDomains;
     private String agentCode;
     private String agentName;
     private String description;
