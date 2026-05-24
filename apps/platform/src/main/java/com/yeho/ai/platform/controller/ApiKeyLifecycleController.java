@@ -2,6 +2,7 @@ package com.yeho.ai.platform.controller;
 
 import com.yeho.ai.platform.service.ApiKeyLifecycleService;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/api-keys")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','DEVELOPER')")
 public class ApiKeyLifecycleController {
 
     private final ApiKeyLifecycleService apiKeyLifecycleService;

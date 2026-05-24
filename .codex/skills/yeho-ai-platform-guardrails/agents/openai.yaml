@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yeho AI Platform Guardrails"
+  short_description: "Keep Yeho changes inside approved boundaries."
+  default_prompt: "Use this skill when changing Yeho AI Platform so new work respects the platform boundary, UI style, security rules, and EDMS/business-system data ownership model."

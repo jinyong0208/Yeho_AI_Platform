@@ -225,7 +225,7 @@ export default function DashboardPage() {
             h={300}
             data={burnTrend}
             dataKey="day"
-            series={[{ name: 'credits', color: 'teal.6' }]}
+            series={[{ name: t('common.credits'), color: 'teal.6' }]}
             curveType="monotone"
             withGradient
             withDots

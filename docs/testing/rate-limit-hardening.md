@@ -1,28 +1,28 @@
-# Rate Limit Hardening Smoke
+# 限流强化冒烟测试
 
-This smoke verifies endpoint-level gateway rejection for:
+本冒烟测试验证网关端点级拒绝逻辑：
 
-- TPM (`rate_limit_tpm_exceeded`)
-- Max Concurrent (`rate_limit_concurrent_exceeded`)
+- TPM：`rate_limit_tpm_exceeded`
+- 最大并发：`rate_limit_concurrent_exceeded`
 
-The script configures the local mock provider, creates temporary tenant API keys, applies API key-level limits, calls `POST /v1/chat/completions`, checks OpenAI-compatible `429` errors, verifies usage-log error codes, and revokes the temporary API keys.
+脚本会配置本地 mock provider，创建临时租户 API Key，应用 API Key 级限流配置，调用 `POST /v1/chat/completions`，检查 OpenAI-compatible 的 `429` 错误，验证 usage log 错误码，并吊销临时 API Key。
 
-## Run
+## 运行方式
 
-Start or rebuild the platform first:
+先启动或重建 Platform：
 
 ```powershell
 docker compose build --progress plain platform
 docker compose up -d platform
 ```
 
-Then run:
+然后运行：
 
 ```powershell
 .\scripts\smoke-rate-limit-hardening.ps1
 ```
 
-## Expected Result
+## 预期结果
 
 ```json
 {
@@ -38,6 +38,6 @@ Then run:
 }
 ```
 
-## Notes
+## 说明
 
-The max-concurrency check uses the local mock provider delay marker `[mock-delay-ms=3000]`. This marker exists only for `/mock-provider/v1` smoke testing and is not part of the real provider adapter path.
+最大并发测试使用本地 mock provider 延迟标记 `[mock-delay-ms=3000]`。该标记只用于 `/mock-provider/v1` 冒烟测试，不属于真实 Provider Adapter 链路。

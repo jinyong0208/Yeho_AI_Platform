@@ -228,7 +228,7 @@ export default function ApiKeyPage() {
                   <Group gap="xs">
                     <Text fw={650}>{apiKey.name}</Text>
                     <Badge color={apiKey.status === 'ACTIVE' ? 'teal' : 'gray'} variant="light" radius="sm">
-                      {apiKey.status}
+                      {t(`common.statusLabels.${apiKey.status}`, { defaultValue: apiKey.status })}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
@@ -248,7 +248,7 @@ export default function ApiKeyPage() {
                   <ActionIcon
                     variant="subtle"
                     color="gray"
-                    aria-label="View API key usage summary"
+                    aria-label={t('apiKeyPage.usageSummaryAria')}
                     loading={usageMutation.isPending && selectedApiKey?.id === apiKey.id}
                     onClick={() => {
                       setSelectedApiKey(apiKey);
@@ -262,7 +262,7 @@ export default function ApiKeyPage() {
                   <ActionIcon
                     variant="subtle"
                     color="blue"
-                    aria-label="Configure API key rate limit"
+                    aria-label={t('apiKeyPage.rateLimitAria')}
                     onClick={() => openLimitModal(apiKey)}
                   >
                     <IconGauge size={16} />
@@ -273,7 +273,7 @@ export default function ApiKeyPage() {
                     <ActionIcon
                       variant="subtle"
                       color="orange"
-                      aria-label="Disable API key"
+                      aria-label={t('apiKeyPage.disableAria')}
                       loading={disableMutation.isPending}
                       onClick={() => openDisableConfirm(apiKey)}
                     >
@@ -285,7 +285,7 @@ export default function ApiKeyPage() {
                     <ActionIcon
                       variant="subtle"
                       color="teal"
-                      aria-label="Enable API key"
+                      aria-label={t('apiKeyPage.enableAria')}
                       loading={enableMutation.isPending}
                       onClick={() => openEnableConfirm(apiKey)}
                     >
@@ -297,7 +297,7 @@ export default function ApiKeyPage() {
                   <ActionIcon
                     variant="subtle"
                     color="red"
-                    aria-label="Revoke API key"
+                    aria-label={t('apiKeyPage.revokeAria')}
                     loading={revokeMutation.isPending}
                     onClick={() => openRevokeConfirm(apiKey)}
                   >

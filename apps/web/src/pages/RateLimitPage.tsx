@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gatewayApi, type RateLimitPayload } from '../api/gateway';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 
 type LimitFormValues = {
   rpmLimit: number | null;
@@ -26,10 +28,17 @@ const emptyValues: LimitFormValues = {
 
 export default function RateLimitPage() {
   const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
   const queryClient = useQueryClient();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-  const tenantsQuery = useQuery({ queryKey: ['tenants', 'rate-limits'], queryFn: tenantApi.list });
-  const tenants = tenantsQuery.data ?? [];
+  const tenantsQuery = useQuery({ queryKey: ['tenants', 'rate-limits'], queryFn: tenantApi.list, enabled: canSelectTenant });
+  const tenants = canSelectTenant
+    ? (tenantsQuery.data ?? [])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      : [];
   const form = useForm<LimitFormValues>({ initialValues: emptyValues });
 
   useEffect(() => {
@@ -122,7 +131,7 @@ export default function RateLimitPage() {
           </Text>
         </Stack>
         <Badge color={form.values.status === 'ACTIVE' ? 'teal' : 'gray'} variant="light" radius="sm">
-          {form.values.status}
+          {t(`common.statusLabels.${form.values.status}`, { defaultValue: form.values.status })}
         </Badge>
       </Group>
 
@@ -132,6 +141,7 @@ export default function RateLimitPage() {
           maw={420}
           value={selectedTenantId}
           onChange={setSelectedTenantId}
+          disabled={!canSelectTenant}
           data={tenants.map((tenant) => ({
             value: tenant.id,
             label: `${tenant.tenantName} · ${tenant.tenantCode}`,

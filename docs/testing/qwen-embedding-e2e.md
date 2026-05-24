@@ -1,42 +1,42 @@
-# Qwen Embedding E2E
+# Qwen Embedding 端到端测试
 
-This smoke verifies the real Qwen embedding path through Yeho AI Platform:
+本冒烟测试验证真实 Qwen Embedding 通过 Yeho AI Platform 的完整链路：
 
-- encrypted Qwen Provider API key
-- `text-embedding-v4` model routing
-- OpenAI-compatible `POST /v1/embeddings`
-- `embedding:create` scoped tenant API key
-- request id echo
-- usage log creation
+- 加密保存的 Qwen Provider API Key。
+- `text-embedding-v4` 模型路由。
+- OpenAI-compatible `POST /v1/embeddings`。
+- 带有 `embedding:create` scope 的租户 API Key。
+- request id 回传。
+- usage log 创建。
 
-It does not persist customer documents, document chunks, or vector indexes. The returned embedding vector is only inspected for dimension count and is not printed.
+该测试不会持久化客户文档、文档切片或向量索引。返回的 embedding vector 只检查维度，不会打印向量内容。
 
-## Secret Setup
+## 密钥准备
 
-Use a local helper file outside the repository:
+在仓库外创建本地辅助文件：
 
 ```powershell
 notepad C:\tmp\yeho-provider-secrets.ps1
 ```
 
-Expected format:
+预期格式：
 
 ```powershell
 $env:QWEN_API_KEY="sk-..."
 ```
 
-Do not commit this file or paste the key into logs, tickets, screenshots, or reports.
+不要提交该文件，也不要把 Key 粘贴到日志、工单、截图或报告中。
 
-## Run
+## 运行方式
 
-Start the platform first, then run:
+先启动平台，然后运行：
 
 ```powershell
 . C:\tmp\yeho-provider-secrets.ps1
 .\scripts\qwen-embedding-e2e.ps1
 ```
 
-Optional parameters:
+可选参数：
 
 ```powershell
 .\scripts\qwen-embedding-e2e.ps1 `
@@ -47,9 +47,9 @@ Optional parameters:
   -ModelCode "text-embedding-v4"
 ```
 
-## Expected Result
+## 预期结果
 
-The command should return JSON similar to:
+命令应返回类似下面的 JSON：
 
 ```json
 {
@@ -61,11 +61,11 @@ The command should return JSON similar to:
 }
 ```
 
-The script creates a temporary tenant API key and revokes it after validation.
+脚本会创建临时租户 API Key，并在验证结束后吊销。
 
-## Troubleshooting
+## 排查建议
 
-- `ProviderApiKey is required`: source `C:\tmp\yeho-provider-secrets.ps1` or pass `-ProviderApiKey`.
-- `Model not found`: run without `-SkipModelEnsure` so the script can create/activate `text-embedding-v4`.
-- `401` or `403`: check tenant API key scope includes `embedding:create`.
-- `502`: check Qwen key validity, provider base URL, and outbound network access.
+- `ProviderApiKey is required`：请先加载 `C:\tmp\yeho-provider-secrets.ps1`，或传入 `-ProviderApiKey`。
+- `Model not found`：不要传 `-SkipModelEnsure`，让脚本自动创建或激活 `text-embedding-v4`。
+- `401` 或 `403`：检查租户 API Key scope 是否包含 `embedding:create`。
+- `502`：检查 Qwen Key 是否有效、Provider Base URL 是否正确，以及本机是否能访问外网。

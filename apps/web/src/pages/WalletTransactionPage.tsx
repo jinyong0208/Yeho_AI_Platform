@@ -52,7 +52,7 @@ export default function WalletTransactionPage() {
           createdAt: log.createdAt,
         })),
         `wallet-ledger-${selectedTenantId}.xlsx`,
-        'Wallet Ledger',
+        t('walletLogPage.ledger'),
       );
       notifications.show({ color: 'teal', title: t('walletPage.exportedTitle'), message: t('walletPage.ledgerExportedMessage') });
     },
@@ -121,7 +121,7 @@ export default function WalletTransactionPage() {
                     <Group gap="xs">
                       <Text fw={650}>{log.bizType}</Text>
                       <Badge color={incoming ? 'teal' : 'gray'} variant="light" radius="sm">
-                        {log.direction}
+                        {t(`common.statusLabels.${log.direction}`, { defaultValue: log.direction })}
                       </Badge>
                     </Group>
                     <Text size="xs" c="dimmed">

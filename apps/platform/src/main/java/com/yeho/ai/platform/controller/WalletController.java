@@ -27,7 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/wallets")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','FINANCE','DEVELOPER')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','FINANCE')")
 public class WalletController {
     private final AiWalletService aiWalletService;
     private final TenantAccessService tenantAccessService;

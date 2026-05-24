@@ -28,8 +28,11 @@ import {
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { invoiceApi, type InvoiceApplication } from '../api/invoice';
 import { tenantApi } from '../api/tenants';
+import { useAuthStore } from '../store/useAuthStore';
+import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
 
 type TenantLite = {
   id: string;
@@ -37,15 +40,13 @@ type TenantLite = {
   tenantName: string;
 };
 
-const STATUS_OPTIONS = [
-  { value: 'APPLIED', label: 'APPLIED' },
-  { value: 'PROCESSING', label: 'PROCESSING' },
-  { value: 'ISSUED', label: 'ISSUED' },
-  { value: 'REJECTED', label: 'REJECTED' },
-];
-
 export default function InvoicePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
+  const primaryRole = resolvePrimaryRole(user?.roles);
+  const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
+  const canProcessInvoice = primaryRole === USER_ROLES.SUPER_ADMIN || primaryRole === USER_ROLES.FINANCE;
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -58,14 +59,22 @@ export default function InvoicePage() {
     remark: '',
   });
 
-  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
+  const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list, enabled: canSelectTenant });
   const invoicesQuery = useQuery({
     queryKey: ['invoice-applications', tenantId, status],
     queryFn: () => invoiceApi.list({ tenantId, status, limit: 100 }),
   });
 
-  const tenants = (tenantsQuery.data ?? []) as TenantLite[];
+  const tenants = canSelectTenant
+    ? ((tenantsQuery.data ?? []) as TenantLite[])
+    : user?.tenantId
+      ? [{ id: user.tenantId, tenantName: '当前租户', tenantCode: user.tenantId }]
+      : [];
   const invoices = invoicesQuery.data ?? [];
+  const statusOptions = ['APPLIED', 'PROCESSING', 'ISSUED', 'REJECTED'].map((value) => ({
+    value,
+    label: t(`invoicePage.statusLabels.${value}`),
+  }));
 
   useEffect(() => {
     if (!form.tenantId && tenants.length > 0) {
@@ -79,23 +88,23 @@ export default function InvoicePage() {
     mutationFn: invoiceApi.create,
     onSuccess: () => {
       invalidate();
-      notifications.show({ color: 'teal', message: '发票申请已创建' });
+      notifications.show({ color: 'teal', message: t('invoicePage.createdMessage') });
     },
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'process' | 'issue' | 'reject' }) => {
       if (action === 'process') {
-        return invoiceApi.process(id, 'Console status update');
+        return invoiceApi.process(id, t('invoicePage.processRemark'));
       }
       if (action === 'issue') {
-        return invoiceApi.issue(id, 'Console status update');
+        return invoiceApi.issue(id, t('invoicePage.processRemark'));
       }
-      return invoiceApi.reject(id, 'Console status update');
+      return invoiceApi.reject(id, t('invoicePage.processRemark'));
     },
     onSuccess: () => {
       invalidate();
-      notifications.show({ color: 'teal', message: '发票状态已更新' });
+      notifications.show({ color: 'teal', message: t('invoicePage.statusUpdatedMessage') });
     },
   });
 
@@ -119,14 +128,14 @@ export default function InvoicePage() {
             <ThemeIcon color="dark" variant="light" radius="sm" size={34}>
               <IconReceiptTax size={19} />
             </ThemeIcon>
-            <Title order={2}>发票申请</Title>
+            <Title order={2}>{t('invoicePage.title')}</Title>
           </Group>
           <Text c="dimmed" maw={760}>
-            记录租户发票申请和处理状态，当前阶段只做申请流转，不对接正式税控系统。
+            {t('invoicePage.description')}
           </Text>
         </Stack>
         <Badge color="gray" variant="light" radius="sm">
-          Invoice Record
+          {t('invoicePage.badge')}
         </Badge>
       </Group>
 
@@ -134,13 +143,13 @@ export default function InvoicePage() {
         <Card className="surface-card" p="lg">
           <Stack gap="md">
             <Group justify="space-between">
-              <Text fw={650}>New Application</Text>
+              <Text fw={650}>{t('invoicePage.newApplication')}</Text>
               <ThemeIcon color="blue" variant="light" radius="sm">
                 <IconFileInvoice size={18} />
               </ThemeIcon>
             </Group>
             <Select
-              label="租户"
+              label={t('invoicePage.tenant')}
               value={form.tenantId || null}
               onChange={(value) => setForm((current) => ({ ...current, tenantId: value || '' }))}
               data={tenants.map((tenant) => ({
@@ -150,17 +159,17 @@ export default function InvoicePage() {
             />
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
               <TextInput
-                label="发票抬头"
+                label={t('invoicePage.invoiceTitle')}
                 value={form.invoiceTitle}
                 onChange={(event) => setForm((current) => ({ ...current, invoiceTitle: event.currentTarget.value }))}
               />
               <TextInput
-                label="税号"
+                label={t('invoicePage.taxNo')}
                 value={form.taxNo}
                 onChange={(event) => setForm((current) => ({ ...current, taxNo: event.currentTarget.value }))}
               />
               <NumberInput
-                label="金额 CNY"
+                label={t('invoicePage.amountCny')}
                 min={0.01}
                 decimalScale={2}
                 value={form.amountCny}
@@ -169,22 +178,22 @@ export default function InvoicePage() {
                 }
               />
               <Select
-                label="类型"
+                label={t('invoicePage.type')}
                 value={form.invoiceType}
                 onChange={(value) => setForm((current) => ({ ...current, invoiceType: value || 'SPECIAL_VAT' }))}
                 data={[
-                  { value: 'SPECIAL_VAT', label: 'SPECIAL_VAT' },
-                  { value: 'NORMAL_VAT', label: 'NORMAL_VAT' },
+                  { value: 'SPECIAL_VAT', label: t('invoicePage.typeLabels.SPECIAL_VAT') },
+                  { value: 'NORMAL_VAT', label: t('invoicePage.typeLabels.NORMAL_VAT') },
                 ]}
               />
             </SimpleGrid>
             <TextInput
-              label="接收邮箱"
+              label={t('invoicePage.email')}
               value={form.email}
               onChange={(event) => setForm((current) => ({ ...current, email: event.currentTarget.value }))}
             />
             <Textarea
-              label="备注"
+              label={t('invoicePage.remark')}
               minRows={3}
               value={form.remark}
               onChange={(event) => setForm((current) => ({ ...current, remark: event.currentTarget.value }))}
@@ -196,7 +205,7 @@ export default function InvoicePage() {
                 disabled={!form.tenantId || !form.invoiceTitle || form.amountCny <= 0}
                 onClick={submit}
               >
-                创建申请
+                {t('invoicePage.createApplication')}
               </Button>
             </Group>
           </Stack>
@@ -205,25 +214,26 @@ export default function InvoicePage() {
         <Card className="surface-card" p="lg">
           <Stack gap="md">
             <Group justify="space-between">
-              <Text fw={650}>Filters</Text>
+              <Text fw={650}>{t('invoicePage.filters')}</Text>
               <ThemeIcon color="gray" variant="light" radius="sm">
                 <IconSearch size={18} />
               </ThemeIcon>
             </Group>
             <Select
-              label="租户"
+              label={t('invoicePage.tenant')}
               clearable
               value={tenantId}
               onChange={setTenantId}
+              disabled={!canSelectTenant}
               data={tenants.map((tenant) => ({
                 value: tenant.id,
                 label: `${tenant.tenantName} · ${tenant.tenantCode}`,
               }))}
             />
-            <Select label="状态" clearable value={status} onChange={setStatus} data={STATUS_OPTIONS} />
+            <Select label={t('invoicePage.status')} clearable value={status} onChange={setStatus} data={statusOptions} />
             <SimpleGrid cols={2} spacing="sm">
-              <Metric label="Applications" value={String(invoices.length)} />
-              <Metric label="Issued" value={String(invoices.filter((invoice) => invoice.status === 'ISSUED').length)} />
+              <Metric label={t('invoicePage.applications')} value={String(invoices.length)} />
+              <Metric label={t('invoicePage.issued')} value={String(invoices.filter((invoice) => invoice.status === 'ISSUED').length)} />
             </SimpleGrid>
           </Stack>
         </Card>
@@ -232,10 +242,10 @@ export default function InvoicePage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Invoice Queue
+            {t('invoicePage.queue')}
           </Text>
           <Badge color="gray" variant="light" radius="sm">
-            {invoices.length} rows
+            {t('invoicePage.rowCount', { count: invoices.length })}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -244,6 +254,8 @@ export default function InvoicePage() {
               key={invoice.id}
               invoice={invoice}
               loading={statusMutation.isPending}
+              canProcess={canProcessInvoice}
+              t={t}
               onAction={(action) => statusMutation.mutate({ id: invoice.id, action })}
             />
           ))}
@@ -252,7 +264,7 @@ export default function InvoicePage() {
               <ThemeIcon color="gray" variant="light" radius="sm" size={40} mb="sm" mx="auto">
                 <IconReceiptTax size={20} />
               </ThemeIcon>
-              <Text c="dimmed">暂无发票申请。</Text>
+              <Text c="dimmed">{t('invoicePage.empty')}</Text>
             </Box>
           )}
         </Stack>
@@ -264,11 +276,15 @@ export default function InvoicePage() {
 function InvoiceRow({
   invoice,
   loading,
+  canProcess,
   onAction,
+  t,
 }: {
   invoice: InvoiceApplication;
   loading: boolean;
+  canProcess: boolean;
   onAction: (action: 'process' | 'issue' | 'reject') => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
     <Group className="list-row" p="md" justify="space-between" wrap="nowrap">
@@ -280,14 +296,14 @@ function InvoiceRow({
           <Group gap="xs">
             <Text fw={650}>{invoice.invoiceTitle}</Text>
             <Badge color={statusColor(invoice.status)} variant="light" radius="sm">
-              {invoice.status}
+              {t(`invoicePage.statusLabels.${invoice.status}`, { defaultValue: invoice.status })}
             </Badge>
             <Badge color="gray" variant="light" radius="sm">
-              {invoice.invoiceType}
+              {t(`invoicePage.typeLabels.${invoice.invoiceType}`, { defaultValue: invoice.invoiceType })}
             </Badge>
           </Group>
           <Text size="xs" c="dimmed">
-            ¥{invoice.amountCny} · {invoice.email || 'no email'} · {dayjs(invoice.appliedAt).format('YYYY-MM-DD HH:mm')}
+            ¥{invoice.amountCny} · {invoice.email || t('invoicePage.noEmail')} · {dayjs(invoice.appliedAt).format('YYYY-MM-DD HH:mm')}
           </Text>
           {invoice.remark && (
             <Text size="xs" c="dimmed" mt={4} lineClamp={1}>
@@ -297,8 +313,9 @@ function InvoiceRow({
         </Box>
       </Group>
 
+      {canProcess && (
       <Group gap="xs" wrap="nowrap">
-        <Tooltip label="处理">
+        <Tooltip label={t('invoicePage.actions.process')}>
           <ActionIcon
             variant="subtle"
             color="blue"
@@ -309,7 +326,7 @@ function InvoiceRow({
             <IconProgressCheck size={18} />
           </ActionIcon>
         </Tooltip>
-        <Tooltip label="开具">
+        <Tooltip label={t('invoicePage.actions.issue')}>
           <ActionIcon
             variant="subtle"
             color="teal"
@@ -320,7 +337,7 @@ function InvoiceRow({
             <IconCircleCheck size={18} />
           </ActionIcon>
         </Tooltip>
-        <Tooltip label="驳回">
+        <Tooltip label={t('invoicePage.actions.reject')}>
           <ActionIcon
             variant="subtle"
             color="red"
@@ -332,6 +349,7 @@ function InvoiceRow({
           </ActionIcon>
         </Tooltip>
       </Group>
+      )}
     </Group>
   );
 }

@@ -58,6 +58,10 @@ public class AgentConfigService {
         return toResponse(config);
     }
 
+    public Long tenantIdOf(Long id) {
+        return requireConfig(id).getTenantId();
+    }
+
     private void apply(AgentConfig config, AgentConfigRequest request) {
         if (request.tenantId() != null) {
             config.setTenantId(request.tenantId());

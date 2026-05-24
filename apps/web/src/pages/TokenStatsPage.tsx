@@ -125,7 +125,7 @@ export default function TokenStatsPage() {
           h={280}
           data={chartData}
           dataKey="metric"
-          series={[{ name: 'tokens', color: 'teal.6' }]}
+          series={[{ name: t('common.tokens'), color: 'teal.6' }]}
           curveType="monotone"
           withGradient
           withDots

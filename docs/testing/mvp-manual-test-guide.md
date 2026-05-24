@@ -1,28 +1,28 @@
-# MVP Manual Test Guide
+# MVP 手工测试指南
 
-This guide is for local manual verification after the MVP hardening work.
+本文档用于 MVP Hardening 完成后的本地手工验收。
 
-The product boundary remains:
+产品边界保持不变：
 
-- EDMS owns documents, chunks, vector indexes, RAG retrieval, and permission filtering.
-- Yeho AI Platform owns Gateway, Billing, Audit, tenants, API keys, provider adapters, prompt/agent configuration, and runtime observability.
-- Do not create centralized document storage, centralized vectors, or OnlyOffice flows in this platform test.
+- EDMS 负责文档原文、切片、向量索引、RAG 检索和权限过滤。
+- Yeho AI Platform 负责 Gateway、Billing、Audit、租户、API Key、Provider Adapter、Prompt/Agent 配置和 Runtime Observability。
+- 本平台测试中不要创建中心化文档存储、中心化向量库或 OnlyOffice 流程。
 
-## 1. Start The Platform
+## 1. 启动平台
 
-From the repository root:
+在项目根目录执行：
 
 ```powershell
 docker compose up -d postgres redis agent platform web
 ```
 
-Check containers:
+查看容器：
 
 ```powershell
 docker ps
 ```
 
-Expected Yeho services:
+预期能看到以下 Yeho 服务：
 
 - `yeho-ai-postgres`
 - `yeho-ai-redis`
@@ -30,22 +30,22 @@ Expected Yeho services:
 - `yeho-ai-platform`
 - `yeho-ai-web`
 
-Health checks:
+健康检查：
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/api/v1/health
 Invoke-RestMethod http://localhost:8000/api/v1/health
 ```
 
-## 2. Open The Console
+## 2. 打开控制台
 
-Open:
+浏览器访问：
 
 ```text
 http://127.0.0.1:5173/login
 ```
 
-Default local login:
+本地默认登录信息：
 
 ```text
 Tenant Code: default
@@ -53,159 +53,178 @@ Username: admin
 Password: Admin@123456
 ```
 
-After login, the `SUPER_ADMIN` menu should show:
+登录后，`SUPER_ADMIN` 菜单应包含：
 
 - Dashboard
-- Tenant Management
+- 租户管理
+- 用户管理
 - Provider Health
-- Provider Management
-- Rate Limits
+- Provider 管理
+- 限流配置
 - API Key Scope
 - Provider Analytics
 - Billing Analytics
-- Global Audit
+- 全局审计
 - Workflow (Preview)
 
-## 3. Provider Configuration Check
+## 3. 用户管理检查
 
-Open:
+打开：
+
+```text
+用户管理
+```
+
+验证：
+
+- `SUPER_ADMIN` 可以进入用户管理页面。
+- 如果没有租户，页面显示“请先创建租户”。
+- 已选择租户时，点击“新建”可以在该租户下创建用户。
+- 创建用户时可以选择 `TENANT_ADMIN`、`DEVELOPER`、`FINANCE`、`VIEWER`。
+- 默认角色不能固定为 `VIEWER`。
+
+## 4. Provider 配置检查
+
+打开：
 
 ```text
 Provider Health
 ```
 
-Verify:
+验证：
 
-- Provider cards show health status.
-- Cards show timeout and retry badges.
-- Click `配置`.
-- The modal shows Base URL, status, timeout, retry, circuit breaker, cooldown, and fallback model.
-- Saving the modal should update `/api/v1/providers/{id}`.
-- Provider API Key rotation is still separate and should never display the existing key.
+- Provider 卡片显示健康状态。
+- 卡片显示 timeout 和 retry 标签。
+- 点击“配置”。
+- 弹窗显示 Base URL、状态、timeout、retry、熔断阈值、冷却时间和 fallback model。
+- 保存弹窗应调用 `/api/v1/providers/{id}`。
+- Provider API Key 轮换是单独入口，现有密钥绝不能被页面回显。
 
-## 4. Provider Secret File Format
+## 5. Provider 密钥文件格式
 
-Keep real provider keys outside Git. For local PowerShell tests, use:
+真实 Provider Key 必须放在 Git 仓库外。本地 PowerShell 测试可使用：
 
 ```powershell
 $env:DEEPSEEK_API_KEY = "replace-with-deepseek-key"
 $env:QWEN_API_KEY = "replace-with-qwen-key"
 ```
 
-Example load command:
+加载示例：
 
 ```powershell
 . C:\tmp\yeho-provider-secrets.ps1
 ```
 
-Never paste real keys into docs, Git commits, console logs, or screenshots.
+不要把真实 Key 粘贴到文档、Git commit、控制台日志或截图中。
 
-## 5. Core Smoke Test
+## 6. 核心冒烟测试
 
-Run:
+运行：
 
 ```powershell
 .\scripts\smoke-mvp-closeout.ps1
 ```
 
-This covers:
+覆盖范围：
 
-- Platform health
-- Console login token
-- OpenAI-compatible error body
-- API key lifecycle
-- API key scope
-- Tenant isolation
-- Wallet low-balance query
-- Model price versions
-- Provider health list
+- Platform 健康检查。
+- Console 登录 token。
+- OpenAI-compatible 错误响应。
+- API Key 生命周期。
+- API Key scope。
+- 租户隔离。
+- 钱包低余额查询。
+- Model 价格版本。
+- Provider Health 列表。
 
-## 6. Real Provider Chat Test
+## 7. 真实 Provider Chat 测试
 
-After loading real keys, run the provider E2E script. For Qwen:
+加载真实 Key 后运行 Provider E2E 脚本。
+
+Qwen：
 
 ```powershell
 . C:\tmp\yeho-provider-secrets.ps1
 .\scripts\provider-e2e.ps1 -ProviderCode "QWEN"
 ```
 
-For DeepSeek:
+DeepSeek：
 
 ```powershell
 . C:\tmp\yeho-provider-secrets.ps1
 .\scripts\provider-e2e.ps1 -ProviderCode "DEEPSEEK"
 ```
 
-Expected:
+预期：
 
-- `/v1/chat/completions` returns HTTP 200.
-- Response is OpenAI-compatible.
-- `ai_usage_log` contains the request.
-- Wallet balance and wallet log reflect the charge.
+- `/v1/chat/completions` 返回 HTTP 200。
+- 响应结构兼容 OpenAI。
+- `ai_usage_log` 写入本次请求。
+- 钱包余额和钱包流水反映本次扣费。
 
-## 7. Qwen Embedding Reservation Test
+## 8. Qwen Embedding 预留接口测试
 
-Embedding is reserved for EDMS or future private knowledge scenarios. The platform does not store vectors.
+Embedding 只作为 EDMS 或后续私有知识库场景预留。平台不保存向量。
 
-Run:
+运行：
 
 ```powershell
 . C:\tmp\yeho-provider-secrets.ps1
 .\scripts\qwen-embedding-e2e.ps1
 ```
 
-Expected:
+预期：
 
-- `/v1/embeddings` returns HTTP 200.
-- Qwen embedding dimension is returned by the provider.
-- Usage log is written.
-- No centralized vector index or document chunk is created.
+- `/v1/embeddings` 返回 HTTP 200。
+- 返回 Qwen embedding 维度。
+- 写入 usage log。
+- 不创建中心化向量索引或文档切片。
 
-## 8. Rate Limit Hardening Test
+## 9. 限流强化测试
 
-Run:
+运行：
 
 ```powershell
 .\scripts\smoke-rate-limit-hardening.ps1
 ```
 
-Expected:
+预期：
 
-- TPM overflow returns HTTP 429 with OpenAI-compatible `rate_limit_tpm_exceeded`.
-- Concurrent overflow returns HTTP 429 with OpenAI-compatible `rate_limit_concurrent_exceeded`.
-- Audit and usage records keep request IDs.
+- TPM 超限返回 HTTP 429，错误码为 `rate_limit_tpm_exceeded`。
+- 并发超限返回 HTTP 429，错误码为 `rate_limit_concurrent_exceeded`。
+- 审计和 usage 记录保留 request ID。
 
-## 9. Frontend Build Verification
+## 10. 前端构建验证
 
-Run:
+运行：
 
 ```powershell
 cd apps\web
 npm run build
 ```
 
-Expected:
+预期：
 
-- TypeScript build passes.
-- Vite production build passes.
+- TypeScript 构建通过。
+- Vite 生产构建通过。
 
-## 10. Backend Regression
+## 11. 后端回归测试
 
-Run:
+运行：
 
 ```powershell
 cd apps\platform
 mvn test
 ```
 
-Expected:
+预期：
 
-- All backend tests pass.
+- 后端测试全部通过。
 
-## 11. Known Notes
+## 12. 已知说明
 
-- Real provider tests require valid DeepSeek or Qwen account credentials and network access.
-- `C:\tmp\yeho-provider-secrets.ps1` is local-only and should be deleted or protected after validation.
-- MinIO is optional and not required for MVP AI Gateway testing.
-- Workflow remains preview-only; no runtime engine is enabled.
-- Centralized RAG, customer document storage, document chunks, and vector indexes are intentionally out of scope.
+- 真实 Provider 测试需要有效的 DeepSeek 或 Qwen 账号密钥，并需要可访问外网。
+- `C:\tmp\yeho-provider-secrets.ps1` 仅供本地使用，验证结束后建议删除或妥善保护。
+- MinIO 是可选组件，不是 MVP AI Gateway 测试必需项。
+- Workflow 当前仅为 Preview，不启用 Runtime Engine。
+- 中心化 RAG、客户文档存储、文档切片和向量索引均刻意不在本平台范围内。

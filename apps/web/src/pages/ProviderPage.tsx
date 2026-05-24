@@ -338,11 +338,15 @@ export default function ProviderPage() {
                         {provider.base_url ?? provider.baseUrl ?? '-'}
                       </Text>
                     </Stack>
-                    <Badge color={statusColor(currentHealth)}>{currentHealth}</Badge>
+                    <Badge color={statusColor(currentHealth)}>
+                      {t(`providerPage.health.${currentHealth}`, { defaultValue: currentHealth })}
+                    </Badge>
                   </Group>
 
                   <Group gap="xs">
-                    <Badge variant="outline">{t('status')} {provider.status ?? '-'}</Badge>
+                    <Badge variant="outline">
+                      {t('status')} {provider.status ? t(`common.statusLabels.${provider.status}`, { defaultValue: provider.status }) : '-'}
+                    </Badge>
                     <Badge variant="outline">
                       {t('providerPage.failures')} {provider.consecutive_failures ?? provider.consecutiveFailures ?? 0}
                     </Badge>

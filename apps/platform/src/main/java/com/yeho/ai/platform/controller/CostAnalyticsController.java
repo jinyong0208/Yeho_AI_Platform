@@ -5,6 +5,7 @@ import com.yeho.ai.platform.dto.gateway.CostMetricResponse;
 import com.yeho.ai.platform.dto.gateway.CostSummaryResponse;
 import com.yeho.ai.platform.service.CostAnalyticsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/analytics/costs")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class CostAnalyticsController {
 
     private final CostAnalyticsService costAnalyticsService;

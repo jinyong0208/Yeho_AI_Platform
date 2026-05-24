@@ -46,7 +46,7 @@ export function ProviderCostDashboardPage() {
               h={320}
               data={rows}
               dataKey="dimensionName"
-              series={[{ name: 'credits', color: 'blue.6' }]}
+              series={[{ name: t('analyticsPage.credits'), color: 'blue.6' }]}
             />
           </Stack>
         </Card>
@@ -57,7 +57,7 @@ export function ProviderCostDashboardPage() {
               h={320}
               data={rows}
               dataKey="dimensionName"
-              series={[{ name: 'profit', color: 'green.6' }]}
+              series={[{ name: t('analyticsPage.profit'), color: 'green.6' }]}
             />
           </Stack>
         </Card>

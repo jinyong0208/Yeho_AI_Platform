@@ -53,6 +53,7 @@ export default function WalletPage() {
   const user = useAuthStore((state) => state.user);
   const primaryRole = resolvePrimaryRole(user?.roles);
   const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
+  const canOperateBilling = primaryRole === USER_ROLES.SUPER_ADMIN || primaryRole === USER_ROLES.FINANCE;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const queryClient = useQueryClient();
@@ -72,7 +73,7 @@ export default function WalletPage() {
   const ordersQuery = useQuery({
     queryKey: ['recharge-orders', selectedTenantId],
     queryFn: () => billingApi.rechargeOrders(selectedTenantId, 8),
-    enabled: Boolean(selectedTenantId),
+    enabled: Boolean(selectedTenantId) && canOperateBilling,
   });
   const lowBalanceQuery = useQuery({
     queryKey: ['wallet-low-balance', selectedTenantId],
@@ -141,7 +142,7 @@ export default function WalletPage() {
           updatedAt: order.updatedAt,
         })),
         `recharge-orders-${selectedTenantId ?? 'all'}.xlsx`,
-        'Recharge Orders',
+        t('walletPage.rechargeOrders'),
       );
       notifications.show({ color: 'teal', title: t('walletPage.exportedTitle'), message: t('walletPage.ordersExportedMessage') });
     },
@@ -181,9 +182,11 @@ export default function WalletPage() {
             {t('walletPage.description')}
           </Text>
         </Stack>
-        <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
-          {t('walletPage.createRechargeOrder')}
-        </Button>
+        {canOperateBilling && (
+          <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
+            {t('walletPage.createRechargeOrder')}
+          </Button>
+        )}
       </Group>
 
       <Card className="surface-card" p="lg">
@@ -213,6 +216,7 @@ export default function WalletPage() {
         </Alert>
       )}
 
+      {canOperateBilling && (
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
@@ -242,7 +246,7 @@ export default function WalletPage() {
                 <Group gap="xs">
                   <Text fw={650}>{order.orderNo}</Text>
                   <Badge color={order.status === 'PAID' ? 'teal' : 'gray'} variant="light" radius="sm">
-                    {order.status}
+                    {t(`common.statusLabels.${order.status}`, { defaultValue: order.status })}
                   </Badge>
                 </Group>
                 <Text size="xs" c="dimmed">
@@ -282,7 +286,9 @@ export default function WalletPage() {
           )}
         </Stack>
       </Card>
+      )}
 
+      {canOperateBilling && (
       <Modal opened={opened} onClose={close} title={t('walletPage.createRechargeOrder')} centered>
         <form onSubmit={form.onSubmit((values) => createOrderMutation.mutate(values))}>
           <Stack>
@@ -296,6 +302,7 @@ export default function WalletPage() {
           </Stack>
         </form>
       </Modal>
+      )}
     </Stack>
   );
 }

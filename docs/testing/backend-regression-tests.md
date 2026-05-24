@@ -1,35 +1,41 @@
-# Backend Regression Tests
+# 后端回归测试
 
-The MVP closeout backend tests focus on rules that must not regress:
+MVP 收口阶段的后端测试重点是防止以下核心规则回退：
 
-- API key scope parsing and authorization.
-- Tenant access boundaries.
-- OpenAI-compatible error envelope.
-- Wallet credit reservation, settlement, and insufficient-balance handling.
-- Provider retry, circuit breaker, fallback, and rate-limit rollback behavior.
-- OpenAI-compatible endpoint filters for chat preflight, models, and embeddings.
+- API Key scope 解析与授权。
+- 租户访问边界。
+- OpenAI-compatible 错误响应结构。
+- 钱包 Credits 预冻结、结算和余额不足处理。
+- Provider 重试、熔断、fallback，以及限流回滚行为。
+- Chat、Models、Embeddings 等 OpenAI-compatible 端点的前置过滤逻辑。
 
-Run from `apps/platform`:
+## 运行全部后端测试
+
+在 `apps/platform` 目录执行：
 
 ```powershell
 mvn test
 ```
 
-Run only the closeout regression set:
+## 只运行收口回归测试集
 
 ```powershell
 mvn "-Dtest=ApiKeyScopeServiceTest,TenantAccessServiceTest,OpenAiErrorResponseWriterTest,OpenAiEndpointFilterTest,AiWalletServiceTest,AiGatewayServiceTest,ProviderCircuitBreakerServiceTest,RateLimitServiceTest" test
 ```
 
-Run through Docker Compose when local Java or Maven is unavailable:
+## 通过 Docker Compose 运行
+
+当本机 Java 或 Maven 不可用时，可以通过 Docker Compose 构建测试镜像：
 
 ```powershell
 docker compose -f docker-compose.test.yml build platform-test
 ```
 
-These tests are intentionally service-level unit tests. They do not require PostgreSQL, Redis, Provider API keys, or customer data.
+这些测试刻意保持在 Service 级单元测试范围内，不依赖 PostgreSQL、Redis、Provider API Key 或客户数据。
 
-The broader Compose smoke tests remain:
+## 相关冒烟测试
+
+更完整的 Compose 冒烟测试包括：
 
 ```powershell
 .\scripts\smoke-all.ps1
@@ -39,73 +45,73 @@ The broader Compose smoke tests remain:
 .\scripts\regression-openai-errors.ps1
 ```
 
-`smoke-gateway-integration.ps1` is the local black-box gateway integration check. It configures DeepSeek and Qwen to the local mock provider, creates temporary tenant API keys, and verifies:
+`smoke-gateway-integration.ps1` 是本地黑盒网关集成测试。它会把 DeepSeek 和 Qwen 配置到本地 mock provider，创建临时租户 API Key，并验证：
 
-- `/v1/chat/completions` success path.
-- Wallet balance decreases and wallet `SETTLE` log uses the same `request_id`.
-- `ai_usage_log` records chat success with token usage and charge credits.
-- `/v1/embeddings` rejects keys without `embedding:create`.
-- `/v1/embeddings` success path records usage with the caller `X-Request-Id`.
-- API-key RPM limit returns OpenAI-compatible `429 rate_limit_rpm_exceeded`.
+- `/v1/chat/completions` 成功链路。
+- 钱包余额扣减，且钱包 `SETTLE` 流水使用同一个 `request_id`。
+- `ai_usage_log` 记录 chat 成功、token 用量和扣费 Credits。
+- `/v1/embeddings` 会拒绝缺少 `embedding:create` scope 的 API Key。
+- `/v1/embeddings` 成功链路会使用调用方传入的 `X-Request-Id` 记录 usage log。
+- API Key 级 RPM 限流返回 OpenAI-compatible 的 `429 rate_limit_rpm_exceeded`。
 
-`smoke-rate-limit-hardening.ps1` adds endpoint-level checks for:
+`smoke-rate-limit-hardening.ps1` 额外验证：
 
-- TPM rejection with `rate_limit_tpm_exceeded`.
-- Max-concurrency rejection with `rate_limit_concurrent_exceeded`.
+- TPM 超限返回 `rate_limit_tpm_exceeded`。
+- 最大并发超限返回 `rate_limit_concurrent_exceeded`。
 
-`regression-openai-errors.ps1` checks OpenAI-compatible error envelopes and `X-Request-Id` for:
+`regression-openai-errors.ps1` 验证 OpenAI-compatible 错误响应和 `X-Request-Id`：
 
-- `/v1/models` missing auth.
-- `/v1/chat/completions` missing auth.
-- `/v1/embeddings` missing auth.
-- `/v1/models` invalid key.
-- `/v1/chat/completions` scope denial with a temporary `models:read`-only API key.
+- `/v1/models` 缺少鉴权。
+- `/v1/chat/completions` 缺少鉴权。
+- `/v1/embeddings` 缺少鉴权。
+- `/v1/models` 使用无效 API Key。
+- 临时 `models:read` only API Key 调用 `/v1/chat/completions` 被 scope 拒绝。
 
-## Current Coverage
+## 当前覆盖范围
 
-`ApiKeyScopeServiceTest`:
+`ApiKeyScopeServiceTest`：
 
-- Default scope is `chat:completion`.
-- Scopes are trimmed, sorted, and deduplicated.
-- Exact scopes and `admin:*` are allowed.
-- Missing scopes return gateway `403 insufficient_scope`.
-- Null API keys return gateway `401 invalid_api_key`.
+- 默认 scope 为 `chat:completion`。
+- scopes 会 trim、排序并去重。
+- 精确 scope 和 `admin:*` 可以通过授权。
+- 缺少 scope 时返回网关 `403 insufficient_scope`。
+- 空 API Key 返回网关 `401 invalid_api_key`。
 
-`TenantAccessServiceTest`:
+`TenantAccessServiceTest`：
 
-- `SUPER_ADMIN` can access any tenant.
-- Tenant users are scoped to their own tenant.
-- Cross-tenant access is denied.
-- Anonymous access is denied.
+- `SUPER_ADMIN` 可以访问任意租户。
+- 租户用户只能访问自己的租户。
+- 跨租户访问会被拒绝。
+- 匿名访问会被拒绝。
 
-`OpenAiErrorResponseWriterTest`:
+`OpenAiErrorResponseWriterTest`：
 
-- Error body follows the OpenAI-compatible `error` envelope.
-- Blank messages fall back to the HTTP reason phrase.
-- `X-Request-Id` is preserved.
-- `param` is emitted as JSON `null`.
+- 错误体符合 OpenAI-compatible 的 `error` envelope。
+- 空错误消息会回退为 HTTP reason phrase。
+- `X-Request-Id` 会被保留。
+- `param` 会以 JSON `null` 输出。
 
-`AiWalletServiceTest`:
+`AiWalletServiceTest`：
 
-- Credit charge calculation uses input/output rates, multiplier, and ceiling rounding.
-- Reserve rejects insufficient credits without mutating wallet or logs.
-- Reserve moves credits from balance to frozen and writes a wallet log.
-- Settlement releases unused credits and records actual usage.
-- Settlement rejects underestimated charges when top-up balance is insufficient.
+- Credits 扣费计算使用 input/output rate、multiplier 和向上取整。
+- 余额不足时拒绝预冻结，且不改动钱包和流水。
+- 预冻结会把 Credits 从 balance 转入 frozen，并写钱包流水。
+- 结算会释放未使用的冻结 Credits，并记录实际用量。
+- 当预估扣费不足且追加扣费余额不足时，结算会拒绝。
 
-`AiGatewayServiceTest`:
+`AiGatewayServiceTest`：
 
-- Fallback route success uses the fallback provider/model for response, billing, and usage log.
-- Rate-limit rejection before wallet reservation does not release unfrozen credits.
+- fallback 成功时，响应、计费和 usage log 使用 fallback provider/model。
+- 钱包预冻结前发生限流拒绝时，不会释放未冻结的 Credits。
 
-`RateLimitServiceTest`:
+`RateLimitServiceTest`：
 
-- Redis counters are rolled back when rate-limit checks reject a request.
-- Audit-log failures do not suppress the original `429` gateway error.
+- 限流检查拒绝请求时会回滚 Redis 计数器。
+- 审计日志写入失败不会吞掉原始的 `429` 网关错误。
 
-`ProviderCircuitBreakerServiceTest`:
+`ProviderCircuitBreakerServiceTest`：
 
-- Retry succeeds on a later attempt and records provider recovery.
-- Failure threshold opens the circuit.
-- Cooling-down providers are rejected.
-- Success clears previous circuit state.
+- 重试在后续尝试成功时会记录 Provider 恢复。
+- 达到失败阈值会打开熔断。
+- 处于冷却期的 Provider 会被拒绝。
+- 成功调用会清理之前的熔断状态。

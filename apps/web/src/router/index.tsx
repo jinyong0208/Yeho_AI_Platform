@@ -77,7 +77,13 @@ type NavItem = {
   muted?: boolean;
 };
 
-const allRoles = [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER];
+const allRoles = [
+  USER_ROLES.SUPER_ADMIN,
+  USER_ROLES.TENANT_ADMIN,
+  USER_ROLES.DEVELOPER,
+  USER_ROLES.FINANCE,
+  USER_ROLES.VIEWER,
+];
 
 const navItems: NavItem[] = [
   {
@@ -119,7 +125,7 @@ const navItems: NavItem[] = [
     groupKey: 'navGroups.gateway',
     to: '/rate-limits',
     labelKey: 'nav.rateLimits',
-    roles: [USER_ROLES.SUPER_ADMIN],
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
     icon: IconAdjustmentsHorizontal,
   },
   {
@@ -147,7 +153,7 @@ const navItems: NavItem[] = [
     groupKey: 'navGroups.tenant',
     to: '/users',
     labelKey: 'nav.users',
-    roles: [USER_ROLES.TENANT_ADMIN],
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
     icon: IconUsers,
   },
   {
@@ -161,22 +167,36 @@ const navItems: NavItem[] = [
     groupKey: 'navGroups.tenant',
     to: '/wallet',
     labelKey: 'nav.wallet',
-    roles: [USER_ROLES.TENANT_ADMIN],
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
     icon: IconWallet,
   },
   {
     groupKey: 'navGroups.tenant',
     to: '/wallet/transactions',
     labelKey: 'nav.walletLogs',
-    roles: [USER_ROLES.TENANT_ADMIN],
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
     icon: IconCoins,
+  },
+  {
+    groupKey: 'navGroups.tenant',
+    to: '/invoices',
+    labelKey: 'nav.invoices',
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
+    icon: IconReceiptTax,
   },
   {
     groupKey: 'navGroups.observability',
     to: '/usage-logs',
     labelKey: 'nav.usage',
-    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER, USER_ROLES.FINANCE, USER_ROLES.VIEWER],
     icon: IconActivity,
+  },
+  {
+    groupKey: 'navGroups.observability',
+    to: '/token-stats',
+    labelKey: 'nav.tokenStats',
+    roles: [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE, USER_ROLES.VIEWER],
+    icon: IconChartHistogram,
   },
   {
     groupKey: 'navGroups.runtime',
@@ -226,15 +246,15 @@ const navItems: NavItem[] = [
 const routeRoles: Record<string, UserRole[]> = {
   '/': allRoles,
   '/tenants': [USER_ROLES.SUPER_ADMIN],
-  '/users': [USER_ROLES.TENANT_ADMIN],
+  '/users': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/providers': [USER_ROLES.SUPER_ADMIN],
   '/models': [USER_ROLES.SUPER_ADMIN],
-  '/api-keys': allRoles,
-  '/wallet': [USER_ROLES.TENANT_ADMIN],
-  '/wallet/transactions': [USER_ROLES.TENANT_ADMIN],
-  '/invoices': [USER_ROLES.TENANT_ADMIN],
-  '/usage-logs': [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
-  '/token-stats': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
+  '/api-keys': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
+  '/wallet': [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
+  '/wallet/transactions': [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
+  '/invoices': [USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE],
+  '/usage-logs': [USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER, USER_ROLES.FINANCE, USER_ROLES.VIEWER],
+  '/token-stats': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.FINANCE, USER_ROLES.VIEWER],
   '/profit': [USER_ROLES.SUPER_ADMIN],
   '/provider-costs': [USER_ROLES.SUPER_ADMIN],
   '/audit-logs': [USER_ROLES.SUPER_ADMIN],
@@ -243,7 +263,7 @@ const routeRoles: Record<string, UserRole[]> = {
   '/agent-execute-logs': [USER_ROLES.TENANT_ADMIN],
   '/agent-debug': [USER_ROLES.TENANT_ADMIN],
   '/workflow': [USER_ROLES.SUPER_ADMIN],
-  '/rate-limits': [USER_ROLES.SUPER_ADMIN],
+  '/rate-limits': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/playground': [USER_ROLES.DEVELOPER],
   '/api-docs': [USER_ROLES.DEVELOPER],
 };

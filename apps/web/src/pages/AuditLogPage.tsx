@@ -8,6 +8,7 @@ import {
   IconUserShield,
 } from '@tabler/icons-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { auditApi } from '../api/audit';
 import { tenantApi } from '../api/tenants';
 
@@ -18,6 +19,7 @@ type TenantLite = {
 };
 
 export default function AuditLogPage() {
+  const { t } = useTranslation();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [action, setAction] = useState<string | null>(null);
@@ -41,9 +43,9 @@ export default function AuditLogPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Stack gap={4}>
-          <Title order={2}>审计日志</Title>
+          <Title order={2}>{t('auditPage.title')}</Title>
           <Text c="dimmed" maw={760}>
-            查看后台接口访问记录、操作者、租户、request_id、状态码和耗时。审计不保存请求体，也不记录 Prompt 原文。
+            {t('auditPage.description')}
           </Text>
         </Stack>
         <ThemeIcon color="dark" variant="light" radius="sm" size={42}>
@@ -54,7 +56,7 @@ export default function AuditLogPage() {
       <Card className="surface-card" p="lg">
         <Group align="end">
           <Select
-            label="租户"
+            label={t('auditPage.tenant')}
             clearable
             maw={300}
             value={tenantId}
@@ -65,7 +67,7 @@ export default function AuditLogPage() {
             }))}
           />
           <TextInput
-            label="用户"
+            label={t('auditPage.user')}
             maw={220}
             leftSection={<IconSearch size={15} />}
             value={username}
@@ -73,22 +75,25 @@ export default function AuditLogPage() {
             placeholder="admin"
           />
           <Select
-            label="动作"
+            label={t('auditPage.action')}
             clearable
             maw={180}
             value={action}
             onChange={setAction}
-            data={['READ', 'CREATE', 'UPDATE', 'DELETE'].map((item) => ({ value: item, label: item }))}
+            data={['READ', 'CREATE', 'UPDATE', 'DELETE'].map((item) => ({
+              value: item,
+              label: t(`auditPage.actionLabels.${item}`),
+            }))}
           />
           <Select
-            label="结果"
+            label={t('auditPage.result')}
             clearable
             maw={180}
             value={success}
             onChange={setSuccess}
             data={[
-              { value: 'true', label: 'Success' },
-              { value: 'false', label: 'Failed' },
+              { value: 'true', label: t('auditPage.success') },
+              { value: 'false', label: t('auditPage.failed') },
             ]}
           />
         </Group>
@@ -97,10 +102,10 @@ export default function AuditLogPage() {
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
-            Console Access
+            {t('auditPage.access')}
           </Text>
           <Badge color="gray" variant="light" radius="sm">
-            {logs.length} rows
+            {t('auditPage.rowCount', { count: logs.length })}
           </Badge>
         </Group>
         <Stack gap={0} className="subtle-list">
@@ -112,16 +117,16 @@ export default function AuditLogPage() {
                 </ThemeIcon>
                 <Box>
                   <Group gap="xs">
-                    <Text fw={650}>{log.path || 'unknown path'}</Text>
+                    <Text fw={650}>{log.path || t('auditPage.unknownPath')}</Text>
                     <Badge color={actionColor(log.action)} variant="light" radius="sm">
-                      {log.action || log.method || 'ACTION'}
+                      {log.action ? t(`auditPage.actionLabels.${log.action}`, { defaultValue: log.action }) : log.method || t('auditPage.unknownAction')}
                     </Badge>
                     <Badge color={log.success ? 'teal' : 'red'} variant="light" radius="sm">
                       {log.statusCode ?? 0}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
-                    {log.username || 'anonymous'} · {log.requestId || 'no request id'} · {log.createdAt}
+                    {log.username || t('auditPage.anonymous')} · {log.requestId || t('auditPage.noRequestId')} · {log.createdAt}
                   </Text>
                   {log.queryString && (
                     <Text size="xs" c="dimmed" mt={4} lineClamp={1}>
@@ -131,9 +136,9 @@ export default function AuditLogPage() {
                 </Box>
               </Group>
               <Group gap="xl" wrap="nowrap" visibleFrom="sm">
-                <AuditMetric label="Resource" value={log.resourceType || '-'} />
-                <AuditMetric label="IP" value={log.ip || '-'} />
-                <AuditMetric label="Latency" value={`${log.latencyMs ?? 0}ms`} />
+                <AuditMetric label={t('auditPage.resource')} value={log.resourceType || '-'} />
+                <AuditMetric label={t('auditPage.ip')} value={log.ip || '-'} />
+                <AuditMetric label={t('auditPage.latency')} value={`${log.latencyMs ?? 0}ms`} />
               </Group>
             </Group>
           ))}
@@ -142,7 +147,7 @@ export default function AuditLogPage() {
               <ThemeIcon color="gray" variant="light" radius="sm" size={40} mb="sm" mx="auto">
                 <IconShieldCheck size={20} />
               </ThemeIcon>
-              <Text c="dimmed">暂无审计日志。</Text>
+              <Text c="dimmed">{t('auditPage.empty')}</Text>
             </Box>
           )}
         </Stack>

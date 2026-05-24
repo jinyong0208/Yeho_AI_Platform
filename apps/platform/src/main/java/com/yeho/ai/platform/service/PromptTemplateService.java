@@ -94,6 +94,10 @@ public class PromptTemplateService {
                 .toList();
     }
 
+    public Long tenantIdOf(Long id) {
+        return requireTemplate(id).getTenantId();
+    }
+
     private void apply(PromptTemplate template, PromptTemplateRequest request) {
         if (request.tenantId() != null) {
             template.setTenantId(request.tenantId());

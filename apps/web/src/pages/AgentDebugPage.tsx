@@ -22,6 +22,7 @@ import {
   IconSparkles,
 } from '@tabler/icons-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { agentApi, type AgentRunResponse, type AgentStepResponse } from '../api/agent';
 
 const DEFAULT_CONTEXT = JSON.stringify(
@@ -34,6 +35,7 @@ const DEFAULT_CONTEXT = JSON.stringify(
 );
 
 export default function AgentDebugPage() {
+  const { t } = useTranslation();
   const [input, setInput] = useState('帮我检查一下 deepseek-chat 模型路由和钱包扣费状态');
   const [contextText, setContextText] = useState(DEFAULT_CONTEXT);
   const [contextError, setContextError] = useState('');
@@ -53,12 +55,12 @@ export default function AgentDebugPage() {
       try {
         const parsed = JSON.parse(contextText) as unknown;
         if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-          setContextError('Context must be a JSON object.');
+          setContextError(t('agentDebugPage.contextMustObject'));
           return;
         }
         context = parsed as Record<string, unknown>;
       } catch {
-        setContextError('Context JSON is invalid.');
+        setContextError(t('agentDebugPage.contextInvalid'));
         return;
       }
     }
@@ -73,10 +75,10 @@ export default function AgentDebugPage() {
             <ThemeIcon color="dark" variant="light" radius="sm" size={34}>
               <IconBrain size={19} />
             </ThemeIcon>
-            <Title order={2}>Agent 调试</Title>
+            <Title order={2}>{t('agentDebugPage.title')}</Title>
           </Group>
           <Text c="dimmed" maw={760}>
-            通过 Java 主平台调用 Python LangGraph Demo Agent，查看意图识别、执行步骤和返回内容。
+            {t('agentDebugPage.description')}
           </Text>
         </Stack>
         <Badge color="gray" variant="light" radius="sm">
@@ -88,13 +90,13 @@ export default function AgentDebugPage() {
         <Card className="surface-card" p="lg">
           <Stack gap="md">
             <Group justify="space-between">
-              <Text fw={650}>Run Input</Text>
+              <Text fw={650}>{t('agentDebugPage.runInput')}</Text>
               <ThemeIcon color="blue" variant="light" radius="sm">
                 <IconRouteAltLeft size={18} />
               </ThemeIcon>
             </Group>
             <Textarea
-              label="输入"
+              label={t('agentDebugPage.input')}
               minRows={7}
               autosize
               maxRows={12}
@@ -102,7 +104,7 @@ export default function AgentDebugPage() {
               onChange={(event) => setInput(event.currentTarget.value)}
             />
             <Textarea
-              label="Context JSON"
+              label={t('agentDebugPage.contextJson')}
               minRows={7}
               autosize
               maxRows={12}
@@ -120,7 +122,7 @@ export default function AgentDebugPage() {
                 disabled={!input.trim()}
                 onClick={runAgent}
               >
-                Run
+                {t('agentDebugPage.run')}
               </Button>
             </Group>
           </Stack>
@@ -129,7 +131,7 @@ export default function AgentDebugPage() {
         <Card className="surface-card" p="lg">
           <Stack gap="md">
             <Group justify="space-between">
-              <Text fw={650}>Result</Text>
+              <Text fw={650}>{t('agentDebugPage.result')}</Text>
               {result && (
                 <Badge color="teal" variant="light" radius="sm">
                   {result.latencyMs}ms
@@ -140,15 +142,15 @@ export default function AgentDebugPage() {
             {result ? (
               <Stack gap="md">
                 <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-                  <ResultMetric label="Intent" value={result.intent || '-'} />
+                  <ResultMetric label={t('agentDebugPage.intent')} value={result.intent || '-'} />
                   <ResultMetric label="Agent" value={result.agentCode || '-'} />
-                  <ResultMetric label="Request ID" value={result.requestId || '-'} />
+                  <ResultMetric label={t('agentDebugPage.requestId')} value={result.requestId || '-'} />
                 </SimpleGrid>
                 <Box className="soft-panel" p="md">
                   <Group gap="xs" mb="xs">
                     <IconSparkles size={17} />
                     <Text size="sm" fw={650}>
-                      Answer
+                      {t('agentDebugPage.answer')}
                     </Text>
                   </Group>
                   <Text size="sm" lh={1.65}>
@@ -157,7 +159,7 @@ export default function AgentDebugPage() {
                 </Box>
                 <Stack gap="xs">
                   <Text size="sm" fw={650}>
-                    Steps
+                    {t('agentDebugPage.steps')}
                   </Text>
                   {(result.steps ?? []).map((step, index) => (
                     <AgentStep key={`${step.name}-${index}`} step={step} index={index} />
@@ -166,7 +168,7 @@ export default function AgentDebugPage() {
                 {result.metadata && (
                   <Stack gap="xs">
                     <Text size="sm" fw={650}>
-                      Metadata
+                      {t('agentDebugPage.metadata')}
                     </Text>
                     <Code block>{JSON.stringify(result.metadata, null, 2)}</Code>
                   </Stack>
@@ -177,13 +179,13 @@ export default function AgentDebugPage() {
                 <ThemeIcon color="gray" variant="light" radius="sm" size={42} mx="auto" mb="sm">
                   <IconBolt size={21} />
                 </ThemeIcon>
-                <Text c="dimmed">等待执行结果。</Text>
+                <Text c="dimmed">{t('agentDebugPage.waiting')}</Text>
               </Box>
             )}
 
             {mutation.isError && (
               <Text size="sm" c="red">
-                Agent run failed.
+                {t('agentDebugPage.failed')}
               </Text>
             )}
           </Stack>

@@ -6,6 +6,7 @@ import {
   Card,
   Group,
   Modal,
+  MultiSelect,
   PasswordInput,
   Select,
   Stack,
@@ -22,6 +23,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tenantApi } from '../api/tenants';
 import { userApi } from '../api/users';
+
+const assignableRoles = ['TENANT_ADMIN', 'DEVELOPER', 'FINANCE', 'VIEWER'];
 
 export default function UserPage() {
   const { t } = useTranslation();
@@ -43,6 +46,10 @@ export default function UserPage() {
       })),
     [tenantsQuery.data],
   );
+  const roleOptions = useMemo(
+    () => assignableRoles.map((role) => ({ value: role, label: t(`roles.${role}`) })),
+    [t],
+  );
   const form = useForm({
     initialValues: {
       username: '',
@@ -50,13 +57,20 @@ export default function UserPage() {
       displayName: '',
       email: '',
       phone: '',
+      roleCodes: ['TENANT_ADMIN'],
+    },
+    validate: {
+      roleCodes: (value) => (value.length > 0 ? null : t('userPage.roleRequired')),
     },
   });
   const createMutation = useMutation({
-    mutationFn: (values: typeof form.values) =>
-      userApi.create(selectedTenantId!, { ...values, roleCodes: ['VIEWER'] }),
+    mutationFn: (values: typeof form.values) => userApi.create(selectedTenantId!, values),
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已创建', message: '用户已创建。' });
+      notifications.show({
+        color: 'teal',
+        title: t('userPage.createdTitle'),
+        message: t('userPage.createdMessage'),
+      });
       queryClient.invalidateQueries({ queryKey: ['tenant-users', selectedTenantId] });
       form.reset();
       close();
@@ -70,7 +84,7 @@ export default function UserPage() {
         <Stack gap={4}>
           <Title order={2}>{t('users')}</Title>
           <Text c="dimmed" maw={640}>
-            租户内成员、角色和访问入口，后续将承接 API Key 与审计日志。
+            {t('userPage.description')}
           </Text>
         </Stack>
         <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
@@ -82,18 +96,23 @@ export default function UserPage() {
         <Group justify="space-between" mb="md" align="flex-end">
           <Select
             label={t('tenants')}
-            placeholder="选择租户"
+            placeholder={t('userPage.selectTenant')}
             data={tenantOptions}
             value={tenantId ?? (selectedTenantId ? String(selectedTenantId) : null)}
             onChange={setTenantId}
             maw={420}
           />
           <Badge color="gray" variant="light" radius="sm">
-            {users.length} users
+            {t('userPage.userCount', { count: users.length })}
           </Badge>
         </Group>
 
-        <Stack gap={0} className="subtle-list">
+        {!selectedTenantId ? (
+          <Box p="xl" ta="center">
+            <Text c="dimmed">{t('userPage.createFirstTenant')}</Text>
+          </Box>
+        ) : (
+          <Stack gap={0} className="subtle-list">
           {users.map((user) => (
             <Group key={user.id} className="list-row" p="md" justify="space-between" wrap="nowrap">
               <Group wrap="nowrap">
@@ -104,7 +123,7 @@ export default function UserPage() {
                   <Group gap="xs">
                     <Text fw={650}>{user.displayName}</Text>
                     <Badge color={user.status === 'ACTIVE' ? 'teal' : 'gray'} variant="light" radius="sm">
-                      {user.status}
+                      {t(`common.statusLabels.${user.status}`, { defaultValue: user.status })}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
@@ -117,13 +136,13 @@ export default function UserPage() {
                 <Group gap={6} visibleFrom="sm">
                   <IconMail size={15} color="#9aa4b2" />
                   <Text size="sm" c="dimmed">
-                    {user.email || '未设置邮箱'}
+                    {user.email || t('userPage.emailUnset')}
                   </Text>
                 </Group>
                 <Group gap={6} visibleFrom="md">
                   <IconShieldCheck size={15} color="#9aa4b2" />
                   <Text size="sm" c="dimmed">
-                    {user.roles?.join(', ') || 'VIEWER'}
+                    {user.roles?.map((role) => t(`roles.${role}`, { defaultValue: role })).join(', ') || t('roles.VIEWER')}
                   </Text>
                 </Group>
               </Group>
@@ -131,13 +150,22 @@ export default function UserPage() {
           ))}
           {users.length === 0 && (
             <Box p="xl" ta="center">
-              <Text c="dimmed">暂无用户。</Text>
+              <Text c="dimmed">{t('userPage.empty')}</Text>
             </Box>
           )}
-        </Stack>
+          </Stack>
+        )}
       </Card>
 
-      <Modal opened={opened} onClose={close} title="新建用户" centered>
+      <Modal
+        opened={opened}
+        onClose={() => {
+          close();
+          form.reset();
+        }}
+        title={t('userPage.newUser')}
+        centered
+      >
         <form onSubmit={form.onSubmit((values) => createMutation.mutate(values))}>
           <Stack>
             <TextInput label={t('username')} required {...form.getInputProps('username')} />
@@ -145,6 +173,12 @@ export default function UserPage() {
             <TextInput label={t('name')} required {...form.getInputProps('displayName')} />
             <TextInput label={t('email')} {...form.getInputProps('email')} />
             <TextInput label={t('phone')} {...form.getInputProps('phone')} />
+            <MultiSelect
+              label={t('userPage.role')}
+              required
+              data={roleOptions}
+              {...form.getInputProps('roleCodes')}
+            />
             <Button color="dark" type="submit" loading={createMutation.isPending}>
               {t('save')}
             </Button>

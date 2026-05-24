@@ -46,7 +46,7 @@ export default function TenantPage() {
   const createMutation = useMutation({
     mutationFn: tenantApi.create,
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '已创建', message: '租户已创建。' });
+      notifications.show({ color: 'teal', title: t('tenantPage.createdTitle'), message: t('tenantPage.createdMessage') });
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       close();
       form.reset();
@@ -68,7 +68,7 @@ export default function TenantPage() {
     mutationFn: (values: typeof limitForm.values) =>
       gatewayApi.updateTenantRateLimit(selectedTenant.id, { ...values, status: 'ACTIVE' }),
     onSuccess: () => {
-      notifications.show({ color: 'teal', title: '限流已保存', message: '租户限流配置已更新。' });
+      notifications.show({ color: 'teal', title: t('rateLimitPage.savedTitle'), message: t('rateLimitPage.savedMessage') });
       closeLimit();
       setSelectedTenant(null);
     },
@@ -93,7 +93,7 @@ export default function TenantPage() {
         <Stack gap={4}>
           <Title order={2}>{t('tenants')}</Title>
           <Text c="dimmed" maw={640}>
-            管理企业工作区边界，后续模型、钱包和 API Key 都会绑定到租户。
+            {t('tenantPage.description')}
           </Text>
         </Stack>
         <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open}>
@@ -105,14 +105,14 @@ export default function TenantPage() {
         <Group justify="space-between" mb="md">
           <Stack gap={2}>
             <Text size="sm" fw={650}>
-              Workspace tenants
+              {t('tenantPage.listTitle')}
             </Text>
             <Text size="xs" c="dimmed">
-              轻量列表视图，避免传统后台重表格。
+              {t('tenantPage.listDescription')}
             </Text>
           </Stack>
           <Badge color="gray" variant="light" radius="sm">
-            {tenants.length} total
+            {t('tenantPage.total', { count: tenants.length })}
           </Badge>
         </Group>
 
@@ -127,7 +127,7 @@ export default function TenantPage() {
                   <Group gap="xs">
                     <Text fw={650}>{tenant.tenantName}</Text>
                     <Badge color={tenant.status === 'ACTIVE' ? 'teal' : 'gray'} variant="light" radius="sm">
-                      {tenant.status}
+                      {t(`common.statusLabels.${tenant.status}`, { defaultValue: tenant.status })}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed">
@@ -140,30 +140,30 @@ export default function TenantPage() {
                 <Group gap={6} visibleFrom="sm">
                   <IconMail size={15} color="#9aa4b2" />
                   <Text size="sm" c="dimmed">
-                    {tenant.contactEmail || '未设置邮箱'}
+                    {tenant.contactEmail || t('tenantPage.emailUnset')}
                   </Text>
                 </Group>
                 <Group gap={6} visibleFrom="md">
                   <IconPhone size={15} color="#9aa4b2" />
                   <Text size="sm" c="dimmed">
-                    {tenant.contactPhone || '未设置电话'}
+                    {tenant.contactPhone || t('tenantPage.phoneUnset')}
                   </Text>
                 </Group>
-                <Tooltip label="租户限流">
+                <Tooltip label={t('tenantPage.rateLimit')}>
                   <ActionIcon
                     variant="subtle"
                     color="blue"
-                    aria-label="Configure tenant rate limit"
+                    aria-label={t('tenantPage.configureLimitAria')}
                     onClick={() => openLimitModal(tenant)}
                   >
                     <IconGauge size={16} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label="删除">
+                <Tooltip label={t('tenantPage.delete')}>
                   <ActionIcon
                     variant="subtle"
                     color="red"
-                    aria-label="Delete tenant"
+                    aria-label={t('tenantPage.deleteAria')}
                     loading={deleteMutation.isPending}
                     onClick={() => deleteMutation.mutate(tenant.id)}
                   >
@@ -175,13 +175,13 @@ export default function TenantPage() {
           ))}
           {tenants.length === 0 && (
             <Box p="xl" ta="center">
-              <Text c="dimmed">暂无租户。</Text>
+              <Text c="dimmed">{t('tenantPage.empty')}</Text>
             </Box>
           )}
         </Stack>
       </Card>
 
-      <Modal opened={opened} onClose={close} title="新建租户" centered>
+      <Modal opened={opened} onClose={close} title={t('tenantPage.newTenant')} centered>
         <form onSubmit={form.onSubmit((values) => createMutation.mutate(values))}>
           <Stack>
             <TextInput label={t('code')} required {...form.getInputProps('tenantCode')} />
@@ -202,17 +202,17 @@ export default function TenantPage() {
           closeLimit();
           setSelectedTenant(null);
         }}
-        title={`租户限流${selectedTenant ? ` · ${selectedTenant.tenantName}` : ''}`}
+        title={t('tenantPage.rateLimitTitle', { suffix: selectedTenant ? ` · ${selectedTenant.tenantName}` : '' })}
         centered
       >
         <form onSubmit={limitForm.onSubmit((values) => updateLimitMutation.mutate(values))}>
           <Stack>
-            <NumberInput label="RPM 每分钟请求数" min={0} {...limitForm.getInputProps('rpmLimit')} />
-            <NumberInput label="TPM 每分钟 Token" min={0} {...limitForm.getInputProps('tpmLimit')} />
-            <NumberInput label="Daily Credits 每日额度" min={0} {...limitForm.getInputProps('dailyCreditsLimit')} />
-            <NumberInput label="Max Concurrent 最大并发" min={0} {...limitForm.getInputProps('maxConcurrent')} />
+            <NumberInput label={t('rateLimitPage.fields.rpmLimit')} min={0} {...limitForm.getInputProps('rpmLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.tpmLimit')} min={0} {...limitForm.getInputProps('tpmLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.dailyCreditsLimit')} min={0} {...limitForm.getInputProps('dailyCreditsLimit')} />
+            <NumberInput label={t('rateLimitPage.fields.maxConcurrent')} min={0} {...limitForm.getInputProps('maxConcurrent')} />
             <Button color="dark" type="submit" loading={updateLimitMutation.isPending} disabled={!selectedTenant}>
-              保存限流
+              {t('tenantPage.saveRateLimit')}
             </Button>
           </Stack>
         </form>

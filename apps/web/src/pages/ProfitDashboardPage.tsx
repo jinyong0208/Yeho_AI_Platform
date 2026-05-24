@@ -136,9 +136,9 @@ export function ProfitDashboardPage() {
                 data={daily}
                 dataKey="date"
                 series={[
-                  { name: 'credits', color: 'blue.6' },
-                  { name: 'cost', color: 'orange.6' },
-                  { name: 'profit', color: 'green.6' },
+                  { name: t('analyticsPage.credits'), color: 'blue.6' },
+                  { name: t('analyticsPage.cost'), color: 'orange.6' },
+                  { name: t('analyticsPage.profit'), color: 'green.6' },
                 ]}
                 curveType="linear"
               />
@@ -153,7 +153,7 @@ export function ProfitDashboardPage() {
                 h={300}
                 data={summary?.providers ?? []}
                 dataKey="dimensionName"
-                series={[{ name: 'credits', color: 'blue.6' }]}
+                series={[{ name: t('analyticsPage.credits'), color: 'blue.6' }]}
               />
             </Stack>
           </Card>

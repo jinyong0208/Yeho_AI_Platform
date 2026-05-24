@@ -1,21 +1,21 @@
-# Real Provider End-to-End Test
+# 真实 Provider 端到端测试
 
-This runbook verifies that a real OpenAI-compatible provider can be configured and called through Yeho AI Platform.
+本文档用于验证真实 OpenAI-compatible Provider 能够通过 Yeho AI Platform 完成配置和调用。
 
-The test must go through the platform Provider Adapter and Model Router. Business code and frontend code must not call provider SDKs directly.
+测试必须经过平台的 Provider Adapter 和 Model Router。业务代码和前端代码禁止直接调用 Provider SDK。
 
-## Preconditions
+## 前置条件
 
-- Platform, PostgreSQL, and Redis are running.
-- You can log in to the admin console API.
-- The provider account has an active API key.
-- The model has a positive wallet balance path through the default tenant or your target tenant.
+- Platform、PostgreSQL 和 Redis 已启动。
+- 可以登录 admin 控制台 API。
+- Provider 账号拥有有效 API Key。
+- 默认租户或目标租户拥有可用的钱包余额。
 
-Do not paste provider API keys into chat, logs, screenshots, or bug reports.
+不要把 Provider API Key 粘贴到聊天、日志、截图或问题报告中。
 
-## Scripted Run
+## 脚本运行
 
-Preferred MVP closeout command:
+MVP 收口阶段推荐命令：
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
@@ -23,7 +23,7 @@ Preferred MVP closeout command:
   -ProviderApiKey "<QWEN_API_KEY>"
 ```
 
-DeepSeek:
+DeepSeek：
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
@@ -31,19 +31,21 @@ DeepSeek:
   -ProviderApiKey "<DEEPSEEK_API_KEY>"
 ```
 
-The script:
+脚本会执行：
 
-- Logs in to the admin API.
-- Finds the provider by `providerCode`.
-- Sets the provider base URL to the known OpenAI-compatible default.
-- Updates the provider API key through the encrypted provider-key endpoint when `ProviderApiKey` is provided.
-- Runs `/api/providers/{providerId}/test`.
-- Creates a temporary tenant API key for gateway chat when `GatewayApiKey` is not provided.
-- Calls `/v1/chat/completions`.
-- Revokes the temporary gateway API key.
-- Does not print the provider API key.
+- 登录 admin API。
+- 根据 `providerCode` 查找 Provider。
+- 将 Provider Base URL 设置为对应的 OpenAI-compatible 默认地址。
+- 传入 `ProviderApiKey` 时，通过加密 Provider Key 接口更新 Provider API Key。
+- 调用 `/api/providers/{providerId}/test`。
+- 未传入 `GatewayApiKey` 时，创建临时租户 API Key 用于 Gateway Chat。
+- 调用 `/v1/chat/completions`。
+- 吊销临时 Gateway API Key。
+- 不打印 Provider API Key。
 
-No-mutation diagnostic mode without a real provider key:
+## 无真实密钥的诊断模式
+
+不改动 Provider 配置的诊断模式：
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
@@ -54,9 +56,9 @@ No-mutation diagnostic mode without a real provider key:
   -AllowProviderFailure
 ```
 
-Use this mode to verify login, provider lookup, provider-health recording, and script wiring without overwriting a local mock-provider configuration. It is not a real Qwen or DeepSeek end-to-end validation.
+该模式用于验证登录、Provider 查询、Provider Health 记录和脚本流程，不会覆盖本地 mock provider 配置。它不代表真实 Qwen 或 DeepSeek 端到端验证通过。
 
-Provider probe only:
+## 仅测试 Provider 探测
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
@@ -65,9 +67,9 @@ Provider probe only:
   -SkipGatewayChat
 ```
 
-## Environment Variable Helper
+## 环境变量辅助方式
 
-When running locally, keep real provider keys in the shell environment and pass them to the script without printing them:
+本地运行时建议把真实 Provider Key 放在 shell 环境变量中，并以变量形式传入脚本，避免打印：
 
 ```powershell
 .\scripts\provider-e2e.ps1 `
@@ -79,9 +81,9 @@ When running locally, keep real provider keys in the shell environment and pass 
   -ProviderApiKey $env:DEEPSEEK_API_KEY
 ```
 
-The validation is only considered complete when `/api/providers/{providerId}/test` succeeds against the real provider endpoint and `/v1/chat/completions` succeeds through the gateway with wallet deduction and usage-log records.
+只有当 `/api/providers/{providerId}/test` 对真实 Provider Endpoint 成功，并且 `/v1/chat/completions` 通过网关成功返回、完成钱包扣费和 usage log 记录时，本验证才算完成。
 
-## Login
+## 登录
 
 ```powershell
 $login = Invoke-RestMethod `
@@ -93,15 +95,15 @@ $login = Invoke-RestMethod `
 $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
 ```
 
-## Configure DeepSeek
+## 配置 DeepSeek
 
-List providers and find the DeepSeek id:
+列出 Providers 并找到 DeepSeek ID：
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8080/api/v1/providers" -Headers $headers
 ```
 
-Set base URL and enable the provider:
+设置 Base URL 并启用 Provider：
 
 ```powershell
 Invoke-RestMethod `
@@ -112,7 +114,7 @@ Invoke-RestMethod `
   -Body '{"providerName":"DeepSeek","baseUrl":"https://api.deepseek.com","status":"ACTIVE"}'
 ```
 
-Store the encrypted provider API key:
+保存加密后的 Provider API Key：
 
 ```powershell
 Invoke-RestMethod `
@@ -123,7 +125,7 @@ Invoke-RestMethod `
   -Body '{"apiKey":"<DEEPSEEK_API_KEY>"}'
 ```
 
-Run the provider probe:
+运行 Provider 探测：
 
 ```powershell
 Invoke-RestMethod `
@@ -132,15 +134,15 @@ Invoke-RestMethod `
   -Headers $headers
 ```
 
-## Configure Qwen
+## 配置 Qwen
 
-Qwen uses Alibaba Cloud DashScope OpenAI-compatible mode:
+Qwen 使用阿里云 DashScope OpenAI-compatible 模式：
 
 ```text
 https://dashscope.aliyuncs.com/compatible-mode/v1
 ```
 
-Set base URL and API key:
+设置 Base URL 和 API Key：
 
 ```powershell
 Invoke-RestMethod `
@@ -158,7 +160,7 @@ Invoke-RestMethod `
   -Body '{"apiKey":"<QWEN_API_KEY>"}'
 ```
 
-Run the provider probe:
+运行 Provider 探测：
 
 ```powershell
 Invoke-RestMethod `
@@ -169,7 +171,7 @@ Invoke-RestMethod `
 
 ## Gateway Chat Completion
 
-Use a tenant API key with `chat:completion` scope:
+使用带有 `chat:completion` scope 的租户 API Key：
 
 ```powershell
 $gatewayHeaders = @{ Authorization = "Bearer yh_sk_demo_default_key" }
@@ -190,7 +192,7 @@ Invoke-RestMethod `
   }'
 ```
 
-For Qwen:
+Qwen：
 
 ```powershell
 Invoke-RestMethod `
@@ -209,9 +211,9 @@ Invoke-RestMethod `
   }'
 ```
 
-## Verify Logs And Billing
+## 验证日志和计费
 
-Check usage logs:
+查看 usage logs：
 
 ```powershell
 Invoke-RestMethod `
@@ -220,7 +222,7 @@ Invoke-RestMethod `
   -Headers $headers
 ```
 
-Check wallet:
+查看钱包：
 
 ```powershell
 Invoke-RestMethod `
@@ -229,7 +231,7 @@ Invoke-RestMethod `
   -Headers $headers
 ```
 
-Check provider health:
+查看 Provider Health：
 
 ```powershell
 Invoke-RestMethod `
@@ -238,19 +240,19 @@ Invoke-RestMethod `
   -Headers $headers
 ```
 
-## Pass Criteria
+## 通过标准
 
-- Provider probe returns `success=true`.
-- Gateway chat completion returns OpenAI-compatible `choices` and `usage`.
-- `ai_usage_log` has the request id, tenant id, API key id, provider code, model code, token usage, `charge_credits`, `real_cost`, `profit`, and `price_version_id`.
-- Wallet balance decreases only through the platform billing path.
-- Provider API key is never returned by any API.
+- Provider 探测返回 `success=true`。
+- Gateway Chat Completion 返回 OpenAI-compatible 的 `choices` 和 `usage`。
+- `ai_usage_log` 记录 request id、tenant id、API key id、provider code、model code、token usage、`charge_credits`、`real_cost`、`profit` 和 `price_version_id`。
+- 钱包余额只通过平台计费链路扣减。
+- 任何 API 都不能返回 Provider API Key。
 
-## Failure Notes
+## 失败排查
 
-- `401` from provider usually means the external provider key is invalid or missing.
-- `API key scope denied` means the tenant gateway key lacks `chat:completion` or `models:read`.
-- Circuit breaker failures should be visible from `/api/providers/health`.
-- Full customer prompts and provider keys must not be added to support logs.
-- If the provider probe succeeds but gateway chat fails, check model status, tenant wallet balance, API key scopes, and `ai_usage_log`.
-- If provider health remains `UNHEALTHY`, check `provider_test_log` for the latest request id and sanitized error.
+- Provider 返回 `401` 通常表示外部 Provider Key 无效或缺失。
+- `API key scope denied` 表示租户 Gateway API Key 缺少 `chat:completion` 或 `models:read`。
+- 熔断失败状态可通过 `/api/providers/health` 查看。
+- 支持日志中禁止加入完整客户 Prompt 和 Provider Key。
+- 如果 Provider 探测成功但 Gateway Chat 失败，请检查模型状态、租户钱包余额、API Key scopes 和 `ai_usage_log`。
+- 如果 Provider Health 仍为 `UNHEALTHY`，请根据最新 request id 查看 `provider_test_log` 中的脱敏错误。
