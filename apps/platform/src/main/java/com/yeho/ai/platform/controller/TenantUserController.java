@@ -1,6 +1,7 @@
 package com.yeho.ai.platform.controller;
 
 import com.yeho.ai.platform.common.ApiResponse;
+import com.yeho.ai.platform.dto.user.AdminPasswordResetRequest;
 import com.yeho.ai.platform.dto.user.UserCreateRequest;
 import com.yeho.ai.platform.dto.user.UserResponse;
 import com.yeho.ai.platform.dto.user.UserUpdateRequest;
@@ -68,6 +69,18 @@ public class TenantUserController {
     ) {
         tenantAccessService.assertTenantAccess(user, tenantId);
         return ApiResponse.ok(tenantUserService.update(tenantId, userId, request));
+    }
+
+    @PutMapping("/{userId}/password")
+    public ApiResponse<Void> resetPassword(
+        @AuthenticationPrincipal AuthenticatedUser user,
+        @PathVariable Long tenantId,
+        @PathVariable Long userId,
+        @Valid @RequestBody AdminPasswordResetRequest request
+    ) {
+        tenantAccessService.assertTenantAccess(user, tenantId);
+        tenantUserService.resetPassword(tenantId, userId, request);
+        return ApiResponse.ok(null);
     }
 
     @DeleteMapping("/{userId}")

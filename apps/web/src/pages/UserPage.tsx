@@ -23,12 +23,15 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tenantApi } from '../api/tenants';
 import { userApi } from '../api/users';
+import type { TenantUser } from '../api/types';
 
 const assignableRoles = ['TENANT_ADMIN', 'DEVELOPER', 'FINANCE', 'VIEWER'];
 
 export default function UserPage() {
   const { t } = useTranslation();
   const [opened, { open, close }] = useDisclosure(false);
+  const [resetOpened, { open: openReset, close: closeReset }] = useDisclosure(false);
+  const [resetTarget, setResetTarget] = useState<TenantUser | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const tenantsQuery = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
@@ -63,6 +66,16 @@ export default function UserPage() {
       roleCodes: (value) => (value.length > 0 ? null : t('userPage.roleRequired')),
     },
   });
+  const resetPasswordForm = useForm({
+    initialValues: {
+      newPassword: '',
+      confirmPassword: '',
+    },
+    validate: {
+      newPassword: (value) => (value.length >= 8 ? null : t('userPage.passwordMinLength')),
+      confirmPassword: (value, values) => (value === values.newPassword ? null : t('userPage.passwordMismatch')),
+    },
+  });
   const createMutation = useMutation({
     mutationFn: (values: typeof form.values) => userApi.create(selectedTenantId!, values),
     onSuccess: () => {
@@ -74,6 +87,20 @@ export default function UserPage() {
       queryClient.invalidateQueries({ queryKey: ['tenant-users', selectedTenantId] });
       form.reset();
       close();
+    },
+  });
+  const resetPasswordMutation = useMutation({
+    mutationFn: (values: typeof resetPasswordForm.values) =>
+      userApi.resetPassword(selectedTenantId!, resetTarget!.id, { newPassword: values.newPassword }),
+    onSuccess: () => {
+      notifications.show({
+        color: 'teal',
+        title: t('userPage.passwordResetTitle'),
+        message: t('userPage.passwordResetMessage'),
+      });
+      resetPasswordForm.reset();
+      setResetTarget(null);
+      closeReset();
     },
   });
   const users = usersQuery.data ?? [];
@@ -145,6 +172,18 @@ export default function UserPage() {
                     {user.roles?.map((role) => t(`roles.${role}`, { defaultValue: role })).join(', ') || t('roles.VIEWER')}
                   </Text>
                 </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  onClick={() => {
+                    setResetTarget(user);
+                    resetPasswordForm.reset();
+                    openReset();
+                  }}
+                >
+                  {t('userPage.resetPassword')}
+                </Button>
               </Group>
             </Group>
           ))}
@@ -180,6 +219,27 @@ export default function UserPage() {
               {...form.getInputProps('roleCodes')}
             />
             <Button color="dark" type="submit" loading={createMutation.isPending}>
+              {t('save')}
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal
+        opened={resetOpened}
+        onClose={() => {
+          closeReset();
+          resetPasswordForm.reset();
+          setResetTarget(null);
+        }}
+        title={t('userPage.resetPasswordTitle', { username: resetTarget?.username ?? '' })}
+        centered
+      >
+        <form onSubmit={resetPasswordForm.onSubmit((values) => resetPasswordMutation.mutate(values))}>
+          <Stack>
+            <PasswordInput label={t('profilePage.newPassword')} required {...resetPasswordForm.getInputProps('newPassword')} />
+            <PasswordInput label={t('profilePage.confirmPassword')} required {...resetPasswordForm.getInputProps('confirmPassword')} />
+            <Button color="dark" type="submit" loading={resetPasswordMutation.isPending}>
               {t('save')}
             </Button>
           </Stack>

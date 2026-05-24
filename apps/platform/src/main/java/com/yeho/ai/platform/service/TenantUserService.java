@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.yeho.ai.platform.common.BusinessException;
 import com.yeho.ai.platform.common.NotFoundException;
+import com.yeho.ai.platform.dto.user.AdminPasswordResetRequest;
 import com.yeho.ai.platform.dto.user.UserCreateRequest;
 import com.yeho.ai.platform.dto.user.UserResponse;
 import com.yeho.ai.platform.dto.user.UserUpdateRequest;
@@ -92,6 +93,14 @@ public class TenantUserService {
         tenantUserMapper.updateById(user);
         syncRoles(user.getId(), request.getRoleCodes());
         return toResponse(user);
+    }
+
+    @Transactional
+    public void resetPassword(Long tenantId, Long userId, AdminPasswordResetRequest request) {
+        TenantUser user = findUser(tenantId, userId);
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(LocalDateTime.now());
+        tenantUserMapper.updateById(user);
     }
 
     @Transactional

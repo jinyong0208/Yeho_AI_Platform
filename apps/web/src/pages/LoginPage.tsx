@@ -14,23 +14,47 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconLogin2, IconSparkles } from '@tabler/icons-react';
+import { IconLogin2, IconRefresh, IconSparkles } from '@tabler/icons-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
+import type { CaptchaResponse } from '../api/types';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const [captcha, setCaptcha] = useState<CaptchaResponse | null>(null);
+  const [captchaLoading, setCaptchaLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const form = useForm({
     initialValues: {
-      tenantCode: 'default',
-      username: 'admin',
-      password: 'Admin@123456',
+      tenantCode: '',
+      username: '',
+      password: '',
+      captchaAnswer: '',
+    },
+    validate: {
+      tenantCode: (value) => (value.trim() ? null : t('loginPage.tenantRequired')),
+      username: (value) => (value.trim() ? null : t('loginPage.usernameRequired')),
+      password: (value) => (value ? null : t('loginPage.passwordRequired')),
+      captchaAnswer: (value) => (value.trim() ? null : t('loginPage.captchaRequired')),
     },
   });
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true);
+    try {
+      setCaptcha(await authApi.captcha());
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCaptcha();
+  }, [loadCaptcha]);
 
   return (
     <Box className="login-canvas">
@@ -59,8 +83,12 @@ export default function LoginPage() {
           <Card className="surface-card" p="lg">
             <form
               onSubmit={form.onSubmit(async (values) => {
+                setSubmitting(true);
                 try {
-                  const result = await authApi.login(values);
+                  const result = await authApi.login({
+                    ...values,
+                    captchaId: captcha?.captchaId ?? '',
+                  });
                   login(result.accessToken, {
                     tenantId: result.tenantId,
                     userId: result.userId,
@@ -74,6 +102,10 @@ export default function LoginPage() {
                     title: t('loginPage.loginFailedTitle'),
                     message: t('loginPage.loginFailedMessage'),
                   });
+                  form.setFieldValue('captchaAnswer', '');
+                  void loadCaptcha();
+                } finally {
+                  setSubmitting(false);
                 }
               })}
             >
@@ -81,7 +113,28 @@ export default function LoginPage() {
                 <TextInput label={t('tenantCode')} {...form.getInputProps('tenantCode')} />
                 <TextInput label={t('username')} {...form.getInputProps('username')} />
                 <PasswordInput label={t('password')} {...form.getInputProps('password')} />
-                <Button color="dark" type="submit" leftSection={<IconLogin2 size={16} />}>
+                <Group align="flex-start" wrap="nowrap">
+                  <TextInput
+                    label={t('loginPage.captcha')}
+                    placeholder={captcha?.challenge ?? t('loginPage.captchaLoading')}
+                    style={{ flex: 1 }}
+                    {...form.getInputProps('captchaAnswer')}
+                  />
+                  <Button
+                    mt={25}
+                    variant="light"
+                    color="gray"
+                    leftSection={<IconRefresh size={16} />}
+                    loading={captchaLoading}
+                    onClick={() => {
+                      form.setFieldValue('captchaAnswer', '');
+                      void loadCaptcha();
+                    }}
+                  >
+                    {captcha?.challenge ?? t('loginPage.refreshCaptcha')}
+                  </Button>
+                </Group>
+                <Button color="dark" type="submit" leftSection={<IconLogin2 size={16} />} loading={submitting}>
                   {t('login')}
                 </Button>
               </Stack>

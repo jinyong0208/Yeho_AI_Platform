@@ -40,6 +40,7 @@ import {
   IconSettingsAutomation,
   IconShieldCheck,
   IconTerminal2,
+  IconUserCog,
   IconUsers,
   IconWallet,
 } from '@tabler/icons-react';
@@ -67,6 +68,7 @@ const AgentConfigPage = lazy(() => import('../pages/AgentConfigPage'));
 const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
 const RateLimitPage = lazy(() => import('../pages/RateLimitPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
+const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
 type NavItem = {
   groupKey: string;
@@ -266,6 +268,7 @@ const routeRoles: Record<string, UserRole[]> = {
   '/rate-limits': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/playground': [USER_ROLES.DEVELOPER],
   '/api-docs': [USER_ROLES.DEVELOPER],
+  '/profile': allRoles,
 };
 
 function ConsoleLayout() {
@@ -312,6 +315,16 @@ function ConsoleLayout() {
             <Text size="sm" c="dimmed">
               {user?.username}
             </Text>
+            <Tooltip label={t('nav.profile')}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                aria-label={t('nav.profile')}
+                onClick={() => navigate('/profile')}
+              >
+                <IconUserCog size={17} />
+              </ActionIcon>
+            </Tooltip>
             <Tooltip label={t('logout')}>
               <ActionIcon
                 variant="subtle"
@@ -423,6 +436,7 @@ export const router = createBrowserRouter([
       { path: 'rate-limits', element: secured('/rate-limits', <RateLimitPage />) },
       { path: 'playground', element: secured('/playground', <PlaceholderPage kind="playground" />) },
       { path: 'api-docs', element: secured('/api-docs', <PlaceholderPage kind="apiDocs" />) },
+      { path: 'profile', element: secured('/profile', <ProfilePage />) },
     ],
   },
 ]);

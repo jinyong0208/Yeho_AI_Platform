@@ -52,6 +52,7 @@ public class AuditLogFilter extends OncePerRequestFilter {
             return false;
         }
         return !path.equals("/api/v1/health")
+            && !path.startsWith("/api/v1/auth/captcha")
             && !path.startsWith("/api/v1/auth/login");
     }
 

@@ -10,6 +10,8 @@ export interface LoginRequest {
   tenantCode: string;
   username: string;
   password: string;
+  captchaId: string;
+  captchaAnswer: string;
 }
 
 export interface LoginResponse {
@@ -20,6 +22,12 @@ export interface LoginResponse {
   userId: string;
   username: string;
   roles: string[];
+}
+
+export interface CaptchaResponse {
+  captchaId: string;
+  challenge: string;
+  expiresInSeconds: number;
 }
 
 export interface Tenant {
@@ -63,4 +71,13 @@ export interface UserCreatePayload {
   email?: string;
   phone?: string;
   roleCodes?: string[];
+}
+
+export interface AdminPasswordResetPayload {
+  newPassword: string;
+}
+
+export interface SelfPasswordChangePayload {
+  currentPassword: string;
+  newPassword: string;
 }
