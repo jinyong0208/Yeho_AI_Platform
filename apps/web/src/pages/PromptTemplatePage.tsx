@@ -51,8 +51,7 @@ export function PromptTemplatePage() {
       ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
       : [];
   const tenantOptions = tenants.map((tenant) => ({ value: String(tenant.id), label: `${tenant.tenantName} / ${tenant.tenantCode}` }));
-  const selectedTenantNumber = tenantId ? Number(tenantId) : undefined;
-  const hasTenantScope = canSelectTenant || Number.isFinite(selectedTenantNumber);
+  const hasTenantScope = canSelectTenant || Boolean(tenantId);
 
   useEffect(() => {
     if (!tenantId && tenants.length > 0) {
@@ -62,7 +61,7 @@ export function PromptTemplatePage() {
 
   const templates = useQuery({
     queryKey: ['prompt-templates', tenantId],
-    queryFn: () => orchestrationApi.promptTemplates(selectedTenantNumber),
+    queryFn: () => orchestrationApi.promptTemplates(tenantId ?? undefined),
     enabled: hasTenantScope,
   });
 
@@ -85,7 +84,7 @@ export function PromptTemplatePage() {
 
   const saveMutation = useMutation({
     mutationFn: (values: typeof form.values) => {
-      const payload = { ...values, tenantId: Number(values.tenantId) };
+      const payload = { ...values, tenantId: values.tenantId };
       return editing
         ? orchestrationApi.updatePromptTemplate(editing.id, payload)
         : orchestrationApi.createPromptTemplate(payload);
@@ -99,6 +98,13 @@ export function PromptTemplatePage() {
       close();
       setEditing(null);
       queryClient.invalidateQueries({ queryKey: ['prompt-templates'] });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: t('promptTemplatePage.saveFailedTitle'),
+        message: error instanceof Error ? error.message : t('promptTemplatePage.saveFailedMessage'),
+      });
     },
   });
 

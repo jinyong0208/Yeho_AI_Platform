@@ -1,8 +1,10 @@
 import { apiClient } from './client';
 
+type Id = string;
+
 export type PromptTemplate = {
-  id: number;
-  tenantId: number;
+  id: Id;
+  tenantId: Id;
   templateCode: string;
   templateName: string;
   description?: string;
@@ -13,9 +15,9 @@ export type PromptTemplate = {
 };
 
 export type PromptVersion = {
-  id: number;
-  tenantId: number;
-  templateId: number;
+  id: Id;
+  tenantId: Id;
+  templateId: Id;
   versionNo: number;
   content: string;
   status: string;
@@ -24,8 +26,8 @@ export type PromptVersion = {
 };
 
 export type AgentConfig = {
-  id: number;
-  tenantId: number;
+  id: Id;
+  tenantId: Id;
   systemCode?: string;
   dataDomain?: string;
   allowedDataDomains?: string;
@@ -42,10 +44,10 @@ export type AgentConfig = {
 };
 
 export type AgentExecuteLog = {
-  id: number;
+  id: Id;
   requestId: string;
-  tenantId: number;
-  agentConfigId?: number;
+  tenantId: Id;
+  agentConfigId?: Id;
   systemCode?: string;
   dataDomain?: string;
   agentCode?: string;
@@ -65,26 +67,26 @@ export type AgentExecuteLog = {
 const unwrap = <T>(response: { data: { data: T } }) => response.data.data;
 
 export const orchestrationApi = {
-  promptTemplates: async (tenantId?: number) =>
+  promptTemplates: async (tenantId?: Id) =>
     unwrap<PromptTemplate[]>(await apiClient.get('/prompt-templates', { params: { tenantId } })),
   createPromptTemplate: async (payload: Partial<PromptTemplate>) =>
     unwrap<PromptTemplate>(await apiClient.post('/prompt-templates', payload)),
-  updatePromptTemplate: async (id: number, payload: Partial<PromptTemplate>) =>
+  updatePromptTemplate: async (id: Id, payload: Partial<PromptTemplate>) =>
     unwrap<PromptTemplate>(await apiClient.put(`/prompt-templates/${id}`, payload)),
-  publishPromptTemplate: async (id: number) =>
+  publishPromptTemplate: async (id: Id) =>
     unwrap<PromptVersion>(await apiClient.post(`/prompt-templates/${id}/publish`)),
-  disablePromptTemplate: async (id: number) =>
+  disablePromptTemplate: async (id: Id) =>
     unwrap<PromptTemplate>(await apiClient.delete(`/prompt-templates/${id}`)),
-  promptVersions: async (id: number) =>
+  promptVersions: async (id: Id) =>
     unwrap<PromptVersion[]>(await apiClient.get(`/prompt-templates/${id}/versions`)),
-  agentConfigs: async (tenantId?: number) =>
+  agentConfigs: async (tenantId?: Id) =>
     unwrap<AgentConfig[]>(await apiClient.get('/agent-configs', { params: { tenantId } })),
   createAgentConfig: async (payload: Partial<AgentConfig>) =>
     unwrap<AgentConfig>(await apiClient.post('/agent-configs', payload)),
-  updateAgentConfig: async (id: number, payload: Partial<AgentConfig>) =>
+  updateAgentConfig: async (id: Id, payload: Partial<AgentConfig>) =>
     unwrap<AgentConfig>(await apiClient.put(`/agent-configs/${id}`, payload)),
-  disableAgentConfig: async (id: number) =>
+  disableAgentConfig: async (id: Id) =>
     unwrap<AgentConfig>(await apiClient.delete(`/agent-configs/${id}`)),
-  agentExecuteLogs: async (params?: { tenantId?: number; requestId?: string; traceId?: string }) =>
+  agentExecuteLogs: async (params?: { tenantId?: Id; requestId?: string; traceId?: string }) =>
     unwrap<AgentExecuteLog[]>(await apiClient.get('/agent-execute-logs', { params })),
 };

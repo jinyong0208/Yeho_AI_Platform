@@ -35,8 +35,7 @@ export function AgentConfigPage() {
       ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
       : [];
   const tenantOptions = tenants.map((tenant) => ({ value: String(tenant.id), label: `${tenant.tenantName} / ${tenant.tenantCode}` }));
-  const selectedTenantNumber = tenantId ? Number(tenantId) : undefined;
-  const hasTenantScope = canSelectTenant || Number.isFinite(selectedTenantNumber);
+  const hasTenantScope = canSelectTenant || Boolean(tenantId);
 
   useEffect(() => {
     if (!tenantId && tenants.length > 0) {
@@ -47,7 +46,7 @@ export function AgentConfigPage() {
   const models = useQuery({ queryKey: ['models', 'agent-configs'], queryFn: gatewayApi.models });
   const configs = useQuery({
     queryKey: ['agent-configs', tenantId],
-    queryFn: () => orchestrationApi.agentConfigs(selectedTenantNumber),
+    queryFn: () => orchestrationApi.agentConfigs(tenantId ?? undefined),
     enabled: hasTenantScope,
   });
 
@@ -76,7 +75,7 @@ export function AgentConfigPage() {
 
   const saveMutation = useMutation({
     mutationFn: (values: typeof form.values) => {
-      const payload = { ...values, tenantId: Number(values.tenantId) };
+      const payload = { ...values, tenantId: values.tenantId };
       return editing ? orchestrationApi.updateAgentConfig(editing.id, payload) : orchestrationApi.createAgentConfig(payload);
     },
     onSuccess: () => {
@@ -88,6 +87,13 @@ export function AgentConfigPage() {
       close();
       setEditing(null);
       queryClient.invalidateQueries({ queryKey: ['agent-configs'] });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: t('agentConfigPage.saveFailedTitle'),
+        message: error instanceof Error ? error.message : t('agentConfigPage.saveFailedMessage'),
+      });
     },
   });
 

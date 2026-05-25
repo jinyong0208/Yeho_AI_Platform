@@ -28,8 +28,7 @@ export function AgentExecuteLogPage() {
     : user?.tenantId
       ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
       : [];
-  const selectedTenantNumber = tenantId ? Number(tenantId) : undefined;
-  const hasTenantScope = canSelectTenant || Number.isFinite(selectedTenantNumber);
+  const hasTenantScope = canSelectTenant || Boolean(tenantId);
 
   useEffect(() => {
     if (!tenantId && tenants.length > 0) {
@@ -41,7 +40,7 @@ export function AgentExecuteLogPage() {
     queryKey: ['agent-execute-logs', tenantId, requestId, traceId],
     queryFn: () =>
       orchestrationApi.agentExecuteLogs({
-        tenantId: selectedTenantNumber,
+        tenantId: tenantId ?? undefined,
         requestId: requestId || undefined,
         traceId: traceId || undefined,
       }),
