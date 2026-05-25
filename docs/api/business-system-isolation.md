@@ -15,6 +15,10 @@ Yeho AI Platform 只管理 AI 能力，不集中保存客户文档、切片、�
 
 Yeho AI Platform 只记录调用元数据，用于鉴权、计费、审计和观测。
 
+面向调用方的完整接入说明见：
+
+- [Yeho AI Platform 调用方接入指南](../integration/yeho-ai-caller-integration-guide.md)
+
 ## 新增概念
 
 ### 业务系统

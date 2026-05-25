@@ -9,7 +9,17 @@ OpenAI-compatible chat completions endpoint.
 ```http
 Authorization: Bearer yh_sk_demo_default_key
 Content-Type: application/json
+X-Yeho-System-Code: edms
+X-Yeho-Data-Domain: document_text
+X-Yeho-Agent-Code: document_search
 ```
+
+`X-Yeho-System-Code`、`X-Yeho-Data-Domain`、`X-Yeho-Agent-Code` 用于业务系统隔离、API Key 限制和 Usage Log 观测。若 API Key 配置了允许的业务系统或数据域，请求必须携带匹配 Header，否则返回 403。
+
+调用方完整接入说明见：
+
+- [Yeho AI Platform 调用方接入指南](../integration/yeho-ai-caller-integration-guide.md)
+- [业务系统隔离与网关调用上下文](business-system-isolation.md)
 
 ### Request
 
