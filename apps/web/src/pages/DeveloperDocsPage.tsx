@@ -1,61 +1,107 @@
-import { Badge, Card, Code, Group, List, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
-import { IconApi, IconBook2, IconKey, IconRoute, IconShieldCheck, IconSparkles } from '@tabler/icons-react';
+import { Badge, Card, Code, Divider, Group, List, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
+import {
+  IconApi,
+  IconBook2,
+  IconChecklist,
+  IconKey,
+  IconRoute,
+  IconShieldCheck,
+  IconSparkles,
+} from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
 const sections = [
-  { key: 'boundary', icon: IconShieldCheck, color: 'green' },
-  { key: 'urls', icon: IconRoute, color: 'blue' },
-  { key: 'context', icon: IconApi, color: 'cyan' },
-  { key: 'scopes', icon: IconKey, color: 'yellow' },
-  { key: 'runtime', icon: IconSparkles, color: 'violet' },
-  { key: 'logs', icon: IconBook2, color: 'gray' },
+  { key: 'boundary', icon: IconShieldCheck },
+  { key: 'urls', icon: IconRoute },
+  { key: 'context', icon: IconApi },
+  { key: 'scopes', icon: IconKey },
+  { key: 'runtime', icon: IconSparkles },
+  { key: 'logs', icon: IconBook2 },
 ] as const;
 
-const codeBlocks = ['edmsConfig', 'runtimeCurl', 'chatHeaders'] as const;
+const integrationSteps = ['registerSystem', 'issueKey', 'sendContext'] as const;
+const systemExamples = ['edms', 'eqms', 'robot', 'customerService', 'iot', 'screen'] as const;
+const codeBlocks = ['envConfig', 'runtimeCurl', 'chatHeaders'] as const;
 
 export default function DeveloperDocsPage() {
   const { t } = useTranslation();
 
   return (
-    <Stack gap="lg">
-      <Stack gap={6}>
-        <Group gap="xs">
-          <Title order={2}>{t('developerDocsPage.title')}</Title>
-          <Badge variant="light" color="blue" radius="sm">
-            {t('developerDocsPage.badge')}
-          </Badge>
-        </Group>
-        <Text c="dimmed" maw={920}>
-          {t('developerDocsPage.description')}
-        </Text>
-      </Stack>
+    <Stack gap="xl">
+      <Card className="surface-card" p="xl">
+        <Stack gap="md">
+          <Group gap="xs">
+            <ThemeIcon color="dark" variant="filled" radius="sm" size={38}>
+              <IconBook2 size={20} />
+            </ThemeIcon>
+            <Stack gap={2}>
+              <Group gap="xs">
+                <Title order={2}>{t('developerDocsPage.title')}</Title>
+                <Badge variant="light" color="blue" radius="sm">
+                  {t('developerDocsPage.badge')}
+                </Badge>
+              </Group>
+              <Text c="dimmed" maw={920}>
+                {t('developerDocsPage.description')}
+              </Text>
+            </Stack>
+          </Group>
+          <Divider />
+          <SimpleGrid cols={{ base: 1, md: 3 }} spacing="sm">
+            {['gateway', 'platform', 'dataBoundary'].map((key) => (
+              <Stack key={key} gap={4}>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                  {t(`developerDocsPage.overview.${key}.label`)}
+                </Text>
+                <Text fw={700}>{t(`developerDocsPage.overview.${key}.value`)}</Text>
+                <Text size="sm" c="dimmed">
+                  {t(`developerDocsPage.overview.${key}.hint`)}
+                </Text>
+              </Stack>
+            ))}
+          </SimpleGrid>
+        </Stack>
+      </Card>
 
       <Card className="surface-card" p="lg">
         <Stack gap="sm">
-          <Text fw={700}>{t('developerDocsPage.quickStart.title')}</Text>
+          <Group gap="sm">
+            <ThemeIcon color="blue" variant="light" radius="sm" size={34}>
+              <IconChecklist size={18} />
+            </ThemeIcon>
+            <Stack gap={2}>
+              <Text fw={700}>{t('developerDocsPage.integrationFlow.title')}</Text>
+              <Text size="sm" c="dimmed">
+                {t('developerDocsPage.integrationFlow.description')}
+              </Text>
+            </Stack>
+          </Group>
           <SimpleGrid cols={{ base: 1, md: 3 }} spacing="sm">
-            {['systemCode', 'dataDomain', 'agentCode'].map((key) => (
+            {integrationSteps.map((key, index) => (
               <Card key={key} withBorder radius="sm" p="md">
-                <Text size="xs" c="dimmed">
-                  {t(`developerDocsPage.quickStart.${key}.label`)}
+                <Badge variant="light" color="gray" radius="sm">
+                  {t('developerDocsPage.integrationFlow.step', { index: index + 1 })}
+                </Badge>
+                <Text mt="sm" fw={700}>
+                  {t(`developerDocsPage.integrationFlow.${key}.title`)}
                 </Text>
-                <Code mt={6} block>
-                  {t(`developerDocsPage.quickStart.${key}.value`)}
-                </Code>
+                <Text mt={4} size="sm" c="dimmed">
+                  {t(`developerDocsPage.integrationFlow.${key}.body`)}
+                </Text>
               </Card>
             ))}
           </SimpleGrid>
         </Stack>
       </Card>
 
-      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">
+      <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="md">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
             <Card key={section.key} className="surface-card" p="lg">
               <Stack gap="sm">
                 <Group align="flex-start" gap="sm">
-                  <ThemeIcon color={section.color} variant="light" radius="sm" size={36}>
+                  <ThemeIcon color="gray" variant="light" radius="sm" size={36}>
                     <Icon size={18} />
                   </ThemeIcon>
                   <Stack gap={2}>
@@ -83,6 +129,32 @@ export default function DeveloperDocsPage() {
           );
         })}
       </SimpleGrid>
+
+      <Card className="surface-card" p="lg">
+        <Stack gap="md">
+          <Stack gap={2}>
+            <Text fw={700}>{t('developerDocsPage.systemExamples.title')}</Text>
+            <Text size="sm" c="dimmed">
+              {t('developerDocsPage.systemExamples.description')}
+            </Text>
+          </Stack>
+          <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="sm">
+            {systemExamples.map((key) => (
+              <Card key={key} withBorder radius="sm" p="md">
+                <Stack gap={6}>
+                  <Group justify="space-between" align="flex-start">
+                    <Text fw={700}>{t(`developerDocsPage.systemExamples.${key}.name`)}</Text>
+                    <Code>{t(`developerDocsPage.systemExamples.${key}.code`)}</Code>
+                  </Group>
+                  <Text size="sm" c="dimmed">
+                    {t(`developerDocsPage.systemExamples.${key}.description`)}
+                  </Text>
+                </Stack>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Stack>
+      </Card>
 
       <Card className="surface-card" p="lg">
         <Stack gap="md">

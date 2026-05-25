@@ -295,30 +295,49 @@ const enUS = {
     },
   },
   developerDocsPage: {
-    title: 'Developer Docs',
-    badge: 'Developer',
+    title: 'Platform Developer Docs',
+    badge: 'Standard Integration',
     description:
-      'Integration notes for EDMS, EQMS, robotics, customer service, and other business systems. The platform governs model calls, billing, audit, API keys, Prompt, and Agent configuration without centrally storing customer documents, chunks, or vector indexes.',
-    quickStart: {
-      title: 'Current EDMS recommended context',
-      systemCode: {
-        label: 'Business system',
-        value: 'edms',
+      'Unified integration rules for all business systems. Yeho AI Platform governs the model gateway, billing, audit, API keys, Prompt, and Agent configuration; each business system owns its data, permissions, retrieval, and vector indexes.',
+    overview: {
+      gateway: {
+        label: 'Model Gateway',
+        value: '/v1',
+        hint: 'OpenAI-compatible entry for chat/completions, embeddings, and future model capabilities.',
       },
-      dataDomain: {
-        label: 'Data domain',
-        value: 'document_text',
+      platform: {
+        label: 'Platform API',
+        value: '/api/v1',
+        hint: 'Read business systems, Agent Runtime config, Prompt templates, and governance configuration.',
       },
-      agentCode: {
-        label: 'Agent code',
-        value: 'document_search',
+      dataBoundary: {
+        label: 'Data Boundary',
+        value: 'Business systems own data',
+        hint: 'The platform does not centrally store customer documents, chunks, vectors, or source business data.',
+      },
+    },
+    integrationFlow: {
+      title: 'Standard Integration Flow',
+      description: 'Every new business system follows the same flow to avoid system-specific hardcoding.',
+      step: 'Step {{index}}',
+      registerSystem: {
+        title: 'Register Business System',
+        body: 'Maintain a system_code such as edms, eqms, robot, or iot in the Business Systems page.',
+      },
+      issueKey: {
+        title: 'Issue API Key',
+        body: 'Configure scopes, allowed system_code, and allowed data_domain. The database stores only the key hash.',
+      },
+      sendContext: {
+        title: 'Send Request Context',
+        body: 'Model calls send X-Yeho-System-Code and X-Yeho-Data-Domain; Chat scenarios also send X-Yeho-Agent-Code.',
       },
     },
     sections: {
       boundary: {
         title: 'Data Boundary',
-        description: 'EDMS owns data; Yeho owns capability.',
-        item1: 'Business systems own source files, chunks, vector indexes, RAG retrieval, and permission filtering.',
+        description: 'Business systems own data; Yeho owns capability.',
+        item1: 'Each business system owns source records, chunks, vector indexes, RAG retrieval, and permission filtering.',
         item2: 'Yeho does not centrally store customer documents, chunks, or vector indexes.',
         item3: 'Yeho records only call metadata, tokens, Credits, model, tenant, and audit data.',
       },
@@ -332,9 +351,9 @@ const enUS = {
       context: {
         title: 'Request Context',
         description: 'Business system calls should carry system and data-domain headers.',
-        item1: 'X-Yeho-System-Code identifies the source system, such as edms.',
-        item2: 'X-Yeho-Data-Domain identifies the data domain, such as document_text.',
-        item3: 'Chat scenarios should also send X-Yeho-Agent-Code, such as document_search.',
+        item1: 'X-Yeho-System-Code identifies the source system, such as edms, eqms, or robot.',
+        item2: 'X-Yeho-Data-Domain identifies the data domain, such as document_text, quality_record, or voice_dialog.',
+        item3: 'Chat / Agent scenarios should also send X-Yeho-Agent-Code, such as document_search or quality_review.',
       },
       scopes: {
         title: 'API Key Scopes',
@@ -346,9 +365,9 @@ const enUS = {
       },
       runtime: {
         title: 'Prompt / Agent Boundary',
-        description: 'Semantic search and AI answers are separate capability layers.',
+        description: 'Retrieval, answers, summaries, and extraction are separate capability layers.',
         item1: 'Pure semantic search usually calls only embeddings and does not use Prompt templates.',
-        item2: 'Document answers, summaries, extraction, comparison, and review use Prompt templates and Agent configs.',
+        item2: 'Answers, summaries, extraction, comparison, and review use Prompt templates and Agent configs.',
         item3: 'Agent config returns default model, temperature, max tokens, system prompt, and the published template.',
       },
       logs: {
@@ -359,23 +378,57 @@ const enUS = {
         item3: 'Chat requests with X-Yeho-Agent-Code write Agent Logs.',
       },
     },
+    systemExamples: {
+      title: 'Business System Code Examples',
+      description: 'These are suggested names only; real projects can follow company system-code conventions.',
+      edms: {
+        name: 'Document Management',
+        code: 'edms',
+        description: 'Source documents, chunks, vectors, RAG retrieval, and permission filtering remain in EDMS.',
+      },
+      eqms: {
+        name: 'Quality Management',
+        code: 'eqms',
+        description: 'Quality records, issues, audits, and permissions remain in EQMS.',
+      },
+      robot: {
+        name: 'Robotics Platform',
+        code: 'robot',
+        description: 'Voice dialogs, device state, and scenario permissions remain in the robotics system.',
+      },
+      customerService: {
+        name: 'Customer Service',
+        code: 'customer_service',
+        description: 'Conversation context, knowledge sources, and customer permissions remain in the service system.',
+      },
+      iot: {
+        name: 'IoT Platform',
+        code: 'iot',
+        description: 'Device data, alerts, time-series data, and control permissions remain in the IoT system.',
+      },
+      screen: {
+        name: 'Dashboard System',
+        code: 'screen',
+        description: 'Metric definitions, data sources, and display permissions remain in the dashboard system.',
+      },
+    },
     examples: {
       title: 'Integration Examples',
-      description: 'Reference snippets for business-system developers.',
-      edmsConfig: {
-        title: 'EDMS configuration',
+      description: 'Generic examples. Replace system_code, data_domain, agent_code, and model codes for each system.',
+      envConfig: {
+        title: 'Business system environment variables',
         code:
-          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=document_search\nEDMS_AI_SYSTEM_CODE=edms\nEDMS_VECTOR_DATA_DOMAIN=document_text',
+          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: 'Read Agent Runtime config',
         code:
-          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/document_search \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: edms" \\\n  -H "X-Yeho-Data-Domain: document_text"',
+          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       chatHeaders: {
         title: 'Required Chat context headers',
         code:
-          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: edms\nX-Yeho-Data-Domain: document_text\nX-Yeho-Agent-Code: document_search',
+          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
       },
     },
   },

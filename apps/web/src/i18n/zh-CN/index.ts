@@ -295,30 +295,49 @@ const zhCN = {
     },
   },
   developerDocsPage: {
-    title: '开发文档',
-    badge: '开发者',
+    title: '平台开发文档',
+    badge: '标准接入',
     description:
-      '面向 EDMS、EQMS、机器人、客服和其它业务系统的接入说明。平台只管理模型调用、计费、审计、API Key、Prompt 和 Agent 配置，不集中保存客户文档、切片或向量索引。',
-    quickStart: {
-      title: '当前 EDMS 推荐三要素',
-      systemCode: {
-        label: '业务系统',
-        value: 'edms',
+      '面向所有业务系统的统一接入规范。Yeho AI Platform 负责模型网关、计费、审计、API Key、Prompt 和 Agent 配置；业务系统负责自己的数据、权限、检索和向量索引。',
+    overview: {
+      gateway: {
+        label: '模型网关',
+        value: '/v1',
+        hint: 'OpenAI-compatible chat/completions、embeddings 等模型能力入口。',
       },
-      dataDomain: {
-        label: '数据域',
-        value: 'document_text',
+      platform: {
+        label: '平台管理 API',
+        value: '/api/v1',
+        hint: '读取业务系统、Agent Runtime 配置、Prompt 模板和治理配置。',
       },
-      agentCode: {
-        label: 'Agent 编码',
-        value: 'document_search',
+      dataBoundary: {
+        label: '数据边界',
+        value: '业务系统管数据',
+        hint: '平台不集中保存客户文档、切片、向量索引或业务原始数据。',
+      },
+    },
+    integrationFlow: {
+      title: '标准接入流程',
+      description: '任何新业务系统都按同一流程接入，避免为单个系统写死逻辑。',
+      step: '步骤 {{index}}',
+      registerSystem: {
+        title: '登记业务系统',
+        body: '在业务系统页面维护 system_code，例如 edms、eqms、robot、iot。',
+      },
+      issueKey: {
+        title: '签发 API Key',
+        body: '按用途配置 scope、允许的 system_code 和 data_domain，数据库只保存 hash。',
+      },
+      sendContext: {
+        title: '请求携带上下文',
+        body: '模型请求统一带 X-Yeho-System-Code、X-Yeho-Data-Domain，Chat 场景再带 X-Yeho-Agent-Code。',
       },
     },
     sections: {
       boundary: {
         title: '数据边界',
-        description: 'EDMS 管数据，Yeho 管能力。',
-        item1: '业务系统负责原文、切片、向量索引、RAG 检索和权限过滤。',
+        description: '业务系统管数据，Yeho 管能力。',
+        item1: '各业务系统负责原文、切片、向量索引、RAG 检索和权限过滤。',
         item2: 'Yeho 不集中保存客户完整文档、文档切片或向量索引。',
         item3: 'Yeho 只记录调用元数据、Token、Credits、模型、租户和审计信息。',
       },
@@ -332,9 +351,9 @@ const zhCN = {
       context: {
         title: '调用上下文',
         description: '所有业务系统调用都应带上系统和数据域。',
-        item1: 'X-Yeho-System-Code 标识业务系统，例如 edms。',
-        item2: 'X-Yeho-Data-Domain 标识数据域，例如 document_text。',
-        item3: 'Chat 场景再带 X-Yeho-Agent-Code，例如 document_search。',
+        item1: 'X-Yeho-System-Code 标识业务系统，例如 edms、eqms、robot。',
+        item2: 'X-Yeho-Data-Domain 标识数据域，例如 document_text、quality_record、voice_dialog。',
+        item3: 'Chat / Agent 场景再带 X-Yeho-Agent-Code，例如 document_search、quality_review。',
       },
       scopes: {
         title: 'API Key 权限',
@@ -346,9 +365,9 @@ const zhCN = {
       },
       runtime: {
         title: 'Prompt / Agent 使用边界',
-        description: '语义搜索和 AI 问答不是同一层能力。',
+        description: '检索、问答、总结、抽取是不同层能力。',
         item1: '纯语义搜索通常只调用 embeddings，不使用 Prompt 模板。',
-        item2: '文档问答、总结、抽取、对比和审查才使用 Prompt 模板与 Agent 配置。',
+        item2: '问答、总结、抽取、对比和审查才使用 Prompt 模板与 Agent 配置。',
         item3: 'Agent 配置返回默认模型、温度参数、最大 Token、系统 Prompt 和已发布模板。',
       },
       logs: {
@@ -359,23 +378,57 @@ const zhCN = {
         item3: 'chat 请求携带 X-Yeho-Agent-Code 时会写入 Agent 日志。',
       },
     },
+    systemExamples: {
+      title: '业务系统编码示例',
+      description: '以下只是建议命名，实际项目可按公司系统编码规范维护。',
+      edms: {
+        name: '文档管理',
+        code: 'edms',
+        description: '文档原文、切片、向量、RAG 检索和权限过滤由 EDMS 本地负责。',
+      },
+      eqms: {
+        name: '质量管理',
+        code: 'eqms',
+        description: '质量记录、问题单、审核数据和权限由 EQMS 负责。',
+      },
+      robot: {
+        name: '机器人平台',
+        code: 'robot',
+        description: '语音会话、设备状态和场景权限由机器人业务系统负责。',
+      },
+      customerService: {
+        name: '智能客服',
+        code: 'customer_service',
+        description: '会话上下文、知识来源和客户权限由客服系统负责。',
+      },
+      iot: {
+        name: 'IoT 平台',
+        code: 'iot',
+        description: '设备数据、告警、时序数据和控制权限由 IoT 系统负责。',
+      },
+      screen: {
+        name: '大屏系统',
+        code: 'screen',
+        description: '指标口径、数据源和展示权限由大屏业务系统负责。',
+      },
+    },
     examples: {
       title: '接入示例',
-      description: '以下示例可直接给业务系统开发者参考。',
-      edmsConfig: {
-        title: 'EDMS 配置',
+      description: '以下是通用示例，业务系统只需要替换 system_code、data_domain、agent_code 和模型编码。',
+      envConfig: {
+        title: '业务系统环境变量',
         code:
-          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=document_search\nEDMS_AI_SYSTEM_CODE=edms\nEDMS_VECTOR_DATA_DOMAIN=document_text',
+          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: '读取 Agent Runtime 配置',
         code:
-          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/document_search \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: edms" \\\n  -H "X-Yeho-Data-Domain: document_text"',
+          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       chatHeaders: {
         title: 'Chat 请求必带上下文',
         code:
-          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: edms\nX-Yeho-Data-Domain: document_text\nX-Yeho-Agent-Code: document_search',
+          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
       },
     },
   },
