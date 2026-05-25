@@ -69,6 +69,7 @@ const PromptTemplatePage = lazy(() => import('../pages/PromptTemplatePage'));
 const AgentConfigPage = lazy(() => import('../pages/AgentConfigPage'));
 const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
 const RateLimitPage = lazy(() => import('../pages/RateLimitPage'));
+const DeveloperDocsPage = lazy(() => import('../pages/DeveloperDocsPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
@@ -240,8 +241,8 @@ const navItems: NavItem[] = [
   {
     groupKey: 'navGroups.developer',
     to: '/api-docs',
-    labelKey: 'nav.apiDocs',
-    roles: [USER_ROLES.DEVELOPER],
+    labelKey: 'nav.developerDocs',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
     icon: IconBook2,
   },
   {
@@ -277,7 +278,7 @@ const routeRoles: Record<string, UserRole[]> = {
   '/workflow': [USER_ROLES.SUPER_ADMIN],
   '/rate-limits': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/playground': [USER_ROLES.DEVELOPER],
-  '/api-docs': [USER_ROLES.DEVELOPER],
+  '/api-docs': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
   '/profile': allRoles,
 };
 
@@ -446,7 +447,7 @@ export const router = createBrowserRouter([
       { path: 'workflow', element: secured('/workflow', <PlaceholderPage kind="workflow" />) },
       { path: 'rate-limits', element: secured('/rate-limits', <RateLimitPage />) },
       { path: 'playground', element: secured('/playground', <PlaceholderPage kind="playground" />) },
-      { path: 'api-docs', element: secured('/api-docs', <PlaceholderPage kind="apiDocs" />) },
+      { path: 'api-docs', element: secured('/api-docs', <DeveloperDocsPage />) },
       { path: 'profile', element: secured('/profile', <ProfilePage />) },
     ],
   },

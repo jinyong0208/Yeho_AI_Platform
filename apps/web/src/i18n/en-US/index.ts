@@ -82,6 +82,7 @@ const enUS = {
     agentConfigs: 'Agent Configs',
     agentLogs: 'Agent Logs',
     playground: 'Playground',
+    developerDocs: 'Developer Docs',
     apiDocs: 'API Docs',
     workflowPreview: 'Workflow (Preview)',
     profile: 'Profile',
@@ -291,6 +292,91 @@ const enUS = {
       badge: 'Developer',
       description: 'OpenAI-compatible API and gateway documentation entry.',
       body: 'Covers API keys, model listing, Chat Completions, Embeddings, error envelopes, and rate-limit responses.',
+    },
+  },
+  developerDocsPage: {
+    title: 'Developer Docs',
+    badge: 'Developer',
+    description:
+      'Integration notes for EDMS, EQMS, robotics, customer service, and other business systems. The platform governs model calls, billing, audit, API keys, Prompt, and Agent configuration without centrally storing customer documents, chunks, or vector indexes.',
+    quickStart: {
+      title: 'Current EDMS recommended context',
+      systemCode: {
+        label: 'Business system',
+        value: 'edms',
+      },
+      dataDomain: {
+        label: 'Data domain',
+        value: 'document_text',
+      },
+      agentCode: {
+        label: 'Agent code',
+        value: 'document_search',
+      },
+    },
+    sections: {
+      boundary: {
+        title: 'Data Boundary',
+        description: 'EDMS owns data; Yeho owns capability.',
+        item1: 'Business systems own source files, chunks, vector indexes, RAG retrieval, and permission filtering.',
+        item2: 'Yeho does not centrally store customer documents, chunks, or vector indexes.',
+        item3: 'Yeho records only call metadata, tokens, Credits, model, tenant, and audit data.',
+      },
+      urls: {
+        title: 'Two API Base URLs',
+        description: 'Gateway APIs and platform management APIs are configured separately.',
+        item1: '/v1 is used for OpenAI-compatible chat/completions and embeddings.',
+        item2: '/api/v1 is used to read Agent Runtime configuration and Prompt templates.',
+        item3: 'Use host.docker.internal when a container calls Yeho running on the host.',
+      },
+      context: {
+        title: 'Request Context',
+        description: 'Business system calls should carry system and data-domain headers.',
+        item1: 'X-Yeho-System-Code identifies the source system, such as edms.',
+        item2: 'X-Yeho-Data-Domain identifies the data domain, such as document_text.',
+        item3: 'Chat scenarios should also send X-Yeho-Agent-Code, such as document_search.',
+      },
+      scopes: {
+        title: 'API Key Scopes',
+        description: 'Use least-privilege scopes for each integration.',
+        item1: 'chat:completion is used for chat and RAG answers.',
+        item2: 'embedding:create is used for semantic-search vectorization.',
+        item3: 'agent:read is used to read Agent Runtime configuration.',
+        item4: 'models:read is used for model listing and health checks.',
+      },
+      runtime: {
+        title: 'Prompt / Agent Boundary',
+        description: 'Semantic search and AI answers are separate capability layers.',
+        item1: 'Pure semantic search usually calls only embeddings and does not use Prompt templates.',
+        item2: 'Document answers, summaries, extraction, comparison, and review use Prompt templates and Agent configs.',
+        item3: 'Agent config returns default model, temperature, max tokens, system prompt, and the published template.',
+      },
+      logs: {
+        title: 'Logging Rules',
+        description: 'Different calls write to different logs.',
+        item1: 'Embedding calls write Usage Logs, not Agent Logs.',
+        item2: 'Reading Agent Runtime config writes a zero-token Agent Log.',
+        item3: 'Chat requests with X-Yeho-Agent-Code write Agent Logs.',
+      },
+    },
+    examples: {
+      title: 'Integration Examples',
+      description: 'Reference snippets for business-system developers.',
+      edmsConfig: {
+        title: 'EDMS configuration',
+        code:
+          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=document_search\nEDMS_AI_SYSTEM_CODE=edms\nEDMS_VECTOR_DATA_DOMAIN=document_text',
+      },
+      runtimeCurl: {
+        title: 'Read Agent Runtime config',
+        code:
+          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/document_search \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: edms" \\\n  -H "X-Yeho-Data-Domain: document_text"',
+      },
+      chatHeaders: {
+        title: 'Required Chat context headers',
+        code:
+          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: edms\nX-Yeho-Data-Domain: document_text\nX-Yeho-Agent-Code: document_search',
+      },
     },
   },
   rateLimitPage: {

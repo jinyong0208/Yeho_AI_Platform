@@ -82,6 +82,7 @@ const zhCN = {
     agentConfigs: 'Agent 配置',
     agentLogs: 'Agent 日志',
     playground: 'Playground',
+    developerDocs: '开发文档',
     apiDocs: 'API 文档',
     workflowPreview: 'Workflow（预览）',
     profile: '个人设置',
@@ -291,6 +292,91 @@ const zhCN = {
       badge: '开发者',
       description: 'OpenAI-compatible API 与平台网关接口文档入口。',
       body: '重点覆盖 API Key、模型列表、Chat Completions、Embeddings、错误体和限流响应。',
+    },
+  },
+  developerDocsPage: {
+    title: '开发文档',
+    badge: '开发者',
+    description:
+      '面向 EDMS、EQMS、机器人、客服和其它业务系统的接入说明。平台只管理模型调用、计费、审计、API Key、Prompt 和 Agent 配置，不集中保存客户文档、切片或向量索引。',
+    quickStart: {
+      title: '当前 EDMS 推荐三要素',
+      systemCode: {
+        label: '业务系统',
+        value: 'edms',
+      },
+      dataDomain: {
+        label: '数据域',
+        value: 'document_text',
+      },
+      agentCode: {
+        label: 'Agent 编码',
+        value: 'document_search',
+      },
+    },
+    sections: {
+      boundary: {
+        title: '数据边界',
+        description: 'EDMS 管数据，Yeho 管能力。',
+        item1: '业务系统负责原文、切片、向量索引、RAG 检索和权限过滤。',
+        item2: 'Yeho 不集中保存客户完整文档、文档切片或向量索引。',
+        item3: 'Yeho 只记录调用元数据、Token、Credits、模型、租户和审计信息。',
+      },
+      urls: {
+        title: '两类 API 地址',
+        description: '网关地址和平台管理地址分开配置。',
+        item1: '/v1 用于 OpenAI-compatible chat/completions 和 embeddings。',
+        item2: '/api/v1 用于读取 Agent Runtime 配置和 Prompt 模板。',
+        item3: 'Docker 内访问宿主机 Yeho 时使用 host.docker.internal。',
+      },
+      context: {
+        title: '调用上下文',
+        description: '所有业务系统调用都应带上系统和数据域。',
+        item1: 'X-Yeho-System-Code 标识业务系统，例如 edms。',
+        item2: 'X-Yeho-Data-Domain 标识数据域，例如 document_text。',
+        item3: 'Chat 场景再带 X-Yeho-Agent-Code，例如 document_search。',
+      },
+      scopes: {
+        title: 'API Key 权限',
+        description: '按用途配置最小权限。',
+        item1: 'chat:completion 用于对话和 RAG 回答。',
+        item2: 'embedding:create 用于语义检索向量化。',
+        item3: 'agent:read 用于读取 Agent Runtime 配置。',
+        item4: 'models:read 用于模型列表和状态检查。',
+      },
+      runtime: {
+        title: 'Prompt / Agent 使用边界',
+        description: '语义搜索和 AI 问答不是同一层能力。',
+        item1: '纯语义搜索通常只调用 embeddings，不使用 Prompt 模板。',
+        item2: '文档问答、总结、抽取、对比和审查才使用 Prompt 模板与 Agent 配置。',
+        item3: 'Agent 配置返回默认模型、温度参数、最大 Token、系统 Prompt 和已发布模板。',
+      },
+      logs: {
+        title: '日志规则',
+        description: '不同调用写入不同日志。',
+        item1: 'embedding 调用写入调用日志，不写 Agent 日志。',
+        item2: '读取 Agent Runtime 配置会写入 0 Token 的 Agent 日志。',
+        item3: 'chat 请求携带 X-Yeho-Agent-Code 时会写入 Agent 日志。',
+      },
+    },
+    examples: {
+      title: '接入示例',
+      description: '以下示例可直接给业务系统开发者参考。',
+      edmsConfig: {
+        title: 'EDMS 配置',
+        code:
+          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=document_search\nEDMS_AI_SYSTEM_CODE=edms\nEDMS_VECTOR_DATA_DOMAIN=document_text',
+      },
+      runtimeCurl: {
+        title: '读取 Agent Runtime 配置',
+        code:
+          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/document_search \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: edms" \\\n  -H "X-Yeho-Data-Domain: document_text"',
+      },
+      chatHeaders: {
+        title: 'Chat 请求必带上下文',
+        code:
+          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: edms\nX-Yeho-Data-Domain: document_text\nX-Yeho-Agent-Code: document_search',
+      },
     },
   },
   rateLimitPage: {
