@@ -1,13 +1,16 @@
 package com.yeho.ai.platform.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yeho.ai.platform.common.RequestContext;
 import com.yeho.ai.platform.dto.agent.AgentRuntimeConfigResponse;
 import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.entity.AgentConfig;
+import com.yeho.ai.platform.entity.AgentExecuteLog;
 import com.yeho.ai.platform.entity.PromptTemplate;
 import com.yeho.ai.platform.entity.PromptVersion;
 import com.yeho.ai.platform.gateway.GatewayException;
 import com.yeho.ai.platform.mapper.AgentConfigMapper;
+import com.yeho.ai.platform.mapper.AgentExecuteLogMapper;
 import com.yeho.ai.platform.mapper.PromptTemplateMapper;
 import com.yeho.ai.platform.mapper.PromptVersionMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,18 +18,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AgentRuntimeConfigService {
     private final AgentConfigMapper agentConfigMapper;
+    private final AgentExecuteLogMapper agentExecuteLogMapper;
     private final PromptTemplateMapper promptTemplateMapper;
     private final PromptVersionMapper promptVersionMapper;
 
     public AgentRuntimeConfigResponse resolve(Long tenantId, String agentCode, GatewayRequestContext context) {
+        long startTime = System.currentTimeMillis();
         String normalizedAgentCode = normalizeCode(agentCode);
         if (!StringUtils.hasText(normalizedAgentCode)) {
             throw new GatewayException(HttpStatus.BAD_REQUEST, "missing_agent_code", "Missing agent_code");
@@ -39,7 +46,32 @@ public class AgentRuntimeConfigService {
             throw new GatewayException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent config not found");
         }
         requireAgentContext(config, context == null ? GatewayRequestContext.empty() : context);
-        return toResponse(config, resolvePrompt(config));
+        AgentRuntimeConfigResponse response = toResponse(config, resolvePrompt(config));
+        recordRuntimeConfigRead(config, context == null ? GatewayRequestContext.empty() : context, startTime);
+        return response;
+    }
+
+    private void recordRuntimeConfigRead(AgentConfig config, GatewayRequestContext context, long startTime) {
+        String requestId = StringUtils.hasText(RequestContext.getRequestId())
+                ? RequestContext.getRequestId()
+                : UUID.randomUUID().toString();
+        AgentExecuteLog log = new AgentExecuteLog();
+        log.setRequestId(requestId);
+        log.setTenantId(config.getTenantId());
+        log.setAgentConfigId(config.getId());
+        log.setSystemCode(StringUtils.hasText(context.systemCode()) ? context.systemCode() : config.getSystemCode());
+        log.setDataDomain(StringUtils.hasText(context.dataDomain()) ? context.dataDomain() : config.getDataDomain());
+        log.setAgentCode(config.getAgentCode());
+        log.setModel(config.getDefaultModel());
+        log.setLatencyMs(System.currentTimeMillis() - startTime);
+        log.setInputTokens(0L);
+        log.setOutputTokens(0L);
+        log.setTotalTokens(0L);
+        log.setChargeCredits(0L);
+        log.setSuccess(true);
+        log.setTraceId(requestId);
+        log.setCreatedAt(LocalDateTime.now());
+        agentExecuteLogMapper.insert(log);
     }
 
     private void requireAgentContext(AgentConfig config, GatewayRequestContext context) {

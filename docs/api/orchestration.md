@@ -132,6 +132,7 @@ Prompt 模板解析规则：
 - 如果 `promptTemplateCode` 为空，则回退匹配 `templateCode = agentCode`。
 - 只返回 `PUBLISHED` 状态模板；草稿不会暴露给业务系统。
 - Yeho 只返回配置文本，不保存业务系统传入的文档、切片或向量。
+- 成功读取 Agent Runtime Config 时会写入一条 `agent_execute_log`，Token 和 Credits 为 0，用于标记 Agent / Prompt 模板已被调用方取用。
 
 ## Agent Execute Logs
 

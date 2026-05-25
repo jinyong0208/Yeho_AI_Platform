@@ -189,6 +189,7 @@ Prompt 模板解析规则：
 - `promptTemplateCode` 为空时，回退匹配 `templateCode = agentCode`。
 - 只返回 `PUBLISHED` 状态模板，草稿不会暴露给业务系统。
 - Yeho 只返回配置文本，不保存业务系统传入的文档、切片或向量。
+- 业务系统成功读取 Agent Runtime Config 时，Yeho 会写入一条 Agent 日志，Token / Credits 为 0，用于表示 Agent / Prompt 模板已被取用。
 
 业务系统拿到模板后，在本地完成 `{{question}}`、`{{contexts}}` 等变量替换，再调用 `/v1/chat/completions`。
 
