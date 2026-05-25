@@ -1,11 +1,13 @@
 package com.yeho.ai.platform.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yeho.ai.platform.common.BusinessException;
 import com.yeho.ai.platform.common.NotFoundException;
 import com.yeho.ai.platform.dto.system.BusinessSystemRequest;
 import com.yeho.ai.platform.dto.system.BusinessSystemResponse;
 import com.yeho.ai.platform.entity.BusinessSystem;
 import com.yeho.ai.platform.mapper.BusinessSystemMapper;
+import com.yeho.ai.platform.mapper.TenantMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BusinessSystemService {
     private final BusinessSystemMapper businessSystemMapper;
+    private final TenantMapper tenantMapper;
 
     @Transactional(readOnly = true)
     public List<BusinessSystemResponse> list(Long tenantId) {
@@ -31,9 +34,11 @@ public class BusinessSystemService {
 
     @Transactional
     public BusinessSystemResponse create(Long tenantId, BusinessSystemRequest request) {
+        assertTenantExists(tenantId);
         BusinessSystem system = new BusinessSystem();
         system.setTenantId(tenantId);
         apply(system, request);
+        assertSystemCodeAvailable(tenantId, system.getSystemCode(), null);
         system.setStatus(normalizeStatus(request.getStatus(), "ACTIVE"));
         system.setCreatedAt(LocalDateTime.now());
         system.setUpdatedAt(LocalDateTime.now());
@@ -45,6 +50,7 @@ public class BusinessSystemService {
     public BusinessSystemResponse update(Long tenantId, Long id, BusinessSystemRequest request) {
         BusinessSystem system = requireSystem(tenantId, id);
         apply(system, request);
+        assertSystemCodeAvailable(tenantId, system.getSystemCode(), id);
         if (StringUtils.hasText(request.getStatus())) {
             system.setStatus(normalizeStatus(request.getStatus(), system.getStatus()));
         }
@@ -80,6 +86,24 @@ public class BusinessSystemService {
 
     private String normalizeCode(String value) {
         return value == null ? null : value.trim().toLowerCase();
+    }
+
+    private void assertTenantExists(Long tenantId) {
+        if (tenantId == null || tenantMapper.selectById(tenantId) == null) {
+            throw new BusinessException("Tenant not found");
+        }
+    }
+
+    private void assertSystemCodeAvailable(Long tenantId, String systemCode, Long excludedId) {
+        LambdaQueryWrapper<BusinessSystem> wrapper = new LambdaQueryWrapper<BusinessSystem>()
+            .eq(BusinessSystem::getTenantId, tenantId)
+            .eq(BusinessSystem::getSystemCode, systemCode);
+        if (excludedId != null) {
+            wrapper.ne(BusinessSystem::getId, excludedId);
+        }
+        if (businessSystemMapper.selectCount(wrapper) > 0) {
+            throw new BusinessException("Business system code already exists");
+        }
     }
 
     private String normalizeStatus(String status, String fallback) {

@@ -740,6 +740,8 @@ const enUS = {
     boundaryNote: 'Business systems own data, permissions, and vector indexes; the platform only governs model capability by system_code / data_domain.',
     savedTitle: 'Saved',
     savedMessage: 'Business system configuration has been updated.',
+    saveFailedTitle: 'Save failed',
+    saveFailedMessage: 'Check tenant, system code, or API response.',
     disabledTitle: 'Disabled',
     disabledMessage: 'Business system has been disabled.',
     edit: 'Edit',

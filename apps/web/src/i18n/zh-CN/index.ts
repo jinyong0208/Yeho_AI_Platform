@@ -739,6 +739,8 @@ const zhCN = {
     boundaryNote: '业务系统负责自己的数据、权限和向量索引；平台只按 system_code / data_domain 记录和限制模型调用能力。',
     savedTitle: '已保存',
     savedMessage: '业务系统配置已更新。',
+    saveFailedTitle: '保存失败',
+    saveFailedMessage: '请检查租户、系统编码或接口返回信息。',
     disabledTitle: '已禁用',
     disabledMessage: '业务系统已禁用。',
     edit: '编辑',

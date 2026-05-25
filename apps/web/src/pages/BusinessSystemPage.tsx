@@ -16,6 +16,14 @@ type TenantLite = {
   tenantName: string;
 };
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    return response?.data?.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
+
 export default function BusinessSystemPage() {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
@@ -76,6 +84,13 @@ export default function BusinessSystemPage() {
       close();
       setEditing(null);
       queryClient.invalidateQueries({ queryKey: ['business-systems', tenantId] });
+    },
+    onError: (error) => {
+      notifications.show({
+        color: 'red',
+        title: t('businessSystemPage.saveFailedTitle'),
+        message: getApiErrorMessage(error, t('businessSystemPage.saveFailedMessage')),
+      });
     },
   });
 
