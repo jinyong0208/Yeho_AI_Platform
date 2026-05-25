@@ -154,6 +154,8 @@ Log records include:
 
 Sensitive Prompt text and customer document content must not be recorded in `agent_execute_log`.
 
+When `/v1/chat/completions` is called with `X-Yeho-Agent-Code`, Yeho also writes an `agent_execute_log` row from the usage metadata. This lets business-system RAG calls appear in Agent Logs without storing Prompt原文、文档原文、切片或向量。
+
 ## Console Pages
 
 - `/prompt-templates`

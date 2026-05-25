@@ -2,12 +2,15 @@ package com.yeho.ai.platform.service;
 
 import com.yeho.ai.platform.dto.openai.ChatCompletionRequest;
 import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
+import com.yeho.ai.platform.entity.AgentExecuteLog;
 import com.yeho.ai.platform.entity.AiModel;
 import com.yeho.ai.platform.entity.AiUsageLog;
+import com.yeho.ai.platform.mapper.AgentExecuteLogMapper;
 import com.yeho.ai.platform.mapper.AiUsageLogMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,6 +20,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AiUsageLogService {
     private final AiUsageLogMapper aiUsageLogMapper;
+    private final AgentExecuteLogMapper agentExecuteLogMapper;
     private final AiWalletService aiWalletService;
 
     @Transactional
@@ -148,6 +152,35 @@ public class AiUsageLogService {
         log.setPromptSummary(aiWalletService.summarizePrompt(request.getMessages()));
         log.setCreatedAt(LocalDateTime.ofInstant(Instant.now(), java.time.ZoneId.systemDefault()));
         aiUsageLogMapper.insert(log);
+        recordAgentExecuteLog(log, gatewayContext);
+    }
+
+    private void recordAgentExecuteLog(AiUsageLog usageLog, GatewayRequestContext gatewayContext) {
+        if (usageLog.getTenantId() == null || gatewayContext == null || !StringUtils.hasText(gatewayContext.agentCode())) {
+            return;
+        }
+        AgentExecuteLog log = new AgentExecuteLog();
+        log.setRequestId(usageLog.getRequestId());
+        log.setTenantId(usageLog.getTenantId());
+        log.setSystemCode(gatewayContext.systemCode());
+        log.setDataDomain(gatewayContext.dataDomain());
+        log.setAgentCode(gatewayContext.agentCode());
+        log.setModel(usageLog.getModelCode());
+        log.setLatencyMs(usageLog.getLatencyMs());
+        log.setInputTokens(toLong(usageLog.getInputTokens()));
+        log.setOutputTokens(toLong(usageLog.getOutputTokens()));
+        log.setTotalTokens(toLong(usageLog.getTotalTokens()));
+        log.setChargeCredits(usageLog.getChargeCredits());
+        log.setSuccess(usageLog.getSuccess());
+        log.setErrorCode(usageLog.getErrorCode());
+        log.setErrorMessage(usageLog.getErrorMessage());
+        log.setTraceId(usageLog.getRequestId());
+        log.setCreatedAt(usageLog.getCreatedAt());
+        agentExecuteLogMapper.insert(log);
+    }
+
+    private Long toLong(Integer value) {
+        return value == null ? 0L : value.longValue();
     }
 
     private BigDecimal calculateRealCost(AiModel model, int inputTokens, int outputTokens) {

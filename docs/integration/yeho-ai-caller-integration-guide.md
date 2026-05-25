@@ -237,6 +237,8 @@ curl https://api.yehosoft.com/v1/chat/completions \
 
 当前建议业务系统先使用 `stream=false`。如使用 `stream=true`，调用方需要按 SSE 处理返回。
 
+如果请求携带 `X-Yeho-Agent-Code`，Yeho 会在模型调用完成后写入 Agent 日志，记录 request_id、system_code、data_domain、agent_code、模型、延迟、Token 和 Credits。Agent 日志不保存 Prompt 原文、文档原文、切片或向量。
+
 ## 8. Embeddings
 
 接口：
