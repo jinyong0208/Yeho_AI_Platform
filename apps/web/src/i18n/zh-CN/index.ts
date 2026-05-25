@@ -302,12 +302,12 @@ const zhCN = {
     overview: {
       gateway: {
         label: '模型网关',
-        value: '/v1',
+        value: 'https://api.yehosoft.com/v1',
         hint: 'OpenAI-compatible chat/completions、embeddings 等模型能力入口。',
       },
       platform: {
         label: '平台管理 API',
-        value: '/api/v1',
+        value: 'https://api.yehosoft.com/api/v1',
         hint: '读取业务系统、Agent Runtime 配置、Prompt 模板和治理配置。',
       },
       dataBoundary: {
@@ -346,7 +346,7 @@ const zhCN = {
         description: '网关地址和平台管理地址分开配置。',
         item1: '/v1 用于 OpenAI-compatible chat/completions 和 embeddings。',
         item2: '/api/v1 用于读取 Agent Runtime 配置和 Prompt 模板。',
-        item3: 'Docker 内访问宿主机 Yeho 时使用 host.docker.internal。',
+        item3: 'SaaS 默认使用 https://api.yehosoft.com，私有域名按租户环境单独配置。',
       },
       context: {
         title: '调用上下文',
@@ -418,17 +418,17 @@ const zhCN = {
       envConfig: {
         title: '业务系统环境变量',
         code:
-          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
+          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: '读取 Agent Runtime 配置',
         code:
-          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
+          'curl https://api.yehosoft.com/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       chatHeaders: {
         title: 'Chat 请求必带上下文',
         code:
-          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
+          'POST https://api.yehosoft.com/v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
       },
     },
   },

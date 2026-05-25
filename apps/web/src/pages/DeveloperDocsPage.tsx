@@ -28,7 +28,7 @@ export default function DeveloperDocsPage() {
 
   return (
     <Stack gap="xl">
-      <Card className="surface-card" p="xl">
+      <Card className="surface-card" p="xl" style={{ backgroundColor: '#fbfcfe', borderColor: '#e7edf5' }}>
         <Stack gap="md">
           <Group gap="xs">
             <ThemeIcon color="dark" variant="filled" radius="sm" size={38}>
@@ -49,21 +49,23 @@ export default function DeveloperDocsPage() {
           <Divider />
           <SimpleGrid cols={{ base: 1, md: 3 }} spacing="sm">
             {['gateway', 'platform', 'dataBoundary'].map((key) => (
-              <Stack key={key} gap={4}>
+              <Card key={key} withBorder radius="sm" p="md" style={{ backgroundColor: '#fff' }}>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
                   {t(`developerDocsPage.overview.${key}.label`)}
                 </Text>
-                <Text fw={700}>{t(`developerDocsPage.overview.${key}.value`)}</Text>
+                <Text mt={6} fw={700}>
+                  {t(`developerDocsPage.overview.${key}.value`)}
+                </Text>
                 <Text size="sm" c="dimmed">
                   {t(`developerDocsPage.overview.${key}.hint`)}
                 </Text>
-              </Stack>
+              </Card>
             ))}
           </SimpleGrid>
         </Stack>
       </Card>
 
-      <Card className="surface-card" p="lg">
+      <Card className="surface-card" p="lg" withBorder>
         <Stack gap="sm">
           <Group gap="sm">
             <ThemeIcon color="blue" variant="light" radius="sm" size={34}>
@@ -98,7 +100,7 @@ export default function DeveloperDocsPage() {
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <Card key={section.key} className="surface-card" p="lg">
+            <Card key={section.key} className="surface-card" p="lg" withBorder>
               <Stack gap="sm">
                 <Group align="flex-start" gap="sm">
                   <ThemeIcon color="gray" variant="light" radius="sm" size={36}>
@@ -130,7 +132,7 @@ export default function DeveloperDocsPage() {
         })}
       </SimpleGrid>
 
-      <Card className="surface-card" p="lg">
+      <Card className="surface-card" p="lg" withBorder>
         <Stack gap="md">
           <Stack gap={2}>
             <Text fw={700}>{t('developerDocsPage.systemExamples.title')}</Text>
@@ -156,7 +158,7 @@ export default function DeveloperDocsPage() {
         </Stack>
       </Card>
 
-      <Card className="surface-card" p="lg">
+      <Card className="surface-card" p="lg" withBorder>
         <Stack gap="md">
           <Stack gap={2}>
             <Text fw={700}>{t('developerDocsPage.examples.title')}</Text>

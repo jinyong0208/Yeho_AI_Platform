@@ -302,12 +302,12 @@ const enUS = {
     overview: {
       gateway: {
         label: 'Model Gateway',
-        value: '/v1',
+        value: 'https://api.yehosoft.com/v1',
         hint: 'OpenAI-compatible entry for chat/completions, embeddings, and future model capabilities.',
       },
       platform: {
         label: 'Platform API',
-        value: '/api/v1',
+        value: 'https://api.yehosoft.com/api/v1',
         hint: 'Read business systems, Agent Runtime config, Prompt templates, and governance configuration.',
       },
       dataBoundary: {
@@ -346,7 +346,7 @@ const enUS = {
         description: 'Gateway APIs and platform management APIs are configured separately.',
         item1: '/v1 is used for OpenAI-compatible chat/completions and embeddings.',
         item2: '/api/v1 is used to read Agent Runtime configuration and Prompt templates.',
-        item3: 'Use host.docker.internal when a container calls Yeho running on the host.',
+        item3: 'SaaS uses https://api.yehosoft.com by default; custom domains are configured per tenant environment.',
       },
       context: {
         title: 'Request Context',
@@ -418,17 +418,17 @@ const enUS = {
       envConfig: {
         title: 'Business system environment variables',
         code:
-          'YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1\nYEHO_AI_PLATFORM_API_BASE_URL=http://127.0.0.1:8080/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
+          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: 'Read Agent Runtime config',
         code:
-          'curl http://127.0.0.1:8080/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
+          'curl https://api.yehosoft.com/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       chatHeaders: {
         title: 'Required Chat context headers',
         code:
-          'POST /v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
+          'POST https://api.yehosoft.com/v1/chat/completions\nAuthorization: Bearer <YEHO_AI_API_KEY>\nX-Yeho-System-Code: <system_code>\nX-Yeho-Data-Domain: <data_domain>\nX-Yeho-Agent-Code: <agent_code>',
       },
     },
   },
