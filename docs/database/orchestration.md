@@ -43,7 +43,11 @@ Stores basic Agent configuration.
 Important fields:
 
 - `tenant_id`
+- `system_code`
+- `data_domain`
+- `allowed_data_domains`
 - `agent_code`
+- `prompt_template_code`
 - `agent_name`
 - `system_prompt`
 - `default_model`

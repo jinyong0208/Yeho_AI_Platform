@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 @Service
 public class ApiKeyScopeService {
     public static final String CHAT_COMPLETION = "chat:completion";
+    public static final String AGENT_READ = "agent:read";
 
     public void requireScope(TenantApiKey apiKey, String requiredScope) {
         if (apiKey == null) {
@@ -21,6 +22,17 @@ public class ApiKeyScopeService {
         }
         Set<String> scopes = parseScopes(apiKey.getScopes());
         if (scopes.contains("admin:*") || scopes.contains(requiredScope)) {
+            return;
+        }
+        throw new GatewayException(HttpStatus.FORBIDDEN, "insufficient_scope", "API key scope is not allowed");
+    }
+
+    public void requireAnyScope(TenantApiKey apiKey, Set<String> requiredScopes) {
+        if (apiKey == null) {
+            throw new GatewayException(HttpStatus.UNAUTHORIZED, "invalid_api_key", "Invalid API key");
+        }
+        Set<String> scopes = parseScopes(apiKey.getScopes());
+        if (scopes.contains("admin:*") || requiredScopes.stream().anyMatch(scopes::contains)) {
             return;
         }
         throw new GatewayException(HttpStatus.FORBIDDEN, "insufficient_scope", "API key scope is not allowed");

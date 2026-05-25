@@ -66,6 +66,7 @@ Yeho AI Platform 禁止：
 
 ```bash
 YEHO_AI_BASE_URL=https://api.yehosoft.com/v1
+YEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1
 YEHO_AI_API_KEY=你的 Yeho API Key
 YEHO_AI_SYSTEM_CODE=edms
 YEHO_AI_DATA_DOMAIN=document_text
@@ -130,6 +131,7 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 | 场景 | 必需 scope |
 | --- | --- |
 | 聊天 / 文本生成 | `chat:completion` |
+| 读取 Agent / Prompt 配置 | `agent:read` 或 `chat:completion` |
 | Embedding | `embedding:create` |
 | 查询模型列表 | `models:read` |
 
@@ -138,7 +140,7 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 ```json
 {
   "name": "edms-rag-key",
-  "scopes": ["chat:completion", "embedding:create", "models:read"],
+  "scopes": ["chat:completion", "agent:read", "embedding:create", "models:read"],
   "allowedSystemCodes": ["edms"],
   "allowedDataDomains": ["document_text", "metadata"]
 }
@@ -151,7 +153,46 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 - 配置限制后，请求 Header 必须匹配。
 - API Key 数据库只保存 hash，完整 Key 只在创建时展示一次。
 
-## 6. Chat Completions
+## 6. Agent Runtime Config
+
+业务系统应优先按 `agent_code` 从 Yeho 读取 Agent 配置和已发布 Prompt 模板，避免在业务系统代码里硬编码 Prompt。
+
+接口：
+
+```http
+GET /api/v1/agent-runtime/configs/{agent_code}
+```
+
+请求示例：
+
+```bash
+curl ${YEHO_AI_PLATFORM_API_BASE_URL}/agent-runtime/configs/${YEHO_AI_AGENT_CODE} \
+  -H "Authorization: Bearer ${YEHO_AI_API_KEY}" \
+  -H "X-Yeho-System-Code: ${YEHO_AI_SYSTEM_CODE}" \
+  -H "X-Yeho-Data-Domain: ${YEHO_AI_DATA_DOMAIN}"
+```
+
+返回中的关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `data.defaultModel` | 默认聊天模型，例如 `qwen-plus` |
+| `data.temperature` | 默认温度参数 |
+| `data.maxTokens` | 默认输出 Token 上限 |
+| `data.systemPrompt` | Agent 系统 Prompt |
+| `data.promptTemplate.content` | 已发布 Prompt 模板内容 |
+| `data.promptTemplate.versionNo` | 已发布版本号 |
+
+Prompt 模板解析规则：
+
+- Agent 配置了 `promptTemplateCode` 时，优先读取该模板。
+- `promptTemplateCode` 为空时，回退匹配 `templateCode = agentCode`。
+- 只返回 `PUBLISHED` 状态模板，草稿不会暴露给业务系统。
+- Yeho 只返回配置文本，不保存业务系统传入的文档、切片或向量。
+
+业务系统拿到模板后，在本地完成 `{{question}}`、`{{contexts}}` 等变量替换，再调用 `/v1/chat/completions`。
+
+## 7. Chat Completions
 
 接口：
 
@@ -196,7 +237,7 @@ curl https://api.yehosoft.com/v1/chat/completions \
 
 当前建议业务系统先使用 `stream=false`。如使用 `stream=true`，调用方需要按 SSE 处理返回。
 
-## 7. Embeddings
+## 8. Embeddings
 
 接口：
 
@@ -234,7 +275,7 @@ YEHO_AI_EMBEDDING_MODEL: text-embedding-v4
 EDMS_VECTOR_EMBEDDING_DIMENSION: 1024
 ```
 
-## 8. RAG 调用方式
+## 9. RAG 调用方式
 
 RAG 必须在业务系统侧完成：
 
@@ -251,7 +292,7 @@ RAG 必须在业务系统侧完成：
 
 业务系统传给 Yeho 的 Prompt 应只包含完成回答所需的最小上下文，并避免发送无权限内容。
 
-## 9. 错误响应
+## 10. 错误响应
 
 OpenAI-compatible 错误结构：
 
@@ -276,7 +317,7 @@ OpenAI-compatible 错误结构：
 | 429 | 触发 RPM / TPM / Daily Credits / 并发限制 | 降低请求频率或调整限流 |
 | 502 | Provider 调用失败 | 查看 Provider Health 与 Usage Log |
 
-## 10. 调用方必须记录的本地信息
+## 11. 调用方必须记录的本地信息
 
 业务系统本地建议记录：
 
@@ -293,7 +334,7 @@ OpenAI-compatible 错误结构：
 
 注意：这些业务数据由调用方保存，Yeho AI Platform 不集中保存。
 
-## 11. 最小集成检查清单
+## 12. 最小集成检查清单
 
 接入前确认：
 
@@ -308,11 +349,12 @@ OpenAI-compatible 错误结构：
 - Embedding 模型维度与向量库 Collection 一致。
 - 租户钱包有足够 Credits。
 
-## 12. 标准环境变量示例
+## 13. 标准环境变量示例
 
 ```bash
 YEHO_AI_ENABLED=true
 YEHO_AI_BASE_URL=https://api.yehosoft.com/v1
+YEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1
 YEHO_AI_API_KEY=yh_sk_xxx
 YEHO_AI_SYSTEM_CODE=edms
 YEHO_AI_DATA_DOMAIN=document_text

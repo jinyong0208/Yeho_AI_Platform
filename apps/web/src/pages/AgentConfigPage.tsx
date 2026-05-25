@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Group, Modal, NumberInput, Select, Stack, Table, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { Autocomplete, Badge, Button, Card, Group, Modal, NumberInput, Select, Stack, Table, Text, Textarea, TextInput, Title } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -44,6 +44,11 @@ export function AgentConfigPage() {
   }, [tenantId, tenants]);
 
   const models = useQuery({ queryKey: ['models', 'agent-configs'], queryFn: gatewayApi.models });
+  const promptTemplates = useQuery({
+    queryKey: ['agent-config-prompt-templates', tenantId],
+    queryFn: () => orchestrationApi.promptTemplates(tenantId ?? undefined),
+    enabled: hasTenantScope,
+  });
   const configs = useQuery({
     queryKey: ['agent-configs', tenantId],
     queryFn: () => orchestrationApi.agentConfigs(tenantId ?? undefined),
@@ -57,6 +62,7 @@ export function AgentConfigPage() {
       dataDomain: '',
       allowedDataDomains: '',
       agentCode: '',
+      promptTemplateCode: '',
       agentName: '',
       description: '',
       systemPrompt: '',
@@ -113,6 +119,10 @@ export function AgentConfigPage() {
     value: model.modelCode,
     label: `${model.displayName || model.modelCode} / ${model.modelCode}`,
   }));
+  const promptTemplateOptions = (promptTemplates.data ?? []).map((template) => ({
+    value: template.templateCode,
+    label: `${template.templateName || template.templateCode} / ${template.templateCode}`,
+  }));
   const statusOptions = [
     { value: 'ACTIVE', label: t('agentConfigPage.status.ACTIVE') },
     { value: 'DISABLED', label: t('agentConfigPage.status.DISABLED') },
@@ -127,6 +137,7 @@ export function AgentConfigPage() {
       dataDomain: config?.dataDomain ?? '',
       allowedDataDomains: config?.allowedDataDomains ?? '',
       agentCode: config?.agentCode ?? '',
+      promptTemplateCode: config?.promptTemplateCode ?? '',
       agentName: config?.agentName ?? '',
       description: config?.description ?? '',
       systemPrompt: config?.systemPrompt ?? '',
@@ -170,6 +181,7 @@ export function AgentConfigPage() {
                 <Table.Th>{t('agentConfigPage.systemCode')}</Table.Th>
                 <Table.Th>{t('agentConfigPage.dataDomain')}</Table.Th>
                 <Table.Th>{t('code')}</Table.Th>
+                <Table.Th>{t('agentConfigPage.promptTemplate')}</Table.Th>
                 <Table.Th>{t('name')}</Table.Th>
                 <Table.Th>{t('agentConfigPage.defaultModel')}</Table.Th>
                 <Table.Th>{t('agentConfigPage.temperature')}</Table.Th>
@@ -186,6 +198,7 @@ export function AgentConfigPage() {
                   <Table.Td>
                     <Text fw={700}>{config.agentCode}</Text>
                   </Table.Td>
+                  <Table.Td>{config.promptTemplateCode || '-'}</Table.Td>
                   <Table.Td>{config.agentName}</Table.Td>
                   <Table.Td>{config.defaultModel}</Table.Td>
                   <Table.Td>{config.temperature}</Table.Td>
@@ -209,7 +222,7 @@ export function AgentConfigPage() {
               ))}
               {(configs.data ?? []).length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={9}>
+                  <Table.Td colSpan={10}>
                     <Text c="dimmed" ta="center" py="xl">
                       {t('agentConfigPage.empty')}
                     </Text>
@@ -248,12 +261,20 @@ export function AgentConfigPage() {
               {...form.getInputProps('allowedDataDomains')}
             />
             <TextInput label={t('code')} required {...form.getInputProps('agentCode')} />
+            <Select
+              label={t('agentConfigPage.promptTemplate')}
+              description={t('agentConfigPage.promptTemplateHint')}
+              data={promptTemplateOptions}
+              searchable
+              clearable
+              {...form.getInputProps('promptTemplateCode')}
+            />
             <TextInput label={t('name')} required {...form.getInputProps('agentName')} />
             <TextInput label={t('agentConfigPage.descriptionLabel')} {...form.getInputProps('description')} />
-            <Select
+            <Autocomplete
               label={t('agentConfigPage.defaultModel')}
-              data={modelOptions}
-              searchable
+              description={t('agentConfigPage.defaultModelHint')}
+              data={modelOptions.map((model) => model.value)}
               required
               {...form.getInputProps('defaultModel')}
             />

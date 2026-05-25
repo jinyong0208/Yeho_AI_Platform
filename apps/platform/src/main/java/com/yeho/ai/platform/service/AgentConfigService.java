@@ -70,6 +70,7 @@ public class AgentConfigService {
         config.setDataDomain(normalizeCode(request.dataDomain()));
         config.setAllowedDataDomains(normalizeCsv(request.allowedDataDomains()));
         config.setAgentCode(request.agentCode());
+        config.setPromptTemplateCode(normalizeCode(request.promptTemplateCode()));
         config.setAgentName(request.agentName());
         config.setDescription(request.description());
         config.setSystemPrompt(request.systemPrompt());
@@ -122,6 +123,7 @@ public class AgentConfigService {
                 config.getDataDomain(),
                 config.getAllowedDataDomains(),
                 config.getAgentCode(),
+                config.getPromptTemplateCode(),
                 config.getAgentName(),
                 config.getDescription(),
                 config.getSystemPrompt(),

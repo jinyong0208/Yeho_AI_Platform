@@ -18,6 +18,7 @@ public class AgentConfig {
     private String dataDomain;
     private String allowedDataDomains;
     private String agentCode;
+    private String promptTemplateCode;
     private String agentName;
     private String description;
     private String systemPrompt;

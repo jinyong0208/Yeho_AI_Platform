@@ -74,6 +74,7 @@ public class AgentConfigController {
                 request.dataDomain(),
                 request.allowedDataDomains(),
                 request.agentCode(),
+                request.promptTemplateCode(),
                 request.agentName(),
                 request.description(),
                 request.systemPrompt(),

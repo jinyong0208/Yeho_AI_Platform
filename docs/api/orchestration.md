@@ -53,7 +53,11 @@ Authorization: Bearer <console-token>
 ```json
 {
   "tenantId": 1,
+  "systemCode": "edms",
+  "dataDomain": "document_text",
+  "allowedDataDomains": "document_text,metadata",
   "agentCode": "support_agent",
+  "promptTemplateCode": "support_summary",
   "agentName": "Support Agent",
   "description": "Default customer service assistant.",
   "systemPrompt": "You are a concise enterprise support assistant.",
@@ -70,6 +74,64 @@ DELETE /api/v1/agent-configs/{id}
 ```
 
 This module only stores Agent configuration. It does not run autonomous multi-agent workflows.
+
+## Agent Runtime Config
+
+业务系统可以用自己的 Yeho API Key 按 `agent_code` 读取 Agent 配置和已发布 Prompt 模板，避免在 EDMS / EQMS / 机器人等系统里硬编码 Prompt。
+
+```http
+GET /api/v1/agent-runtime/configs/{agent_code}
+Authorization: Bearer <yeho-api-key>
+X-Yeho-System-Code: edms
+X-Yeho-Data-Domain: document_text
+```
+
+权限要求：
+
+- API Key 需要 `agent:read`、`chat:completion` 或 `admin:*` scope。
+- 如果 API Key 配置了 `allowedSystemCodes` / `allowedDataDomains`，Header 必须匹配。
+- Agent 配置中的 `systemCode` / `dataDomain` / `allowedDataDomains` 也会参与校验。
+
+返回示例：
+
+```json
+{
+  "code": 0,
+  "message": "OK",
+  "requestId": "req_xxx",
+  "data": {
+    "tenantId": "2058119168840212482",
+    "systemCode": "edms",
+    "dataDomain": "document_text",
+    "allowedDataDomains": "document_text,metadata",
+    "agentCode": "document_search",
+    "promptTemplateCode": "edms_rag_answer_zh",
+    "agentName": "EDMS 文档检索助手",
+    "systemPrompt": "你是企业文档助手。",
+    "defaultModel": "qwen-plus",
+    "temperature": 0.2,
+    "maxTokens": 2048,
+    "status": "ACTIVE",
+    "promptTemplate": {
+      "id": "2059000000000000001",
+      "templateCode": "edms_rag_answer_zh",
+      "templateName": "EDMS 文档问答模板",
+      "versionNo": 1,
+      "content": "用户问题：{{question}}\n检索结果：{{contexts}}",
+      "status": "PUBLISHED",
+      "publishedAt": "2026-05-25T10:00:00"
+    }
+  },
+  "timestamp": "2026-05-25T10:00:00"
+}
+```
+
+Prompt 模板解析规则：
+
+- 优先读取 Agent 配置里的 `promptTemplateCode`。
+- 如果 `promptTemplateCode` 为空，则回退匹配 `templateCode = agentCode`。
+- 只返回 `PUBLISHED` 状态模板；草稿不会暴露给业务系统。
+- Yeho 只返回配置文本，不保存业务系统传入的文档、切片或向量。
 
 ## Agent Execute Logs
 

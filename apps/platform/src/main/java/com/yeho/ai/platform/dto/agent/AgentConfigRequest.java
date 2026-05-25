@@ -8,6 +8,7 @@ public record AgentConfigRequest(
         String dataDomain,
         String allowedDataDomains,
         String agentCode,
+        String promptTemplateCode,
         String agentName,
         String description,
         String systemPrompt,

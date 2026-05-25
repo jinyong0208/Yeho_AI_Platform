@@ -3,8 +3,7 @@ package com.yeho.ai.platform.dto.agent;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record AgentConfigResponse(
-        Long id,
+public record AgentRuntimeConfigResponse(
         Long tenantId,
         String systemCode,
         String dataDomain,
@@ -18,7 +17,17 @@ public record AgentConfigResponse(
         BigDecimal temperature,
         Integer maxTokens,
         String status,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        RuntimePromptTemplate promptTemplate
 ) {
+    public record RuntimePromptTemplate(
+            Long id,
+            String templateCode,
+            String templateName,
+            String description,
+            Integer versionNo,
+            String content,
+            String status,
+            LocalDateTime publishedAt
+    ) {
+    }
 }

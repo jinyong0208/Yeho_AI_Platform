@@ -32,6 +32,7 @@ export type AgentConfig = {
   dataDomain?: string;
   allowedDataDomains?: string;
   agentCode: string;
+  promptTemplateCode?: string;
   agentName: string;
   description?: string;
   systemPrompt?: string;
