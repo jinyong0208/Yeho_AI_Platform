@@ -2,6 +2,7 @@ package com.yeho.ai.platform.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeho.ai.platform.dto.gateway.EmbeddingRequest;
+import com.yeho.ai.platform.dto.gateway.GatewayRequestContext;
 import com.yeho.ai.platform.service.EmbeddingGatewayService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -46,7 +47,16 @@ public class OpenAiEmbeddingEndpointFilter extends OncePerRequestFilter {
 
         try {
             EmbeddingRequest embeddingRequest = objectMapper.readValue(request.getInputStream(), EmbeddingRequest.class);
-            Object result = embeddingGatewayService.embeddings(request.getHeader(HttpHeaders.AUTHORIZATION), embeddingRequest);
+            GatewayRequestContext gatewayContext = GatewayRequestContext.of(
+                    request.getHeader("X-Yeho-System-Code"),
+                    request.getHeader("X-Yeho-Data-Domain"),
+                    request.getHeader("X-Yeho-Agent-Code")
+            );
+            Object result = embeddingGatewayService.embeddings(
+                    request.getHeader(HttpHeaders.AUTHORIZATION),
+                    embeddingRequest,
+                    gatewayContext
+            );
             writeJson(response, HttpStatus.OK, result);
         } catch (ResponseStatusException ex) {
             OpenAiErrorResponseWriter.write(
