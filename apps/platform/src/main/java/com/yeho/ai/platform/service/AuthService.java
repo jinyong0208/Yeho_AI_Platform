@@ -64,6 +64,8 @@ public class AuthService {
             token,
             tokenTtlHours * 3600,
             tenant.getId(),
+            tenant.getTenantCode(),
+            tenant.getTenantName(),
             user.getId(),
             user.getUsername(),
             roles

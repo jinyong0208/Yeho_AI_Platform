@@ -19,6 +19,8 @@ export interface LoginResponse {
   accessToken: string;
   expiresInSeconds: number;
   tenantId: string;
+  tenantCode?: string;
+  tenantName?: string;
   userId: string;
   username: string;
   roles: string[];

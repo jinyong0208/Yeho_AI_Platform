@@ -72,7 +72,7 @@ export default function WalletPage() {
   const tenants = canSelectTenant
     ? ((tenantsQuery.data ?? []) as TenantLite[])
     : user?.tenantId
-      ? [{ id: user.tenantId, tenantName: t('walletPage.currentTenant'), tenantCode: user.tenantId }]
+      ? [{ id: user.tenantId, tenantName: user.tenantName || t('walletPage.currentTenant'), tenantCode: user.tenantCode || user.tenantId }]
       : [];
   const walletQuery = useQuery({
     queryKey: ['wallet', selectedTenantId],
@@ -172,7 +172,16 @@ export default function WalletPage() {
   const wallet = walletQuery.data;
   const orders = ordersQuery.data ?? [];
   const lowBalanceAlerts = lowBalanceQuery.data ?? [];
+  const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
+  const selectedTenantName = selectedTenant?.tenantName === t('walletPage.currentTenant') ? '' : selectedTenant?.tenantName;
   const previewCredits = formatCredits(form.values.credits);
+
+  const openRechargeModal = () => {
+    if (selectedTenantName && !form.values.payerName.trim()) {
+      form.setFieldValue('payerName', selectedTenantName);
+    }
+    open();
+  };
 
   const openConfirmRecharge = (orderId: string) => {
     modals.openConfirmModal({
@@ -206,7 +215,7 @@ export default function WalletPage() {
           </Text>
         </Stack>
         {canCreateRechargeOrder && (
-          <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
+          <Button color="dark" leftSection={<IconPlus size={16} />} onClick={openRechargeModal} disabled={!selectedTenantId}>
             {t('walletPage.createRechargeOrder')}
           </Button>
         )}

@@ -91,6 +91,8 @@ export default function LoginPage() {
                   });
                   login(result.accessToken, {
                     tenantId: result.tenantId,
+                    tenantCode: result.tenantCode,
+                    tenantName: result.tenantName,
                     userId: result.userId,
                     username: result.username,
                     roles: result.roles,

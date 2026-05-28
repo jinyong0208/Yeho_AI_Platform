@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 
 export interface AuthUser {
   tenantId: string;
+  tenantCode?: string;
+  tenantName?: string;
   userId: string;
   username: string;
   roles: string[];

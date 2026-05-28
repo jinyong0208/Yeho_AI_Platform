@@ -7,6 +7,8 @@ public record LoginResponse(
     String accessToken,
     Long expiresInSeconds,
     Long tenantId,
+    String tenantCode,
+    String tenantName,
     Long userId,
     String username,
     List<String> roles
