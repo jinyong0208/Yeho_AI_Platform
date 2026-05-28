@@ -27,7 +27,11 @@ import {
   IconCoins,
   IconCreditCard,
   IconDownload,
+  IconInfoCircle,
   IconPlus,
+  IconReceipt,
+  IconRefresh,
+  IconShieldCheck,
   IconX,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
@@ -45,6 +49,7 @@ type TenantLite = {
   tenantName: string;
 };
 
+const CREDITS_PER_CNY = 1000;
 const readAlertCredits = (alert: any) => Number(alert.balance_credits ?? alert.balanceCredits ?? 0);
 const readAlertTenant = (alert: any) => alert.tenant_name ?? alert.tenantName ?? alert.tenant_code ?? alert.tenantCode ?? '-';
 
@@ -150,6 +155,7 @@ export default function WalletPage() {
   const wallet = walletQuery.data;
   const orders = ordersQuery.data ?? [];
   const lowBalanceAlerts = lowBalanceQuery.data ?? [];
+  const previewCredits = formatCredits(form.values.credits);
 
   const openConfirmRecharge = (orderId: string) => {
     modals.openConfirmModal({
@@ -210,9 +216,50 @@ export default function WalletPage() {
         <MetricCard icon={<IconCircleCheck size={20} />} label={t('walletPage.totalUsedCredits')} value={formatCredits(wallet?.totalUsedCredits)} color="red" />
       </SimpleGrid>
 
+      <Card className="surface-card" p="lg">
+        <Group justify="space-between" align="flex-start" mb="md">
+          <Stack gap={4}>
+            <Text fw={750}>{t('walletPage.guideTitle')}</Text>
+            <Text size="sm" c="dimmed" maw={760}>
+              {t('walletPage.guideDescription')}
+            </Text>
+          </Stack>
+          <Badge color="teal" variant="light" radius="sm">
+            {t('walletPage.exchangeRateValue')}
+          </Badge>
+        </Group>
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+          <GuideCard
+            icon={<IconInfoCircle size={20} />}
+            color="blue"
+            title={t('walletPage.exchangeRateTitle')}
+            body={t('walletPage.exchangeRateHint')}
+          />
+          <GuideCard
+            icon={<IconShieldCheck size={20} />}
+            color="yellow"
+            title={t('walletPage.freezeTitle')}
+            body={t('walletPage.freezeBody')}
+          />
+          <GuideCard
+            icon={<IconRefresh size={20} />}
+            color="teal"
+            title={t('walletPage.settlementTitle')}
+            body={t('walletPage.settlementBody')}
+          />
+        </SimpleGrid>
+      </Card>
+
       {lowBalanceAlerts.length > 0 && (
         <Alert color="yellow" icon={<IconAlertTriangle size={16} />} radius="md">
-          {lowBalanceAlerts.map((alert) => `${readAlertTenant(alert)} 余额 ${formatCredits(readAlertCredits(alert))}`).join('；')}
+          {lowBalanceAlerts
+            .map((alert) =>
+              t('walletPage.lowBalanceAlert', {
+                tenant: readAlertTenant(alert),
+                balance: formatCredits(readAlertCredits(alert)),
+              }),
+            )
+            .join('；')}
         </Alert>
       )}
 
@@ -292,8 +339,31 @@ export default function WalletPage() {
       <Modal opened={opened} onClose={close} title={t('walletPage.createRechargeOrder')} centered>
         <form onSubmit={form.onSubmit((values) => createOrderMutation.mutate(values))}>
           <Stack>
-            <NumberInput label={t('walletPage.amountCny')} min={1} required {...form.getInputProps('amountCny')} />
-            <NumberInput label={t('common.credits')} min={1} required {...form.getInputProps('credits')} />
+            <Alert color="blue" variant="light" icon={<IconReceipt size={16} />}>
+              {t('walletPage.rechargeHelp')}
+            </Alert>
+            <NumberInput
+              label={t('walletPage.amountCny')}
+              description={t('walletPage.amountCnyDescription')}
+              min={1}
+              required
+              value={form.values.amountCny}
+              onChange={(value) => {
+                const amount = Number(value) || 0;
+                form.setFieldValue('amountCny', amount);
+                form.setFieldValue('credits', Math.max(1, Math.round(amount * CREDITS_PER_CNY)));
+              }}
+            />
+            <NumberInput
+              label={t('common.credits')}
+              description={t('walletPage.creditsDescription')}
+              min={1}
+              required
+              {...form.getInputProps('credits')}
+            />
+            <Text size="sm" c="dimmed">
+              {t('walletPage.estimatedArrival', { credits: previewCredits })}
+            </Text>
             <TextInput label={t('walletPage.payChannel')} required {...form.getInputProps('payChannel')} />
             <TextInput label={t('walletPage.remark')} {...form.getInputProps('remark')} />
             <Button color="dark" type="submit" loading={createOrderMutation.isPending}>
@@ -304,6 +374,42 @@ export default function WalletPage() {
       </Modal>
       )}
     </Stack>
+  );
+}
+
+function GuideCard({
+  icon,
+  color,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  color: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <Box
+      p="md"
+      style={(theme) => ({
+        border: `1px solid ${theme.colors.gray[2]}`,
+        borderRadius: theme.radius.md,
+      })}
+    >
+      <Group align="flex-start" wrap="nowrap">
+        <ThemeIcon color={color} variant="light" radius="sm" size={36}>
+          {icon}
+        </ThemeIcon>
+        <Stack gap={4}>
+          <Text size="sm" fw={700}>
+            {title}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {body}
+          </Text>
+        </Stack>
+      </Group>
+    </Box>
   );
 }
 
