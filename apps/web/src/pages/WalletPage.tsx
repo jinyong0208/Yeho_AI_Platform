@@ -100,6 +100,13 @@ export default function WalletPage() {
       remark: '',
     },
   });
+  const formatPayChannel = (code?: string | null) =>
+    t(`walletPage.payChannelOptions.${code ?? ''}`, { defaultValue: code || '-' });
+  const payChannelOptions = [
+    { value: 'BANK_TRANSFER', label: t('walletPage.payChannelOptions.BANK_TRANSFER') },
+    { value: 'OFFLINE', label: t('walletPage.payChannelOptions.OFFLINE') },
+    { value: 'OTHER', label: t('walletPage.payChannelOptions.OTHER') },
+  ];
 
   useEffect(() => {
     if (!selectedTenantId && tenants.length > 0) {
@@ -147,7 +154,7 @@ export default function WalletPage() {
           amountCny: order.amountCny,
           credits: order.credits,
           status: order.status,
-          payChannel: order.payChannel,
+          payChannel: formatPayChannel(order.payChannel),
           payerName: order.payerName ?? '',
           payerAccount: order.payerAccount ?? '',
           paymentProofNo: order.paymentProofNo ?? '',
@@ -307,7 +314,7 @@ export default function WalletPage() {
                   </Badge>
                 </Group>
                 <Text size="xs" c="dimmed">
-                  {order.amountCny} CNY · {formatCredits(order.credits)} · {order.payChannel}
+                  {order.amountCny} CNY · {formatCredits(order.credits)} · {formatPayChannel(order.payChannel)}
                 </Text>
                 <Text size="xs" c="dimmed">
                   {t('walletPage.paymentMeta', {
@@ -358,26 +365,31 @@ export default function WalletPage() {
       )}
 
       {canCreateRechargeOrder && (
-      <Modal opened={opened} onClose={close} title={t('walletPage.createRechargeOrder')} centered>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={t('walletPage.createRechargeOrder')}
+        centered
+        size="lg"
+        radius="md"
+        overlayProps={{ backgroundOpacity: 0.45, blur: 2 }}
+      >
         <form onSubmit={form.onSubmit((values) => createOrderMutation.mutate(values))}>
-          <Stack>
-            <Alert color="blue" variant="light" icon={<IconReceipt size={16} />}>
-              {t('walletPage.rechargeHelp')}
-            </Alert>
+          <Stack gap="md">
             <Box
-              p="md"
+              p="lg"
               style={(theme) => ({
-                border: `1px solid ${theme.colors.gray[2]}`,
+                border: `1px solid ${theme.colors.blue[1]}`,
                 borderRadius: theme.radius.md,
-                background: theme.colors.gray[0],
+                background: theme.colors.blue[0],
               })}
             >
               <Group align="flex-start" wrap="nowrap">
-                <ThemeIcon color="blue" variant="light" radius="sm">
-                  <IconBuildingBank size={18} />
+                <ThemeIcon color="blue" variant="white" radius="sm" size={40}>
+                  <IconReceipt size={20} />
                 </ThemeIcon>
-                <Stack gap={4}>
-                  <Text fw={700} size="sm">
+                <Stack gap={6}>
+                  <Text fw={750}>
                     {t('walletPage.offlinePaymentTitle')}
                   </Text>
                   <Text size="sm" c="dimmed">
@@ -386,31 +398,58 @@ export default function WalletPage() {
                 </Stack>
               </Group>
             </Box>
-            <NumberInput
-              label={t('walletPage.amountCny')}
-              description={t('walletPage.amountCnyDescription')}
-              min={1}
+
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+              <NumberInput
+                label={t('walletPage.amountCny')}
+                description={t('walletPage.amountCnyDescription')}
+                min={1}
+                required
+                value={form.values.amountCny}
+                onChange={(value) => {
+                  const amount = Number(value) || 0;
+                  form.setFieldValue('amountCny', amount);
+                  form.setFieldValue('credits', Math.max(1, Math.round(amount * CREDITS_PER_CNY)));
+                }}
+              />
+              <NumberInput
+                label={t('common.credits')}
+                description={t('walletPage.creditsDescription')}
+                min={1}
+                required
+                {...form.getInputProps('credits')}
+              />
+            </SimpleGrid>
+
+            <Box
+              p="md"
+              style={(theme) => ({
+                border: `1px solid ${theme.colors.gray[2]}`,
+                borderRadius: theme.radius.md,
+                background: theme.white,
+              })}
+            >
+              <Group justify="space-between" gap="sm">
+                <Text size="sm" c="dimmed">
+                  {t('walletPage.estimatedArrivalLabel')}
+                </Text>
+                <Text fw={750}>{previewCredits}</Text>
+              </Group>
+            </Box>
+
+            <Select
+              label={t('walletPage.payChannel')}
               required
-              value={form.values.amountCny}
-              onChange={(value) => {
-                const amount = Number(value) || 0;
-                form.setFieldValue('amountCny', amount);
-                form.setFieldValue('credits', Math.max(1, Math.round(amount * CREDITS_PER_CNY)));
-              }}
+              data={payChannelOptions}
+              allowDeselect={false}
+              leftSection={<IconBuildingBank size={16} />}
+              {...form.getInputProps('payChannel')}
             />
-            <NumberInput
-              label={t('common.credits')}
-              description={t('walletPage.creditsDescription')}
-              min={1}
-              required
-              {...form.getInputProps('credits')}
-            />
-            <Text size="sm" c="dimmed">
-              {t('walletPage.estimatedArrival', { credits: previewCredits })}
-            </Text>
-            <TextInput label={t('walletPage.payChannel')} required {...form.getInputProps('payChannel')} />
-            <TextInput label={t('walletPage.payerName')} {...form.getInputProps('payerName')} />
-            <TextInput label={t('walletPage.payerAccount')} {...form.getInputProps('payerAccount')} />
+
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+              <TextInput label={t('walletPage.payerName')} {...form.getInputProps('payerName')} />
+              <TextInput label={t('walletPage.payerAccount')} {...form.getInputProps('payerAccount')} />
+            </SimpleGrid>
             <TextInput
               label={t('walletPage.paymentProofNo')}
               description={t('walletPage.paymentProofNoDescription')}
@@ -418,7 +457,7 @@ export default function WalletPage() {
               {...form.getInputProps('paymentProofNo')}
             />
             <TextInput label={t('walletPage.remark')} {...form.getInputProps('remark')} />
-            <Button color="dark" type="submit" loading={createOrderMutation.isPending}>
+            <Button color="dark" type="submit" loading={createOrderMutation.isPending} fullWidth>
               {t('create')}
             </Button>
           </Stack>
