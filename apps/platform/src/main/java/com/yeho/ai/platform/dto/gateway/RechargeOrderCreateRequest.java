@@ -21,5 +21,8 @@ public class RechargeOrderCreateRequest {
     private Long credits;
 
     private String payChannel;
+    private String payerName;
+    private String payerAccount;
+    private String paymentProofNo;
     private String remark;
 }

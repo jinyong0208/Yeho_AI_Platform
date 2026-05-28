@@ -19,6 +19,9 @@ public class TenantRechargeOrder {
     private Long credits;
     private String status;
     private String payChannel;
+    private String payerName;
+    private String payerAccount;
+    private String paymentProofNo;
     private LocalDateTime paidAt;
     private String remark;
     private LocalDateTime createdAt;

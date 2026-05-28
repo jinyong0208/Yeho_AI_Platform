@@ -8,7 +8,7 @@ Phase 4 connects the React management console to the gateway, billing, and usage
 - Model Providers: list, create, and disable AI providers.
 - Model Configs: list, create, and disable model routes.
 - API Keys: list, create, and revoke tenant API keys.
-- Wallet Balance: view wallet totals and create or confirm recharge orders.
+- Wallet Balance: view wallet totals, submit offline recharge orders, and confirm orders as finance.
 - Wallet Ledger: view wallet transaction logs.
 - Usage Logs: filter gateway call logs by tenant, model, and result.
 - Token Stats: view usage summary and token mix.

@@ -23,7 +23,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   IconAlertTriangle,
   IconBolt,
+  IconBuildingBank,
   IconCircleCheck,
+  IconClipboardText,
   IconCoins,
   IconCreditCard,
   IconDownload,
@@ -58,7 +60,9 @@ export default function WalletPage() {
   const user = useAuthStore((state) => state.user);
   const primaryRole = resolvePrimaryRole(user?.roles);
   const canSelectTenant = primaryRole === USER_ROLES.SUPER_ADMIN;
-  const canOperateBilling = primaryRole === USER_ROLES.SUPER_ADMIN || primaryRole === USER_ROLES.FINANCE;
+  const canCreateRechargeOrder =
+    primaryRole === USER_ROLES.SUPER_ADMIN || primaryRole === USER_ROLES.TENANT_ADMIN || primaryRole === USER_ROLES.FINANCE;
+  const canManageRechargeOrder = primaryRole === USER_ROLES.SUPER_ADMIN || primaryRole === USER_ROLES.FINANCE;
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const queryClient = useQueryClient();
@@ -78,7 +82,7 @@ export default function WalletPage() {
   const ordersQuery = useQuery({
     queryKey: ['recharge-orders', selectedTenantId],
     queryFn: () => billingApi.rechargeOrders(selectedTenantId, 8),
-    enabled: Boolean(selectedTenantId) && canOperateBilling,
+    enabled: Boolean(selectedTenantId) && canCreateRechargeOrder,
   });
   const lowBalanceQuery = useQuery({
     queryKey: ['wallet-low-balance', selectedTenantId],
@@ -89,7 +93,10 @@ export default function WalletPage() {
     initialValues: {
       amountCny: 100,
       credits: 100000,
-      payChannel: 'MANUAL',
+      payChannel: 'BANK_TRANSFER',
+      payerName: '',
+      payerAccount: '',
+      paymentProofNo: '',
       remark: '',
     },
   });
@@ -141,6 +148,9 @@ export default function WalletPage() {
           credits: order.credits,
           status: order.status,
           payChannel: order.payChannel,
+          payerName: order.payerName ?? '',
+          payerAccount: order.payerAccount ?? '',
+          paymentProofNo: order.paymentProofNo ?? '',
           paidAt: order.paidAt ?? '',
           remark: order.remark ?? '',
           createdAt: order.createdAt,
@@ -188,7 +198,7 @@ export default function WalletPage() {
             {t('walletPage.description')}
           </Text>
         </Stack>
-        {canOperateBilling && (
+        {canCreateRechargeOrder && (
           <Button color="dark" leftSection={<IconPlus size={16} />} onClick={open} disabled={!selectedTenantId}>
             {t('walletPage.createRechargeOrder')}
           </Button>
@@ -263,7 +273,7 @@ export default function WalletPage() {
         </Alert>
       )}
 
-      {canOperateBilling && (
+      {canCreateRechargeOrder && (
       <Card className="surface-card" p="lg">
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={650}>
@@ -299,31 +309,43 @@ export default function WalletPage() {
                 <Text size="xs" c="dimmed">
                   {order.amountCny} CNY · {formatCredits(order.credits)} · {order.payChannel}
                 </Text>
+                <Text size="xs" c="dimmed">
+                  {t('walletPage.paymentMeta', {
+                    payer: order.payerName || t('walletPage.unfilled'),
+                    proof: order.paymentProofNo || t('walletPage.unfilled'),
+                  })}
+                </Text>
               </Box>
-              <Group gap="xs" wrap="nowrap">
-                <Button
-                  variant="light"
-                  color="dark"
-                  size="xs"
-                  leftSection={<IconCircleCheck size={14} />}
-                  disabled={order.status !== 'CREATED'}
-                  loading={confirmMutation.isPending}
-                  onClick={() => openConfirmRecharge(order.id)}
-                >
-                  {t('walletPage.confirmRecharge')}
-                </Button>
-                <Button
-                  variant="subtle"
-                  color="red"
-                  size="xs"
-                  leftSection={<IconX size={14} />}
-                  disabled={order.status !== 'CREATED'}
-                  loading={closeOrderMutation.isPending}
-                  onClick={() => openCloseOrder(order.id)}
-                >
-                  {t('walletPage.close')}
-                </Button>
-              </Group>
+              {canManageRechargeOrder ? (
+                <Group gap="xs" wrap="nowrap">
+                  <Button
+                    variant="light"
+                    color="dark"
+                    size="xs"
+                    leftSection={<IconCircleCheck size={14} />}
+                    disabled={order.status !== 'CREATED'}
+                    loading={confirmMutation.isPending}
+                    onClick={() => openConfirmRecharge(order.id)}
+                  >
+                    {t('walletPage.confirmRecharge')}
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    color="red"
+                    size="xs"
+                    leftSection={<IconX size={14} />}
+                    disabled={order.status !== 'CREATED'}
+                    loading={closeOrderMutation.isPending}
+                    onClick={() => openCloseOrder(order.id)}
+                  >
+                    {t('walletPage.close')}
+                  </Button>
+                </Group>
+              ) : (
+                <Badge color={order.status === 'CREATED' ? 'yellow' : 'teal'} variant="light" radius="sm">
+                  {order.status === 'CREATED' ? t('walletPage.waitingFinance') : t(`common.statusLabels.${order.status}`, { defaultValue: order.status })}
+                </Badge>
+              )}
             </Group>
           ))}
           {orders.length === 0 && (
@@ -335,13 +357,35 @@ export default function WalletPage() {
       </Card>
       )}
 
-      {canOperateBilling && (
+      {canCreateRechargeOrder && (
       <Modal opened={opened} onClose={close} title={t('walletPage.createRechargeOrder')} centered>
         <form onSubmit={form.onSubmit((values) => createOrderMutation.mutate(values))}>
           <Stack>
             <Alert color="blue" variant="light" icon={<IconReceipt size={16} />}>
               {t('walletPage.rechargeHelp')}
             </Alert>
+            <Box
+              p="md"
+              style={(theme) => ({
+                border: `1px solid ${theme.colors.gray[2]}`,
+                borderRadius: theme.radius.md,
+                background: theme.colors.gray[0],
+              })}
+            >
+              <Group align="flex-start" wrap="nowrap">
+                <ThemeIcon color="blue" variant="light" radius="sm">
+                  <IconBuildingBank size={18} />
+                </ThemeIcon>
+                <Stack gap={4}>
+                  <Text fw={700} size="sm">
+                    {t('walletPage.offlinePaymentTitle')}
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    {t('walletPage.offlinePaymentBody')}
+                  </Text>
+                </Stack>
+              </Group>
+            </Box>
             <NumberInput
               label={t('walletPage.amountCny')}
               description={t('walletPage.amountCnyDescription')}
@@ -365,6 +409,14 @@ export default function WalletPage() {
               {t('walletPage.estimatedArrival', { credits: previewCredits })}
             </Text>
             <TextInput label={t('walletPage.payChannel')} required {...form.getInputProps('payChannel')} />
+            <TextInput label={t('walletPage.payerName')} {...form.getInputProps('payerName')} />
+            <TextInput label={t('walletPage.payerAccount')} {...form.getInputProps('payerAccount')} />
+            <TextInput
+              label={t('walletPage.paymentProofNo')}
+              description={t('walletPage.paymentProofNoDescription')}
+              leftSection={<IconClipboardText size={16} />}
+              {...form.getInputProps('paymentProofNo')}
+            />
             <TextInput label={t('walletPage.remark')} {...form.getInputProps('remark')} />
             <Button color="dark" type="submit" loading={createOrderMutation.isPending}>
               {t('create')}

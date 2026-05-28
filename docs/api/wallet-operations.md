@@ -51,14 +51,30 @@ Content-Type: application/json
   "tenantId": 2057485859385335809,
   "amountCny": 100,
   "credits": 100000,
-  "payChannel": "MANUAL",
+  "payChannel": "BANK_TRANSFER",
+  "payerName": "Acme Ltd.",
+  "payerAccount": "1234",
+  "paymentProofNo": "bank-voucher-001",
   "remark": "offline transfer"
 }
 ```
 
+Roles:
+
+- `SUPER_ADMIN`
+- `TENANT_ADMIN`
+- `FINANCE`
+
 Initial status:
 
 - `CREATED`
+
+Self-service rule:
+
+- Tenant admins can submit and view their own recharge orders.
+- The user should include the order number in the offline payment remark.
+- `payerName`, `payerAccount`, and `paymentProofNo` are optional reconciliation fields.
+- Credits are not posted until finance confirmation.
 
 ### Confirm Order
 
@@ -68,6 +84,7 @@ POST /api/v1/recharge-orders/{id}/confirm
 
 Behavior:
 
+- Only `SUPER_ADMIN` and `FINANCE` can confirm.
 - Only `CREATED` orders can be confirmed.
 - Sets status to `PAID`.
 - Writes `paid_at`.
@@ -82,6 +99,7 @@ POST /api/v1/recharge-orders/{id}/close
 
 Behavior:
 
+- Only `SUPER_ADMIN` and `FINANCE` can close.
 - Only `CREATED` orders can be closed.
 - Sets status to `CLOSED`.
 - Does not change wallet balance.

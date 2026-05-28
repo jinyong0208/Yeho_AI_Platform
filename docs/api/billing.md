@@ -32,14 +32,30 @@ Creates a recharge order.
   "tenantId": 2057485859385335809,
   "amountCny": 1.00,
   "credits": 1000,
-  "payChannel": "MANUAL",
-  "remark": "test order"
+  "payChannel": "BANK_TRANSFER",
+  "payerName": "Acme Ltd.",
+  "payerAccount": "1234",
+  "paymentProofNo": "bank-voucher-001",
+  "remark": "offline transfer"
 }
 ```
+
+Roles:
+
+- `SUPER_ADMIN`
+- `TENANT_ADMIN`
+- `FINANCE`
+
+Tenant admins can create and view their own recharge orders. Finance or platform admins confirm offline payment and post credits.
 
 ### POST /api/v1/recharge-orders/{id}/confirm
 
 Marks a recharge order as `PAID` and credits the tenant wallet.
+
+Roles:
+
+- `SUPER_ADMIN`
+- `FINANCE`
 
 ### GET /api/v1/recharge-orders
 
@@ -63,4 +79,3 @@ Query parameters:
 ### GET /api/v1/usage-stats/summary
 
 Returns request count, success/failure count, token totals, charged credits, real cost, and profit.
-

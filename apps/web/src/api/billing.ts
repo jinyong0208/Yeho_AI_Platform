@@ -29,6 +29,9 @@ export type RechargeOrder = {
   credits: number;
   status: string;
   payChannel: string;
+  payerName?: string | null;
+  payerAccount?: string | null;
+  paymentProofNo?: string | null;
   paidAt?: string | null;
   remark?: string | null;
   createdAt: string;
@@ -59,6 +62,9 @@ export type RechargeOrderCreateRequest = {
   amountCny: number;
   credits: number;
   payChannel: string;
+  payerName?: string;
+  payerAccount?: string;
+  paymentProofNo?: string;
   remark?: string;
 };
 

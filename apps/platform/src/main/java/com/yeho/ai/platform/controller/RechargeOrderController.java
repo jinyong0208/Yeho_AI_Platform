@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/recharge-orders")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','FINANCE')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','TENANT_ADMIN','FINANCE')")
 public class RechargeOrderController {
     private final RechargeOrderService rechargeOrderService;
     private final TenantAccessService tenantAccessService;
@@ -38,6 +38,7 @@ public class RechargeOrderController {
     }
 
     @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','FINANCE')")
     public ApiResponse<RechargeOrderResponse> confirm(
         @AuthenticationPrincipal AuthenticatedUser user,
         @PathVariable Long id
@@ -47,6 +48,7 @@ public class RechargeOrderController {
     }
 
     @PostMapping("/{id}/close")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','FINANCE')")
     public ApiResponse<RechargeOrderResponse> close(
         @AuthenticationPrincipal AuthenticatedUser user,
         @PathVariable Long id

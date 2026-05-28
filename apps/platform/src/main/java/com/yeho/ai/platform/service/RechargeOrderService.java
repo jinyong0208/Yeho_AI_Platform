@@ -41,7 +41,10 @@ public class RechargeOrderService {
         order.setAmountCny(request.getAmountCny());
         order.setCredits(request.getCredits());
         order.setStatus("CREATED");
-        order.setPayChannel(request.getPayChannel());
+        order.setPayChannel(normalizeText(request.getPayChannel(), "BANK_TRANSFER"));
+        order.setPayerName(normalizeText(request.getPayerName(), null));
+        order.setPayerAccount(normalizeText(request.getPayerAccount(), null));
+        order.setPaymentProofNo(normalizeText(request.getPaymentProofNo(), null));
         order.setRemark(request.getRemark());
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
@@ -123,6 +126,9 @@ public class RechargeOrderService {
             order.getCredits(),
             order.getStatus(),
             order.getPayChannel(),
+            order.getPayerName(),
+            order.getPayerAccount(),
+            order.getPaymentProofNo(),
             order.getPaidAt(),
             order.getRemark(),
             order.getCreatedAt(),
@@ -140,5 +146,12 @@ public class RechargeOrderService {
             return 100;
         }
         return Math.max(1, Math.min(limit, 500));
+    }
+
+    private String normalizeText(String value, String defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return value.trim();
     }
 }
