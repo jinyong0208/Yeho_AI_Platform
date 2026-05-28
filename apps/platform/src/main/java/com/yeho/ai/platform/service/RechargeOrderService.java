@@ -51,7 +51,7 @@ public class RechargeOrderService {
 
     @Transactional
     public RechargeOrderResponse confirm(Long id) {
-        TenantRechargeOrder order = tenantRechargeOrderMapper.selectById(id);
+        TenantRechargeOrder order = tenantRechargeOrderMapper.selectByIdForUpdate(id);
         if (order == null) {
             throw new NotFoundException("Recharge order not found");
         }
@@ -73,7 +73,7 @@ public class RechargeOrderService {
 
     @Transactional
     public RechargeOrderResponse close(Long id) {
-        TenantRechargeOrder order = tenantRechargeOrderMapper.selectById(id);
+        TenantRechargeOrder order = tenantRechargeOrderMapper.selectByIdForUpdate(id);
         if (order == null) {
             throw new NotFoundException("Recharge order not found");
         }
