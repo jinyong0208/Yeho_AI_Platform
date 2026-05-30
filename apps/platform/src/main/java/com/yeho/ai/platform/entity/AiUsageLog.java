@@ -22,6 +22,7 @@ public class AiUsageLog {
     private String systemCode;
     private String dataDomain;
     private String agentCode;
+    private String workflowCode;
     private String apiKeyScopes;
     private Long priceVersionId;
     private Integer inputTokens;

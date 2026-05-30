@@ -16,13 +16,14 @@ public class AgentExecuteLogService {
 
     private final AgentExecuteLogMapper agentExecuteLogMapper;
 
-    public List<AgentExecuteLogResponse> list(Long tenantId, String requestId, String traceId, int page, int size) {
+    public List<AgentExecuteLogResponse> list(Long tenantId, String requestId, String traceId, String workflowCode, int page, int size) {
         Page<AgentExecuteLog> result = agentExecuteLogMapper.selectPage(
                 Page.of(Math.max(page, 1), Math.min(Math.max(size, 1), 100)),
                 new LambdaQueryWrapper<AgentExecuteLog>()
                         .eq(tenantId != null, AgentExecuteLog::getTenantId, tenantId)
                         .eq(requestId != null && !requestId.isBlank(), AgentExecuteLog::getRequestId, requestId)
                         .eq(traceId != null && !traceId.isBlank(), AgentExecuteLog::getTraceId, traceId)
+                        .eq(workflowCode != null && !workflowCode.isBlank(), AgentExecuteLog::getWorkflowCode, workflowCode)
                         .orderByDesc(AgentExecuteLog::getCreatedAt)
         );
         return result.getRecords().stream().map(this::toResponse).toList();
@@ -41,6 +42,7 @@ public class AgentExecuteLogService {
                 log.getSystemCode(),
                 log.getDataDomain(),
                 log.getAgentCode(),
+                log.getWorkflowCode(),
                 log.getModel(),
                 log.getLatencyMs(),
                 log.getInputTokens(),

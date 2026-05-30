@@ -10,6 +10,7 @@ public record AgentExecuteLogResponse(
         String systemCode,
         String dataDomain,
         String agentCode,
+        String workflowCode,
         String model,
         Long latencyMs,
         Long inputTokens,

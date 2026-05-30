@@ -13,6 +13,7 @@ public record UsageLogResponse(
     String systemCode,
     String dataDomain,
     String agentCode,
+    String workflowCode,
     Integer inputTokens,
     Integer outputTokens,
     Integer totalTokens,

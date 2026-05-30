@@ -28,6 +28,7 @@ public class UsageQueryService {
         String systemCode,
         String dataDomain,
         String agentCode,
+        String workflowCode,
         Boolean success,
         LocalDateTime from,
         LocalDateTime to,
@@ -41,6 +42,7 @@ public class UsageQueryService {
                 systemCode,
                 dataDomain,
                 agentCode,
+                workflowCode,
                 success,
                 from,
                 to,
@@ -60,6 +62,7 @@ public class UsageQueryService {
         String systemCode,
         String dataDomain,
         String agentCode,
+        String workflowCode,
         LocalDateTime from,
         LocalDateTime to
     ) {
@@ -71,6 +74,7 @@ public class UsageQueryService {
             systemCode,
             dataDomain,
             agentCode,
+            workflowCode,
             null,
             from,
             to,
@@ -112,6 +116,7 @@ public class UsageQueryService {
         String systemCode,
         String dataDomain,
         String agentCode,
+        String workflowCode,
         Boolean success,
         LocalDateTime from,
         LocalDateTime to,
@@ -140,6 +145,9 @@ public class UsageQueryService {
         if (StringUtils.hasText(agentCode)) {
             wrapper.eq(AiUsageLog::getAgentCode, agentCode);
         }
+        if (StringUtils.hasText(workflowCode)) {
+            wrapper.eq(AiUsageLog::getWorkflowCode, workflowCode);
+        }
         if (success != null) {
             wrapper.eq(AiUsageLog::getSuccess, success);
         }
@@ -166,6 +174,7 @@ public class UsageQueryService {
             log.getSystemCode(),
             log.getDataDomain(),
             log.getAgentCode(),
+            log.getWorkflowCode(),
             log.getInputTokens(),
             log.getOutputTokens(),
             log.getTotalTokens(),

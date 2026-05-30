@@ -306,10 +306,10 @@ public class EmbeddingGatewayService {
         jdbcTemplate.update("""
                 insert into ai_usage_log (
                     id, tenant_id, api_key_id, provider_code, model_code, request_id,
-                    system_code, data_domain, agent_code, price_version_id,
+                    system_code, data_domain, agent_code, workflow_code, price_version_id,
                     input_tokens, output_tokens, total_tokens, real_cost, charge_credits, profit,
                     latency_ms, success, error_code, error_message, api_key_scopes, created_at
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, 0, 0, ?, ?, ?, ?, ?, now())
                 """,
                 IdWorker.getId(),
                 apiKey.tenantId(),
@@ -320,6 +320,7 @@ public class EmbeddingGatewayService {
                 gatewayContext == null ? null : gatewayContext.systemCode(),
                 gatewayContext == null ? null : gatewayContext.dataDomain(),
                 gatewayContext == null ? null : gatewayContext.agentCode(),
+                gatewayContext == null ? null : gatewayContext.workflowCode(),
                 model.priceVersionId(),
                 totalTokens,
                 totalTokens,

@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/v1/chat/completions", "/v1/embeddings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/models").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/agent-runtime/configs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/workflow-runtime/configs/**").permitAll()
                 .requestMatchers("/mock-provider/**").permitAll()
                 .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                 .anyRequest().authenticated()

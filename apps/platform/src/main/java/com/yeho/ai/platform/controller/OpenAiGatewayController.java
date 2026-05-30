@@ -29,9 +29,10 @@ public class OpenAiGatewayController {
         @RequestHeader(value = "X-Yeho-System-Code", required = false) String systemCode,
         @RequestHeader(value = "X-Yeho-Data-Domain", required = false) String dataDomain,
         @RequestHeader(value = "X-Yeho-Agent-Code", required = false) String agentCode,
+        @RequestHeader(value = "X-Yeho-Workflow-Code", required = false) String workflowCode,
         HttpServletResponse servletResponse
     ) {
-        GatewayRequestContext gatewayContext = GatewayRequestContext.of(systemCode, dataDomain, agentCode);
+        GatewayRequestContext gatewayContext = GatewayRequestContext.of(systemCode, dataDomain, agentCode, workflowCode);
         if (Boolean.TRUE.equals(request.getStream())) {
             servletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
             servletResponse.setHeader("Cache-Control", "no-cache");

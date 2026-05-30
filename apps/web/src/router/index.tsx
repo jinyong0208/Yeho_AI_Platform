@@ -70,6 +70,7 @@ const AgentConfigPage = lazy(() => import('../pages/AgentConfigPage'));
 const AgentExecuteLogPage = lazy(() => import('../pages/AgentExecuteLogPage'));
 const RateLimitPage = lazy(() => import('../pages/RateLimitPage'));
 const DeveloperDocsPage = lazy(() => import('../pages/DeveloperDocsPage'));
+const WorkflowPage = lazy(() => import('../pages/WorkflowPage'));
 const PlaceholderPage = lazy(() => import('../pages/PlaceholderPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
@@ -249,7 +250,7 @@ const navItems: NavItem[] = [
     groupKey: 'navGroups.preview',
     to: '/workflow',
     labelKey: 'nav.workflowPreview',
-    roles: [USER_ROLES.SUPER_ADMIN],
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
     icon: IconSettingsAutomation,
     muted: true,
   },
@@ -275,7 +276,7 @@ const routeRoles: Record<string, UserRole[]> = {
   '/agent-configs': [USER_ROLES.TENANT_ADMIN],
   '/agent-execute-logs': [USER_ROLES.TENANT_ADMIN],
   '/agent-debug': [USER_ROLES.TENANT_ADMIN],
-  '/workflow': [USER_ROLES.SUPER_ADMIN],
+  '/workflow': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/rate-limits': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
   '/playground': [USER_ROLES.DEVELOPER],
   '/api-docs': [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN, USER_ROLES.DEVELOPER],
@@ -444,7 +445,7 @@ export const router = createBrowserRouter([
       { path: 'agent-configs', element: secured('/agent-configs', <AgentConfigPage />) },
       { path: 'agent-execute-logs', element: secured('/agent-execute-logs', <AgentExecuteLogPage />) },
       { path: 'agent-debug', element: secured('/agent-debug', <AgentDebugPage />) },
-      { path: 'workflow', element: secured('/workflow', <PlaceholderPage kind="workflow" />) },
+      { path: 'workflow', element: secured('/workflow', <WorkflowPage />) },
       { path: 'rate-limits', element: secured('/rate-limits', <RateLimitPage />) },
       { path: 'playground', element: secured('/playground', <PlaceholderPage kind="playground" />) },
       { path: 'api-docs', element: secured('/api-docs', <DeveloperDocsPage />) },

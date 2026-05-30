@@ -210,7 +210,7 @@ public class StartupDataInitializer implements ApplicationRunner {
             apiKey.setApiKeyHash(apiKeyHashService.hash(demoApiKey));
             apiKey.setApiKeyPrefix(apiKeyHashService.prefix(demoApiKey));
             apiKey.setName("Demo API Key");
-            apiKey.setScopes("admin:*,chat:completion,usage:read,billing:read,provider:test");
+            apiKey.setScopes("admin:*,chat:completion,usage:read,billing:read,provider:test,agent:read,workflow:read,embedding:create,models:read");
             apiKey.setStatus("ACTIVE");
             apiKey.setCreatedAt(now);
             tenantApiKeyMapper.insert(apiKey);

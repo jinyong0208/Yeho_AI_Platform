@@ -3,6 +3,7 @@ import {
   IconApi,
   IconBook2,
   IconChecklist,
+  IconGitBranch,
   IconKey,
   IconRoute,
   IconShieldCheck,
@@ -16,12 +17,13 @@ const sections = [
   { key: 'context', icon: IconApi },
   { key: 'scopes', icon: IconKey },
   { key: 'runtime', icon: IconSparkles },
+  { key: 'workflow', icon: IconGitBranch },
   { key: 'logs', icon: IconBook2 },
 ] as const;
 
 const integrationSteps = ['registerSystem', 'issueKey', 'sendContext'] as const;
 const systemExamples = ['edms', 'eqms', 'robot', 'customerService', 'iot', 'screen'] as const;
-const codeBlocks = ['envConfig', 'runtimeCurl', 'chatHeaders'] as const;
+const codeBlocks = ['envConfig', 'runtimeCurl', 'workflowRuntimeCurl', 'chatHeaders'] as const;
 
 export default function DeveloperDocsPage() {
   const { t } = useTranslation();

@@ -137,6 +137,7 @@ public class AiUsageLogService {
         log.setSystemCode(gatewayContext == null ? null : gatewayContext.systemCode());
         log.setDataDomain(gatewayContext == null ? null : gatewayContext.dataDomain());
         log.setAgentCode(gatewayContext == null ? null : gatewayContext.agentCode());
+        log.setWorkflowCode(gatewayContext == null ? null : gatewayContext.workflowCode());
         log.setApiKeyScopes(apiKeyScopes);
         log.setPriceVersionId(model == null ? null : model.getCurrentPriceVersionId());
         log.setInputTokens(inputTokens);
@@ -156,7 +157,8 @@ public class AiUsageLogService {
     }
 
     private void recordAgentExecuteLog(AiUsageLog usageLog, GatewayRequestContext gatewayContext) {
-        if (usageLog.getTenantId() == null || gatewayContext == null || !StringUtils.hasText(gatewayContext.agentCode())) {
+        if (usageLog.getTenantId() == null || gatewayContext == null
+                || (!StringUtils.hasText(gatewayContext.agentCode()) && !StringUtils.hasText(gatewayContext.workflowCode()))) {
             return;
         }
         AgentExecuteLog log = new AgentExecuteLog();
@@ -165,6 +167,7 @@ public class AiUsageLogService {
         log.setSystemCode(gatewayContext.systemCode());
         log.setDataDomain(gatewayContext.dataDomain());
         log.setAgentCode(gatewayContext.agentCode());
+        log.setWorkflowCode(gatewayContext.workflowCode());
         log.setModel(usageLog.getModelCode());
         log.setLatencyMs(usageLog.getLatencyMs());
         log.setInputTokens(toLong(usageLog.getInputTokens()));

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 public class ApiKeyScopeService {
     public static final String CHAT_COMPLETION = "chat:completion";
     public static final String AGENT_READ = "agent:read";
+    public static final String WORKFLOW_READ = "workflow:read";
 
     public void requireScope(TenantApiKey apiKey, String requiredScope) {
         if (apiKey == null) {

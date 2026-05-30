@@ -10,6 +10,7 @@ export type UsageLog = {
   systemCode?: string | null;
   dataDomain?: string | null;
   agentCode?: string | null;
+  workflowCode?: string | null;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -45,6 +46,7 @@ export type UsageQuery = {
   systemCode?: string | null;
   dataDomain?: string | null;
   agentCode?: string | null;
+  workflowCode?: string | null;
   success?: boolean | null;
   limit?: number;
 };

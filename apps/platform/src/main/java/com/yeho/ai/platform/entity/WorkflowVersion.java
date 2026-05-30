@@ -8,26 +8,22 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("agent_execute_log")
-public class AgentExecuteLog {
+@TableName("workflow_version")
+public class WorkflowVersion {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-    private String requestId;
     private Long tenantId;
-    private Long agentConfigId;
+    private Long workflowId;
+    private String workflowCode;
+    private String workflowName;
+    private String description;
     private String systemCode;
     private String dataDomain;
     private String agentCode;
-    private String workflowCode;
-    private String model;
-    private Long latencyMs;
-    private Long inputTokens;
-    private Long outputTokens;
-    private Long totalTokens;
-    private Long chargeCredits;
-    private Boolean success;
-    private String errorCode;
-    private String errorMessage;
-    private String traceId;
+    private String defaultModel;
+    private Integer versionNo;
+    private String schemaJson;
+    private String status;
+    private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
 }

@@ -52,6 +52,7 @@ export type AgentExecuteLog = {
   systemCode?: string;
   dataDomain?: string;
   agentCode?: string;
+  workflowCode?: string;
   model?: string;
   latencyMs?: number;
   inputTokens: number;
@@ -62,6 +63,41 @@ export type AgentExecuteLog = {
   errorCode?: string;
   errorMessage?: string;
   traceId?: string;
+  createdAt: string;
+};
+
+export type WorkflowDefinition = {
+  id: Id;
+  tenantId: Id;
+  workflowCode: string;
+  workflowName: string;
+  description?: string;
+  systemCode?: string;
+  dataDomain?: string;
+  agentCode?: string;
+  defaultModel?: string;
+  schemaJson: string;
+  status: string;
+  currentVersionNo?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkflowVersion = {
+  id: Id;
+  tenantId: Id;
+  workflowId: Id;
+  workflowCode: string;
+  workflowName: string;
+  description?: string;
+  systemCode?: string;
+  dataDomain?: string;
+  agentCode?: string;
+  defaultModel?: string;
+  versionNo: number;
+  schemaJson: string;
+  status: string;
+  publishedAt?: string;
   createdAt: string;
 };
 
@@ -88,6 +124,18 @@ export const orchestrationApi = {
     unwrap<AgentConfig>(await apiClient.put(`/agent-configs/${id}`, payload)),
   disableAgentConfig: async (id: Id) =>
     unwrap<AgentConfig>(await apiClient.delete(`/agent-configs/${id}`)),
-  agentExecuteLogs: async (params?: { tenantId?: Id; requestId?: string; traceId?: string }) =>
+  agentExecuteLogs: async (params?: { tenantId?: Id; requestId?: string; traceId?: string; workflowCode?: string }) =>
     unwrap<AgentExecuteLog[]>(await apiClient.get('/agent-execute-logs', { params })),
+  workflows: async (tenantId?: Id) =>
+    unwrap<WorkflowDefinition[]>(await apiClient.get('/workflows', { params: { tenantId } })),
+  createWorkflow: async (payload: Partial<WorkflowDefinition>) =>
+    unwrap<WorkflowDefinition>(await apiClient.post('/workflows', payload)),
+  updateWorkflow: async (id: Id, payload: Partial<WorkflowDefinition>) =>
+    unwrap<WorkflowDefinition>(await apiClient.put(`/workflows/${id}`, payload)),
+  publishWorkflow: async (id: Id) =>
+    unwrap<WorkflowVersion>(await apiClient.post(`/workflows/${id}/publish`)),
+  disableWorkflow: async (id: Id) =>
+    unwrap<WorkflowDefinition>(await apiClient.delete(`/workflows/${id}`)),
+  workflowVersions: async (id: Id) =>
+    unwrap<WorkflowVersion[]>(await apiClient.get(`/workflows/${id}/versions`)),
 };

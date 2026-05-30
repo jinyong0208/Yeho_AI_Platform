@@ -50,7 +50,8 @@ public class OpenAiEmbeddingEndpointFilter extends OncePerRequestFilter {
             GatewayRequestContext gatewayContext = GatewayRequestContext.of(
                     request.getHeader("X-Yeho-System-Code"),
                     request.getHeader("X-Yeho-Data-Domain"),
-                    request.getHeader("X-Yeho-Agent-Code")
+                    request.getHeader("X-Yeho-Agent-Code"),
+                    request.getHeader("X-Yeho-Workflow-Code")
             );
             Object result = embeddingGatewayService.embeddings(
                     request.getHeader(HttpHeaders.AUTHORIZATION),

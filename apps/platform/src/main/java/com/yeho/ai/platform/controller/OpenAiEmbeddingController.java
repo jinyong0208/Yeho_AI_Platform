@@ -29,13 +29,14 @@ public class OpenAiEmbeddingController {
             @RequestHeader(value = "X-Yeho-System-Code", required = false) String systemCode,
             @RequestHeader(value = "X-Yeho-Data-Domain", required = false) String dataDomain,
             @RequestHeader(value = "X-Yeho-Agent-Code", required = false) String agentCode,
+            @RequestHeader(value = "X-Yeho-Workflow-Code", required = false) String workflowCode,
             @RequestBody EmbeddingRequest request
     ) {
         try {
             EmbeddingResponse response = embeddingGatewayService.embeddings(
                     authorization,
                     request,
-                    GatewayRequestContext.of(systemCode, dataDomain, agentCode)
+                    GatewayRequestContext.of(systemCode, dataDomain, agentCode, workflowCode)
             );
             return ResponseEntity.ok(response);
         } catch (ResponseStatusException ex) {

@@ -123,6 +123,7 @@ export function AgentExecuteLogPage() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [requestId, setRequestId] = useState('');
   const [traceId, setTraceId] = useState('');
+  const [workflowCode, setWorkflowCode] = useState('');
 
   const tenantsQuery = useQuery({ queryKey: ['tenants', 'agent-logs'], queryFn: tenantApi.list, enabled: canSelectTenant });
   const tenants = canSelectTenant
@@ -139,12 +140,13 @@ export function AgentExecuteLogPage() {
   }, [tenantId, tenants]);
 
   const logs = useQuery({
-    queryKey: ['agent-execute-logs', tenantId, requestId, traceId],
+    queryKey: ['agent-execute-logs', tenantId, requestId, traceId, workflowCode],
     queryFn: () =>
       orchestrationApi.agentExecuteLogs({
         tenantId: tenantId ?? undefined,
         requestId: requestId || undefined,
         traceId: traceId || undefined,
+        workflowCode: workflowCode || undefined,
       }),
     enabled: hasTenantScope,
   });
@@ -167,7 +169,7 @@ export function AgentExecuteLogPage() {
       </Group>
 
       <Card className="surface-card" p="lg">
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }} spacing="md">
           <Select
             label={t('agentLogPage.tenant')}
             data={tenants.map((tenant) => ({ value: String(tenant.id), label: `${tenant.tenantName} / ${tenant.tenantCode}` }))}
@@ -178,6 +180,7 @@ export function AgentExecuteLogPage() {
           />
           <TextInput label={t('agentLogPage.requestId')} value={requestId} onChange={(event) => setRequestId(event.currentTarget.value)} />
           <TextInput label={t('agentLogPage.traceId')} value={traceId} onChange={(event) => setTraceId(event.currentTarget.value)} />
+          <TextInput label={t('agentLogPage.workflow')} value={workflowCode} onChange={(event) => setWorkflowCode(event.currentTarget.value)} />
           <Button color="dark" onClick={() => logs.refetch()} disabled={!hasTenantScope} style={{ alignSelf: 'end' }}>
             {t('agentLogPage.query')}
           </Button>
@@ -241,9 +244,10 @@ export function AgentExecuteLogPage() {
 
               <Divider my="md" />
 
-              <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }} spacing="md">
+              <SimpleGrid cols={{ base: 2, sm: 3, lg: 7 }} spacing="md">
                 <TraceField label={t('agentLogPage.systemCode')} value={primaryLog.systemCode ?? '-'} />
                 <TraceField label={t('agentLogPage.dataDomain')} value={primaryLog.dataDomain ?? '-'} />
+                <TraceField label={t('agentLogPage.workflow')} value={primaryLog.workflowCode ?? '-'} />
                 <TraceField label={t('agentLogPage.agent')} value={primaryLog.agentCode ?? '-'} />
                 <TraceField label={t('agentLogPage.model')} value={primaryLog.model ?? '-'} />
                 <TraceField

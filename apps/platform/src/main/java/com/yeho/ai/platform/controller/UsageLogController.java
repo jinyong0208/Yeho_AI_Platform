@@ -36,6 +36,7 @@ public class UsageLogController {
         @RequestParam(required = false) String systemCode,
         @RequestParam(required = false) String dataDomain,
         @RequestParam(required = false) String agentCode,
+        @RequestParam(required = false) String workflowCode,
         @RequestParam(required = false) Boolean success,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
@@ -49,6 +50,7 @@ public class UsageLogController {
             systemCode,
             dataDomain,
             agentCode,
+            workflowCode,
             success,
             from,
             to,
@@ -66,6 +68,7 @@ public class UsageLogController {
         @RequestParam(required = false) String systemCode,
         @RequestParam(required = false) String dataDomain,
         @RequestParam(required = false) String agentCode,
+        @RequestParam(required = false) String workflowCode,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
     ) {
@@ -77,6 +80,7 @@ public class UsageLogController {
             systemCode,
             dataDomain,
             agentCode,
+            workflowCode,
             from,
             to
         ));

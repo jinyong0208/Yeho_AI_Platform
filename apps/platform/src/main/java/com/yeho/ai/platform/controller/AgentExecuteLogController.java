@@ -30,6 +30,7 @@ public class AgentExecuteLogController {
             @RequestParam(required = false) Long tenantId,
             @RequestParam(required = false) String requestId,
             @RequestParam(required = false) String traceId,
+            @RequestParam(required = false) String workflowCode,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
@@ -37,6 +38,7 @@ public class AgentExecuteLogController {
                 tenantAccessService.scopeTenantId(user, tenantId),
                 requestId,
                 traceId,
+                workflowCode,
                 page,
                 size
         ));

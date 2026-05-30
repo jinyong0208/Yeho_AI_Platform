@@ -62,6 +62,7 @@ public class AgentRuntimeConfigService {
         log.setSystemCode(StringUtils.hasText(context.systemCode()) ? context.systemCode() : config.getSystemCode());
         log.setDataDomain(StringUtils.hasText(context.dataDomain()) ? context.dataDomain() : config.getDataDomain());
         log.setAgentCode(config.getAgentCode());
+        log.setWorkflowCode(context.workflowCode());
         log.setModel(config.getDefaultModel());
         log.setLatencyMs(System.currentTimeMillis() - startTime);
         log.setInputTokens(0L);
