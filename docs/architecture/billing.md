@@ -11,16 +11,16 @@ The platform bills with `Credits`. Currency conversion stays at the recharge/ord
 MVP exchange rate:
 
 - `1 CNY = 1000 Credits`
-- Model calls should normally consume small credit amounts; default Qwen / DeepSeek model rates are tuned for low per-call visible spend.
+- Regular document / RAG conversations should normally land around `500-2500 Credits`, about `0.5-2.5 CNY`.
 
 Default MVP model rates:
 
 ```text
-qwen-plus:      input 0.0100 Credits / Token, output 0.0300 Credits / Token
-deepseek-chat: input 0.0150 Credits / Token, output 0.0400 Credits / Token
+qwen-plus:      input 0.2000 Credits / Token, output 0.8000 Credits / Token
+deepseek-chat: input 0.3000 Credits / Token, output 0.9000 Credits / Token
 ```
 
-Example: `qwen-plus` with 1000 input tokens and 1000 output tokens consumes about 40 Credits, which is about `0.04 CNY` under the default exchange rate.
+Example: `qwen-plus` with 1000 input tokens and 1000 output tokens consumes about 1000 Credits, which is about `1 CNY` under the default exchange rate.
 
 ## Transaction Rules
 

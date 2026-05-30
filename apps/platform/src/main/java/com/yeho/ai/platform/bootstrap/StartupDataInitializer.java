@@ -186,19 +186,19 @@ public class StartupDataInitializer implements ApplicationRunner {
             deepSeekProvider.getId(),
             "deepseek-chat",
             "DeepSeek Chat",
-            new BigDecimal("0.0150"),
-            new BigDecimal("0.0400"),
-            new BigDecimal("0.0060"),
-            new BigDecimal("0.0180")
+            new BigDecimal("0.3000"),
+            new BigDecimal("0.9000"),
+            new BigDecimal("0.1200"),
+            new BigDecimal("0.3600")
         );
         upsertModel(
             qwenProvider.getId(),
             "qwen-plus",
             "Qwen Plus",
-            new BigDecimal("0.0100"),
-            new BigDecimal("0.0300"),
-            new BigDecimal("0.0040"),
-            new BigDecimal("0.0120")
+            new BigDecimal("0.2000"),
+            new BigDecimal("0.8000"),
+            new BigDecimal("0.0800"),
+            new BigDecimal("0.3200")
         );
 
         TenantApiKey apiKey = tenantApiKeyMapper.selectOne(new LambdaQueryWrapper<TenantApiKey>()
