@@ -84,6 +84,11 @@ export default function WalletPage() {
     queryFn: () => billingApi.rechargeOrders(selectedTenantId, 8),
     enabled: Boolean(selectedTenantId) && canCreateRechargeOrder,
   });
+  const reviewOrdersQuery = useQuery({
+    queryKey: ['recharge-orders', 'review'],
+    queryFn: () => billingApi.rechargeOrders(null, 50),
+    enabled: canManageRechargeOrder,
+  });
   const lowBalanceQuery = useQuery({
     queryKey: ['wallet-low-balance', selectedTenantId],
     queryFn: () => billingApi.lowBalanceAlerts(selectedTenantId, 10000, 5),
@@ -133,6 +138,7 @@ export default function WalletPage() {
       notifications.show({ color: 'teal', title: t('walletPage.orderConfirmedTitle'), message: t('walletPage.orderConfirmedMessage') });
       queryClient.invalidateQueries({ queryKey: ['wallet', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['recharge-orders', 'review'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-logs', selectedTenantId] });
       queryClient.invalidateQueries({ queryKey: ['wallet-low-balance', selectedTenantId] });
     },
@@ -142,6 +148,7 @@ export default function WalletPage() {
     onSuccess: () => {
       notifications.show({ color: 'teal', title: t('walletPage.orderClosedTitle'), message: t('walletPage.orderClosedMessage') });
       queryClient.invalidateQueries({ queryKey: ['recharge-orders', selectedTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['recharge-orders', 'review'] });
     },
   });
   const exportOrdersMutation = useMutation({
@@ -171,10 +178,15 @@ export default function WalletPage() {
   });
   const wallet = walletQuery.data;
   const orders = ordersQuery.data ?? [];
+  const reviewOrders = (reviewOrdersQuery.data ?? []).filter((order) => order.status === 'CREATED');
   const lowBalanceAlerts = lowBalanceQuery.data ?? [];
   const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
   const selectedTenantName = selectedTenant?.tenantName === t('walletPage.currentTenant') ? '' : selectedTenant?.tenantName;
   const previewCredits = formatCredits(form.values.credits);
+  const getTenantLabel = (tenantId: string) => {
+    const tenant = tenants.find((item) => item.id === tenantId);
+    return tenant ? `${tenant.tenantName} · ${tenant.tenantCode}` : tenantId;
+  };
 
   const openRechargeModal = () => {
     if (selectedTenantName && !form.values.payerName.trim()) {
@@ -234,6 +246,72 @@ export default function WalletPage() {
           }))}
         />
       </Card>
+
+      {canManageRechargeOrder && (
+        <Card className="surface-card" p="lg">
+          <Group justify="space-between" align="flex-start" mb="md">
+            <Stack gap={4}>
+              <Text fw={750}>{t('walletPage.reviewOrdersTitle')}</Text>
+              <Text size="sm" c="dimmed">
+                {t('walletPage.reviewOrdersDescription')}
+              </Text>
+            </Stack>
+            <Badge color={reviewOrders.length > 0 ? 'yellow' : 'teal'} variant="light" radius="sm">
+              {t('walletPage.pendingReviewCount', { count: reviewOrders.length })}
+            </Badge>
+          </Group>
+          <Stack gap={0} className="subtle-list">
+            {reviewOrders.map((order) => (
+              <Group key={order.id} className="list-row" p="md" justify="space-between" wrap="nowrap">
+                <Box>
+                  <Group gap="xs">
+                    <Text fw={650}>{order.orderNo}</Text>
+                    <Badge color="yellow" variant="light" radius="sm">
+                      {t('walletPage.waitingFinance')}
+                    </Badge>
+                  </Group>
+                  <Text size="xs" c="dimmed">
+                    {getTenantLabel(order.tenantId)} · {order.amountCny} CNY · {formatCredits(order.credits)} · {formatPayChannel(order.payChannel)}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {t('walletPage.paymentMeta', {
+                      payer: order.payerName || t('walletPage.unfilled'),
+                      proof: order.paymentProofNo || t('walletPage.unfilled'),
+                    })}
+                  </Text>
+                </Box>
+                <Group gap="xs" wrap="nowrap">
+                  <Button
+                    variant="light"
+                    color="dark"
+                    size="xs"
+                    leftSection={<IconCircleCheck size={14} />}
+                    loading={confirmMutation.isPending}
+                    onClick={() => openConfirmRecharge(order.id)}
+                  >
+                    {t('walletPage.confirmRecharge')}
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    color="red"
+                    size="xs"
+                    leftSection={<IconX size={14} />}
+                    loading={closeOrderMutation.isPending}
+                    onClick={() => openCloseOrder(order.id)}
+                  >
+                    {t('walletPage.close')}
+                  </Button>
+                </Group>
+              </Group>
+            ))}
+            {reviewOrders.length === 0 && (
+              <Box p="xl" ta="center">
+                <Text c="dimmed">{t('walletPage.emptyReviewOrders')}</Text>
+              </Box>
+            )}
+          </Stack>
+        </Card>
+      )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
         <MetricCard icon={<IconCoins size={20} />} label={t('walletPage.balanceCredits')} value={formatCredits(wallet?.balanceCredits)} color="teal" />
