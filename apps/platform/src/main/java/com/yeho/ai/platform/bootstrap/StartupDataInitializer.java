@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -185,19 +186,19 @@ public class StartupDataInitializer implements ApplicationRunner {
             deepSeekProvider.getId(),
             "deepseek-chat",
             "DeepSeek Chat",
-            1,
-            2,
-            1,
-            2
+            new BigDecimal("0.0150"),
+            new BigDecimal("0.0400"),
+            new BigDecimal("0.0060"),
+            new BigDecimal("0.0180")
         );
         upsertModel(
             qwenProvider.getId(),
             "qwen-plus",
             "Qwen Plus",
-            1,
-            2,
-            1,
-            2
+            new BigDecimal("0.0100"),
+            new BigDecimal("0.0300"),
+            new BigDecimal("0.0040"),
+            new BigDecimal("0.0120")
         );
 
         TenantApiKey apiKey = tenantApiKeyMapper.selectOne(new LambdaQueryWrapper<TenantApiKey>()
@@ -258,7 +259,15 @@ public class StartupDataInitializer implements ApplicationRunner {
         return provider;
     }
 
-    private void upsertModel(Long providerId, String modelCode, String displayName, int inputRate, int outputRate, int inputPrice, int outputPrice) {
+    private void upsertModel(
+        Long providerId,
+        String modelCode,
+        String displayName,
+        BigDecimal inputRate,
+        BigDecimal outputRate,
+        BigDecimal inputPrice,
+        BigDecimal outputPrice
+    ) {
         AiModel model = aiModelMapper.selectOne(new LambdaQueryWrapper<AiModel>()
             .eq(AiModel::getModelCode, modelCode));
         LocalDateTime now = LocalDateTime.now();
@@ -267,11 +276,11 @@ public class StartupDataInitializer implements ApplicationRunner {
             model.setProviderId(providerId);
             model.setModelCode(modelCode);
             model.setDisplayName(displayName);
-            model.setInputPrice(java.math.BigDecimal.valueOf(inputPrice));
-            model.setOutputPrice(java.math.BigDecimal.valueOf(outputPrice));
-            model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
-            model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
-            model.setBillingMultiplier(java.math.BigDecimal.ONE);
+            model.setInputPrice(inputPrice);
+            model.setOutputPrice(outputPrice);
+            model.setInputCreditRate(inputRate);
+            model.setOutputCreditRate(outputRate);
+            model.setBillingMultiplier(BigDecimal.ONE);
             model.setSupportStream(Boolean.TRUE);
             model.setSupportToolCall(Boolean.FALSE);
             model.setStatus("ACTIVE");
@@ -285,19 +294,19 @@ public class StartupDataInitializer implements ApplicationRunner {
         model.setProviderId(providerId);
         model.setDisplayName(displayName);
         if (model.getInputPrice() == null) {
-            model.setInputPrice(java.math.BigDecimal.valueOf(inputPrice));
+            model.setInputPrice(inputPrice);
         }
         if (model.getOutputPrice() == null) {
-            model.setOutputPrice(java.math.BigDecimal.valueOf(outputPrice));
+            model.setOutputPrice(outputPrice);
         }
         if (model.getInputCreditRate() == null) {
-            model.setInputCreditRate(java.math.BigDecimal.valueOf(inputRate));
+            model.setInputCreditRate(inputRate);
         }
         if (model.getOutputCreditRate() == null) {
-            model.setOutputCreditRate(java.math.BigDecimal.valueOf(outputRate));
+            model.setOutputCreditRate(outputRate);
         }
         if (model.getBillingMultiplier() == null) {
-            model.setBillingMultiplier(java.math.BigDecimal.ONE);
+            model.setBillingMultiplier(BigDecimal.ONE);
         }
         model.setSupportStream(Boolean.TRUE);
         model.setSupportToolCall(Boolean.FALSE);
