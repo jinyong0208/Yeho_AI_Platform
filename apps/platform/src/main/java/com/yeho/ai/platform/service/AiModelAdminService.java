@@ -26,6 +26,7 @@ public class AiModelAdminService {
     private final AiModelMapper aiModelMapper;
     private final AiProviderMapper aiProviderMapper;
     private final AiModelPriceVersionService aiModelPriceVersionService;
+    private final ModelPricingPolicyService modelPricingPolicyService;
 
     @Transactional
     public ModelResponse create(ModelCreateRequest request) {
@@ -45,6 +46,7 @@ public class AiModelAdminService {
         model.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus() : "ACTIVE");
         model.setCreatedAt(now);
         model.setUpdatedAt(now);
+        modelPricingPolicyService.validate(model);
         aiModelMapper.insert(model);
         aiModelPriceVersionService.createSnapshot(model, "Initial price version");
         return toResponse(model, provider.getProviderCode());
@@ -112,6 +114,7 @@ public class AiModelAdminService {
             model.setStatus(request.getStatus());
         }
         model.setUpdatedAt(LocalDateTime.now());
+        modelPricingPolicyService.validate(model);
         aiModelMapper.updateById(model);
         if (pricingChanged) {
             aiModelPriceVersionService.createSnapshot(model, "Model price updated");

@@ -21,6 +21,7 @@ public class AiModelPriceVersionService {
 
     private final AiModelMapper aiModelMapper;
     private final AiModelPriceVersionMapper aiModelPriceVersionMapper;
+    private final ModelPricingPolicyService modelPricingPolicyService;
 
     @Transactional(readOnly = true)
     public List<ModelPriceVersionResponse> list(Long modelId) {
@@ -42,6 +43,7 @@ public class AiModelPriceVersionService {
         model.setOutputCreditRate(nullSafe(request.getOutputCreditRate(), model.getOutputCreditRate(), BigDecimal.ZERO));
         model.setBillingMultiplier(nullSafe(request.getBillingMultiplier(), model.getBillingMultiplier(), BigDecimal.ONE));
         model.setUpdatedAt(LocalDateTime.now());
+        modelPricingPolicyService.validate(model);
         aiModelMapper.updateById(model);
         return toResponse(createSnapshot(model, request.getRemark()));
     }
