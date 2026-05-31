@@ -346,12 +346,23 @@ embedding:create
 POST /v1/chat/completions
 Authorization: Bearer <yeho-tenant-api-key>
 Content-Type: application/json
+X-Yeho-System-Code: <system_code>
+X-Yeho-Data-Domain: <data_domain>
+X-Yeho-Agent-Code: <agent_code>
+X-Yeho-Workflow-Code: <workflow_code>
 ```
 
 API Key 必须包含 scope：
 
 ```text
 chat:completion
+```
+
+如业务系统使用 Yeho 平台上的 Agent / Workflow 配置，还需要：
+
+```text
+agent:read
+workflow:read
 ```
 
 请求：
@@ -407,6 +418,7 @@ chat:completion
 - 不要把用户无权限的数据放入 Prompt。
 - 不要在业务系统日志中打印完整 Prompt。
 - 业务系统应保存自己的业务调用记录，但敏感上下文必须脱敏或只保存摘要。
+- `X-Yeho-Workflow-Code` 仅用于 Chat / Agent 场景的日志关联；Embedding 请求不要携带 Agent / Workflow Header。
 
 ## 9. RAG 检索接口规范
 
@@ -569,6 +581,8 @@ X-Request-Id: <request_id>
   "user_id": "user_1001",
   "system_code": "EDMS",
   "capability": "rag_chat",
+  "agent_code": "document_search",
+  "workflow_code": "document_qa_workflow",
   "yeho_model": "qwen-plus",
   "yeho_api": "/v1/chat/completions",
   "source_ids": ["doc_10001"],
@@ -606,6 +620,8 @@ X-Request-Id: <request_id>
 
 ```text
 chat:completion
+agent:read
+workflow:read
 embedding:create
 models:read
 usage:read
@@ -682,6 +698,7 @@ edms_20260523100000_a8f31c
 - 已有租户映射关系。
 - 已申请 Yeho Tenant API Key。
 - API Key 具备所需 scopes。
+- 如使用 Workflow，已配置 `workflow_code` 并给 API Key 开通 `workflow:read`。
 - 已完成本地数据权限模型。
 - 已确定向量数据库方案。
 - 已确定 embedding 模型和维度。
@@ -810,4 +827,3 @@ response = client.chat.completions.create(
 
 print(response.choices[0].message.content)
 ```
-

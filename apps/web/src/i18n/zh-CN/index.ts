@@ -361,7 +361,8 @@ const zhCN = {
         item1: 'chat:completion 用于对话和 RAG 回答。',
         item2: 'embedding:create 用于语义检索向量化。',
         item3: 'agent:read 用于读取 Agent Runtime 配置。',
-        item4: 'models:read 用于模型列表和状态检查。',
+        item4: 'workflow:read 用于读取 Workflow 预览配置。',
+        item5: 'models:read 用于模型列表和状态检查。',
       },
       runtime: {
         title: 'Prompt / Agent 使用边界',
@@ -376,6 +377,7 @@ const zhCN = {
         item1: 'Yeho 保存 workflow_code、schema_json、绑定 Agent、默认模型、业务系统和数据域。',
         item2: '业务系统可读取已发布 Workflow 配置，并在本地执行检索、OCR、审核或问答步骤。',
         item3: '本阶段不启用平台侧节点执行、循环节点、Tool Runtime 或多 Agent 自治 Runtime。',
+        item4: '已接入系统新增 YEHO_AI_WORKFLOW_CODE，并在 Chat 请求携带 X-Yeho-Workflow-Code 即可关联日志。',
       },
       logs: {
         title: '日志规则',
@@ -425,7 +427,7 @@ const zhCN = {
       envConfig: {
         title: '业务系统环境变量',
         code:
-          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
+          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_WORKFLOW_CODE=<workflow_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: '读取 Agent Runtime 配置',

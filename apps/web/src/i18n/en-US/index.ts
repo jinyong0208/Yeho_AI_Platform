@@ -361,7 +361,8 @@ const enUS = {
         item1: 'chat:completion is used for chat and RAG answers.',
         item2: 'embedding:create is used for semantic-search vectorization.',
         item3: 'agent:read is used to read Agent Runtime configuration.',
-        item4: 'models:read is used for model listing and health checks.',
+        item4: 'workflow:read is used to read Workflow Preview configuration.',
+        item5: 'models:read is used for model listing and health checks.',
       },
       runtime: {
         title: 'Prompt / Agent Boundary',
@@ -376,6 +377,7 @@ const enUS = {
         item1: 'Yeho stores workflow_code, schema_json, bound Agent, default model, system code, and data domain.',
         item2: 'Business systems can read the published workflow config and execute retrieval, OCR, review, or answer steps locally.',
         item3: 'There is no platform-side node execution, loop node, Tool Runtime, or multi-agent autonomous runtime in this phase.',
+        item4: 'Existing systems only need YEHO_AI_WORKFLOW_CODE and X-Yeho-Workflow-Code on Chat requests to link logs.',
       },
       logs: {
         title: 'Logging Rules',
@@ -425,7 +427,7 @@ const enUS = {
       envConfig: {
         title: 'Business system environment variables',
         code:
-          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
+          'YEHO_AI_BASE_URL=https://api.yehosoft.com/v1\nYEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1\nYEHO_AI_CHAT_MODEL=qwen-plus\nYEHO_AI_EMBEDDING_MODEL=text-embedding-v4\nYEHO_AI_AGENT_CODE=<agent_code>\nYEHO_AI_WORKFLOW_CODE=<workflow_code>\nYEHO_AI_SYSTEM_CODE=<system_code>\nYEHO_AI_DATA_DOMAIN=<data_domain>',
       },
       runtimeCurl: {
         title: 'Read Agent Runtime config',

@@ -71,34 +71,18 @@ YEHO_AI_API_KEY=你的 Yeho API Key
 YEHO_AI_SYSTEM_CODE=edms
 YEHO_AI_DATA_DOMAIN=document_text
 YEHO_AI_AGENT_CODE=document_search
+YEHO_AI_WORKFLOW_CODE=document_qa_workflow
 YEHO_AI_CHAT_MODEL=qwen-plus
 YEHO_AI_EMBEDDING_MODEL=text-embedding-v4
 YEHO_AI_TIMEOUT_SECONDS=30
 YEHO_AI_MAX_RETRIES=2
 ```
 
-如果业务系统运行在本机：
-
-```bash
-YEHO_AI_BASE_URL=http://127.0.0.1:8080/v1
-```
-
-如果业务系统运行在 Docker 容器内，并访问宿主机上的 Yeho 后端：
-
-```bash
-YEHO_AI_BASE_URL=http://host.docker.internal:8080/v1
-```
-
-如果业务系统和 Yeho 后端在同一个 Docker Compose 网络内：
-
-```bash
-YEHO_AI_BASE_URL=http://platform:8080/v1
-```
-
-生产环境推荐：
+SaaS 生产环境统一使用：
 
 ```bash
 YEHO_AI_BASE_URL=https://api.yehosoft.com/v1
+YEHO_AI_PLATFORM_API_BASE_URL=https://api.yehosoft.com/api/v1
 ```
 
 ## 4. 必带 Header
@@ -111,6 +95,7 @@ Content-Type: application/json
 X-Yeho-System-Code: {YEHO_AI_SYSTEM_CODE}
 X-Yeho-Data-Domain: {YEHO_AI_DATA_DOMAIN}
 X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
+X-Yeho-Workflow-Code: {YEHO_AI_WORKFLOW_CODE}
 ```
 
 字段说明：
@@ -120,9 +105,15 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 | `Authorization` | 是 | Yeho API Key |
 | `X-Yeho-System-Code` | 建议必填 | 业务系统编码，例如 `edms`、`eqms`、`robot` |
 | `X-Yeho-Data-Domain` | 建议必填 | 数据域，例如 `document_text`、`faq`、`voice_transcript` |
-| `X-Yeho-Agent-Code` | 可选 | Agent / 场景编码，例如 `document_search`、`customer_reply` |
+| `X-Yeho-Agent-Code` | Chat 场景可选 | Agent / 场景编码，例如 `document_search`、`customer_reply` |
+| `X-Yeho-Workflow-Code` | Chat 场景可选 | Workflow 编码，例如 `document_qa_workflow`、`invoice_review_flow` |
 
 如果 API Key 配置了 `allowedSystemCodes` 或 `allowedDataDomains`，则对应 Header 变为必填，否则会返回 403。
+
+建议：
+
+- `chat/completions` 可携带 `X-Yeho-Agent-Code` 和 `X-Yeho-Workflow-Code`，用于 Prompt / Agent / Workflow 审计关联。
+- `embeddings` 只携带 `X-Yeho-System-Code` 和 `X-Yeho-Data-Domain`，避免把向量化请求误记为 Agent / Workflow 执行。
 
 ## 5. API Key 权限
 
@@ -132,6 +123,7 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 | --- | --- |
 | 聊天 / 文本生成 | `chat:completion` |
 | 读取 Agent / Prompt 配置 | `agent:read` 或 `chat:completion` |
+| 读取 Workflow 预览配置 | `workflow:read` 或 `chat:completion` |
 | Embedding | `embedding:create` |
 | 查询模型列表 | `models:read` |
 
@@ -140,7 +132,7 @@ X-Yeho-Agent-Code: {YEHO_AI_AGENT_CODE}
 ```json
 {
   "name": "edms-rag-key",
-  "scopes": ["chat:completion", "agent:read", "embedding:create", "models:read"],
+  "scopes": ["chat:completion", "agent:read", "workflow:read", "embedding:create", "models:read"],
   "allowedSystemCodes": ["edms"],
   "allowedDataDomains": ["document_text", "metadata"]
 }
@@ -193,7 +185,43 @@ Prompt 模板解析规则：
 
 业务系统拿到模板后，在本地完成 `{{question}}`、`{{contexts}}` 等变量替换，再调用 `/v1/chat/completions`。
 
-## 7. Chat Completions
+## 7. Workflow Preview Config
+
+Workflow 第一阶段只作为配置契约和审计关联，不在 Yeho 平台内执行节点。
+
+业务系统可以按 `workflow_code` 读取已发布 Workflow 配置：
+
+```http
+GET /api/v1/workflow-runtime/configs/{workflow_code}
+```
+
+请求示例：
+
+```bash
+curl ${YEHO_AI_PLATFORM_API_BASE_URL}/workflow-runtime/configs/${YEHO_AI_WORKFLOW_CODE} \
+  -H "Authorization: Bearer ${YEHO_AI_API_KEY}" \
+  -H "X-Yeho-System-Code: ${YEHO_AI_SYSTEM_CODE}" \
+  -H "X-Yeho-Data-Domain: ${YEHO_AI_DATA_DOMAIN}"
+```
+
+返回中的关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `data.workflowCode` | Workflow 编码 |
+| `data.agentCode` | Workflow 绑定的 Agent 编码，可继续读取 Agent Runtime Config |
+| `data.defaultModel` | 默认聊天模型 |
+| `data.versionNo` | 当前发布版本 |
+| `data.schemaJson` | 业务系统本地执行的流程契约 |
+
+调用方处理规则：
+
+- 若业务系统配置了 `YEHO_AI_WORKFLOW_CODE`，启动时或缓存失效时读取 Workflow 配置。
+- 若 Workflow 返回 `agentCode`，继续复用原有 Agent Runtime Config 读取逻辑。
+- 真实检索、OCR、审核、排序、权限过滤和上下文组装仍在业务系统本地完成。
+- 最终调用 `/v1/chat/completions` 时携带 `X-Yeho-Workflow-Code`，用于 Usage Log 和 Agent Log 关联。
+
+## 8. Chat Completions
 
 接口：
 
@@ -210,6 +238,7 @@ curl https://api.yehosoft.com/v1/chat/completions \
   -H "X-Yeho-System-Code: edms" \
   -H "X-Yeho-Data-Domain: document_text" \
   -H "X-Yeho-Agent-Code: document_search" \
+  -H "X-Yeho-Workflow-Code: document_qa_workflow" \
   -d '{
     "model": "qwen-plus",
     "messages": [
@@ -238,9 +267,9 @@ curl https://api.yehosoft.com/v1/chat/completions \
 
 当前建议业务系统先使用 `stream=false`。如使用 `stream=true`，调用方需要按 SSE 处理返回。
 
-如果请求携带 `X-Yeho-Agent-Code`，Yeho 会在模型调用完成后写入 Agent 日志，记录 request_id、system_code、data_domain、agent_code、模型、延迟、Token 和 Credits。Agent 日志不保存 Prompt 原文、文档原文、切片或向量。
+如果请求携带 `X-Yeho-Agent-Code` 或 `X-Yeho-Workflow-Code`，Yeho 会在模型调用完成后写入 Agent 日志，记录 request_id、system_code、data_domain、agent_code、workflow_code、模型、延迟、Token 和 Credits。Agent 日志不保存 Prompt 原文、文档原文、切片或向量。
 
-## 8. Embeddings
+## 9. Embeddings
 
 接口：
 
@@ -278,7 +307,7 @@ YEHO_AI_EMBEDDING_MODEL: text-embedding-v4
 EDMS_VECTOR_EMBEDDING_DIMENSION: 1024
 ```
 
-## 9. RAG 调用方式
+## 10. RAG 调用方式
 
 RAG 必须在业务系统侧完成：
 
@@ -295,7 +324,7 @@ RAG 必须在业务系统侧完成：
 
 业务系统传给 Yeho 的 Prompt 应只包含完成回答所需的最小上下文，并避免发送无权限内容。
 
-## 10. 错误响应
+## 11. 错误响应
 
 OpenAI-compatible 错误结构：
 
@@ -320,7 +349,7 @@ OpenAI-compatible 错误结构：
 | 429 | 触发 RPM / TPM / Daily Credits / 并发限制 | 降低请求频率或调整限流 |
 | 502 | Provider 调用失败 | 查看 Provider Health 与 Usage Log |
 
-## 11. 调用方必须记录的本地信息
+## 12. 调用方必须记录的本地信息
 
 业务系统本地建议记录：
 
@@ -328,6 +357,7 @@ OpenAI-compatible 错误结构：
 - `system_code`
 - `data_domain`
 - `agent_code`
+- `workflow_code`
 - `user_id`
 - `tenant_id`
 - 本地业务对象 ID
@@ -337,7 +367,7 @@ OpenAI-compatible 错误结构：
 
 注意：这些业务数据由调用方保存，Yeho AI Platform 不集中保存。
 
-## 12. 最小集成检查清单
+## 13. 最小集成检查清单
 
 接入前确认：
 
@@ -347,12 +377,13 @@ OpenAI-compatible 错误结构：
 - API Key 具备必要 scope。
 - API Key 的 `allowedSystemCodes` 包含调用方 `system_code`。
 - API Key 的 `allowedDataDomains` 包含调用方 `data_domain`。
+- 如使用 Workflow，API Key 具备 `workflow:read`，业务系统已配置 `YEHO_AI_WORKFLOW_CODE`。
 - 调用方 Header 已正确传入。
 - Chat 模型已启用。
 - Embedding 模型维度与向量库 Collection 一致。
 - 租户钱包有足够 Credits。
 
-## 13. 标准环境变量示例
+## 14. 标准环境变量示例
 
 ```bash
 YEHO_AI_ENABLED=true
@@ -362,6 +393,7 @@ YEHO_AI_API_KEY=yh_sk_xxx
 YEHO_AI_SYSTEM_CODE=edms
 YEHO_AI_DATA_DOMAIN=document_text
 YEHO_AI_AGENT_CODE=document_search
+YEHO_AI_WORKFLOW_CODE=document_qa_workflow
 YEHO_AI_CHAT_MODEL=qwen-plus
 YEHO_AI_EMBEDDING_MODEL=text-embedding-v4
 YEHO_AI_TIMEOUT_SECONDS=30

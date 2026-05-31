@@ -121,6 +121,7 @@ export default function DeveloperDocsPage() {
                     'item2',
                     'item3',
                     'item4',
+                    'item5',
                   ].map((itemKey) => {
                     const value = t(`developerDocsPage.sections.${section.key}.${itemKey}`, {
                       defaultValue: '',

@@ -127,6 +127,19 @@ Workflow 第一阶段是配置中心和调用契约，不是执行引擎。
 - 拼装上下文
 - 调用 Yeho Chat / Embedding API
 
+已接入系统需要新增的配置项：
+
+```bash
+YEHO_AI_WORKFLOW_CODE=<workflow_code>
+```
+
+处理规则：
+
+- 启动时或缓存失效时读取 `/api/v1/workflow-runtime/configs/{workflow_code}`。
+- 若 Workflow 返回 `agentCode`，继续复用既有 Agent Runtime Config 读取逻辑。
+- Chat 调用携带 `X-Yeho-Workflow-Code`，用于 Usage Log 与 Agent Log 关联。
+- Embedding 调用建议只携带 `X-Yeho-System-Code` 和 `X-Yeho-Data-Domain`，不要携带 Agent / Workflow Header。
+
 管理接口：
 
 ```http
@@ -205,6 +218,8 @@ Content-Type: application/json
 ```
 
 携带 `X-Yeho-Workflow-Code` 后，Yeho 会在 `ai_usage_log` 和 `agent_execute_log` 中记录 `workflow_code`，方便统计哪个流程最常被调用、最耗费积分或失败率最高。
+
+注意：`X-Yeho-Workflow-Code` 推荐只用于最终 Chat / Agent 场景。纯向量化请求应避免携带该 Header，以免把索引任务与业务流程执行混在一起。
 
 ## Agent Execute Logs
 
