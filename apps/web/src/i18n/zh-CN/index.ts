@@ -790,6 +790,7 @@ const zhCN = {
     systemCode: '业务系统',
     dataDomain: '数据域',
     agentCode: 'Agent',
+    agentHint: '复用 Agent 配置页面里的 agent_code；如果列表为空，也可以直接输入编码。',
     defaultModel: '默认模型',
     previewSteps: '流程预览',
     unnamedStep: '未命名步骤',

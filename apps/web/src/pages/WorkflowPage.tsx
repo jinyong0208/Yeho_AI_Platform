@@ -451,7 +451,12 @@ export default function WorkflowPage() {
               <TextInput label={t('workflowPage.workflowName')} required {...form.getInputProps('workflowName')} />
               <TextInput label={t('workflowPage.systemCode')} placeholder="edms" {...form.getInputProps('systemCode')} />
               <TextInput label={t('workflowPage.dataDomain')} placeholder="document_text" {...form.getInputProps('dataDomain')} />
-              <Select label={t('workflowPage.agentCode')} data={agentOptions} searchable clearable {...form.getInputProps('agentCode')} />
+              <Autocomplete
+                label={t('workflowPage.agentCode')}
+                description={t('workflowPage.agentHint')}
+                data={agentOptions}
+                {...form.getInputProps('agentCode')}
+              />
               <Autocomplete label={t('workflowPage.defaultModel')} data={modelOptions} {...form.getInputProps('defaultModel')} />
             </SimpleGrid>
             <TextInput label={t('workflowPage.descriptionLabel')} {...form.getInputProps('description')} />

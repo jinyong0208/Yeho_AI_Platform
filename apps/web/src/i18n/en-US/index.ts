@@ -791,6 +791,7 @@ const enUS = {
     systemCode: 'Business System',
     dataDomain: 'Data Domain',
     agentCode: 'Agent',
+    agentHint: 'Reuse an agent_code from Agent Configs. If the list is empty, you can enter the code directly.',
     defaultModel: 'Default Model',
     previewSteps: 'Preview Steps',
     unnamedStep: 'Unnamed step',
