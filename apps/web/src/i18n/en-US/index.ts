@@ -1,6 +1,6 @@
 const enUS = {
   appName: 'Yeho AI Platform',
-  appTagline: 'Enterprise AI Gateway / Billing / Audit / Runtime Platform',
+  appTagline: 'Enterprise AI Gateway / Audit / Runtime Platform',
   login: 'Sign in',
   logout: 'Sign out',
   tenantCode: 'Tenant code',
@@ -67,7 +67,7 @@ const enUS = {
     providerManagement: 'Provider Management',
     providerHealth: 'Provider Health',
     providerAnalytics: 'Provider Analytics',
-    billingAnalytics: 'Billing Analytics',
+    billingAnalytics: 'Revenue Analytics',
     globalAudit: 'Global Audit',
     rateLimits: 'Rate Limits',
     apiKeyScope: 'API Key Scope',
@@ -160,7 +160,7 @@ const enUS = {
     priceCreatedTitle: 'Price version created',
     priceCreatedMessage: 'Future usage logs will use the new price version.',
     newPriceVersion: 'New price version',
-    priceVersionDescription: 'Cost is used for profit analytics; customer price is used for billing. Saving validates the margin floor.',
+    priceVersionDescription: 'Cost is used for profit analytics; customer price is used for Credits deduction. Saving validates the margin floor.',
     createPriceVersion: 'Create price version',
     versionNo: 'Version {{version}}',
     current: 'current',
@@ -302,7 +302,7 @@ const enUS = {
     title: 'Platform Developer Docs',
     badge: 'Standard Integration',
     description:
-      'Unified integration rules for all business systems. Yeho AI Platform governs the model gateway, billing, audit, API keys, Prompt, and Agent configuration; each business system owns its data, permissions, retrieval, and vector indexes.',
+      'Unified integration rules for all business systems. Yeho AI Platform governs the model gateway, Credits, audit, API keys, Prompt, and Agent configuration; each business system owns its data, permissions, retrieval, and vector indexes.',
     overview: {
       gateway: {
         label: 'Model Gateway',
@@ -697,8 +697,8 @@ const enUS = {
     empty: 'No provider cost data.',
   },
   billingAnalyticsPage: {
-    title: 'Billing Analytics',
-    description: 'Summarize requests, tokens, Credits, cost, and profit from usage logs to observe the billing loop.',
+    title: 'Revenue Analytics',
+    description: 'Summarize requests, tokens, Credits, cost, and profit from usage logs to observe revenue and cost structure.',
     dailyProfit: 'Daily Profit',
     providerCredits: 'Provider Credits',
     topModels: 'Top Models',
@@ -860,7 +860,7 @@ const enUS = {
     templates: {
       documentQa: {
         name: 'Document Q&A',
-        description: 'Business system handles local retrieval and permission filtering; Yeho handles answer, billing, and audit.',
+        description: 'Business system handles local retrieval and permission filtering; Yeho handles answer, Credits, and audit.',
       },
       documentSummary: {
         name: 'Document Summary',

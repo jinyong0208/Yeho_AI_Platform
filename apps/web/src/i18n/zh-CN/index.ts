@@ -1,6 +1,6 @@
 const zhCN = {
   appName: 'Yeho AI Platform',
-  appTagline: '企业级 AI 网关 / 计费 / 审计 / Runtime 平台',
+  appTagline: '企业级 AI 网关 / 审计 / Runtime 平台',
   login: '登录',
   logout: '退出',
   tenantCode: '租户编码',
@@ -67,7 +67,7 @@ const zhCN = {
     providerManagement: '模型配置',
     providerHealth: '模型供应商状态',
     providerAnalytics: '模型供应商分析',
-    billingAnalytics: '计费分析',
+    billingAnalytics: '收益分析',
     globalAudit: '全局审计',
     rateLimits: '限流配置',
     apiKeyScope: 'API Key 权限',
@@ -133,7 +133,7 @@ const zhCN = {
   },
   modelPage: {
     title: '模型配置',
-    description: '通过 model_code 路由供应商，统一维护供应商成本、客户售价、积分计费倍率和能力开关。',
+    description: '通过 model_code 路由供应商，统一维护供应商成本、客户售价、积分倍率和能力开关。',
     createModel: '新建模型',
     createConfig: '新建模型配置',
     provider: '供应商',
@@ -232,7 +232,7 @@ const zhCN = {
     badge: 'MVP 收口',
     title: 'AI Runtime 控制台',
     description:
-      '统一观察网关健康度、Provider 状态、调用质量、积分消耗和近期网关请求，聚焦企业 AI Runtime 的稳定性与计费闭环。',
+      '统一观察网关健康度、Provider 状态、调用质量、积分消耗和近期网关请求，聚焦企业 AI Runtime 的稳定性与额度闭环。',
     gatewayOnline: '网关正常',
     gatewayAttention: '网关需关注',
     managedProviderHealth: '平台托管',
@@ -302,7 +302,7 @@ const zhCN = {
     title: '平台开发文档',
     badge: '标准接入',
     description:
-      '面向所有业务系统的统一接入规范。Yeho AI Platform 负责模型网关、计费、审计、API Key、Prompt 和 Agent 配置；业务系统负责自己的数据、权限、检索和向量索引。',
+      '面向所有业务系统的统一接入规范。Yeho AI Platform 负责模型网关、额度、审计、API Key、Prompt 和 Agent 配置；业务系统负责自己的数据、权限、检索和向量索引。',
     overview: {
       gateway: {
         label: '模型网关',
@@ -696,8 +696,8 @@ const zhCN = {
     empty: '暂无 Provider 成本数据。',
   },
   billingAnalyticsPage: {
-    title: '计费分析',
-    description: '按调用日志汇总请求、Token、积分消耗、成本和利润，帮助平台管理员观察计费闭环。',
+    title: '收益分析',
+    description: '按调用日志汇总请求、Token、积分消耗、成本和利润，帮助平台管理员观察收入与成本结构。',
     dailyProfit: '每日利润',
     providerCredits: 'Provider 积分消耗',
     topModels: '热门模型',
@@ -859,7 +859,7 @@ const zhCN = {
     templates: {
       documentQa: {
         name: '文档问答',
-        description: '业务系统本地检索和权限过滤，Yeho 负责模型回答、计费和审计。',
+        description: '业务系统本地检索和权限过滤，Yeho 负责模型回答、额度和审计。',
       },
       documentSummary: {
         name: '文档总结',
