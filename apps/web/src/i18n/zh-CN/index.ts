@@ -215,6 +215,8 @@ const zhCN = {
     statusLabels: {
       ACTIVE: '启用',
       DISABLED: '停用',
+      REVOKED: '已吊销',
+      EXPIRED: '已过期',
       DELETED: '已删除',
       CREATED: '已创建',
       PAID: '已支付',

@@ -215,6 +215,8 @@ const enUS = {
     statusLabels: {
       ACTIVE: 'Active',
       DISABLED: 'Disabled',
+      REVOKED: 'Revoked',
+      EXPIRED: 'Expired',
       DELETED: 'Deleted',
       CREATED: 'Created',
       PAID: 'Paid',
