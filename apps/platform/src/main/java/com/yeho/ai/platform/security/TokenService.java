@@ -28,11 +28,12 @@ public class TokenService {
     public String create(TenantUser user, List<String> roles) {
         String token = "yh_" + UUID.randomUUID().toString().replace("-", "");
         var payload = new AuthenticatedUser(user.getId(), user.getTenantId(), user.getUsername(), roles);
+        long effectiveTokenTtlHours = tokenTtlHours > 0 ? tokenTtlHours : 12;
         try {
             redisTemplate.opsForValue().set(
                 TOKEN_PREFIX + token,
                 objectMapper.writeValueAsString(payload),
-                Duration.ofHours(tokenTtlHours)
+                Duration.ofHours(effectiveTokenTtlHours)
             );
         } catch (JsonProcessingException ex) {
             throw new BusinessException("Failed to create login token");

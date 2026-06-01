@@ -18,11 +18,20 @@ interface AuthState {
   logout: () => void;
 }
 
+const DEFAULT_TOKEN_TTL_SECONDS = 12 * 60 * 60;
+
+const normalizeExpiresInSeconds = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 60) {
+    return DEFAULT_TOKEN_TTL_SECONDS;
+  }
+  return value;
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      login: (accessToken, user, expiresInSeconds = 12 * 60 * 60) =>
-        set({ accessToken, user, tokenExpiresAt: Date.now() + expiresInSeconds * 1000 }),
+      login: (accessToken, user, expiresInSeconds) =>
+        set({ accessToken, user, tokenExpiresAt: Date.now() + normalizeExpiresInSeconds(expiresInSeconds) * 1000 }),
       logout: () => set({ accessToken: undefined, tokenExpiresAt: undefined, user: undefined }),
     }),
     {

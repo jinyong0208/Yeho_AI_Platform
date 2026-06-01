@@ -33,6 +33,11 @@ const redirectToLogin = () => {
   }
 };
 
+const isAuthEndpoint = (url?: string) => {
+  const value = url ?? '';
+  return value.includes('/auth/login') || value.includes('/auth/captcha');
+};
+
 const expireSession = () => {
   const token = useAuthStore.getState().accessToken;
   if (!token) {
@@ -54,6 +59,9 @@ const expireSession = () => {
 };
 
 const attachAuthToken = (config: InternalAxiosRequestConfig) => {
+  if (isAuthEndpoint(config.url)) {
+    return config;
+  }
   const { accessToken, tokenExpiresAt } = useAuthStore.getState();
   if (accessToken && tokenExpiresAt && Date.now() >= tokenExpiresAt) {
     expireSession();
@@ -68,11 +76,8 @@ const attachAuthToken = (config: InternalAxiosRequestConfig) => {
 const handleAuthError = (error: AxiosError) => {
   const status = error.response?.status;
   const url = error.config?.url ?? '';
-  const data = error.response?.data as { message?: string } | undefined;
-  const isLoginRequest = url.includes('/auth/login');
-  const looksUnauthenticated = status === 401 || (status === 403 && data?.message === 'Access denied');
 
-  if (!isLoginRequest && looksUnauthenticated) {
+  if (!isAuthEndpoint(url) && status === 401) {
     expireSession();
   }
   return Promise.reject(error);

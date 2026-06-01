@@ -59,10 +59,11 @@ public class AuthService {
 
         List<String> roles = sysRoleMapper.findRoleCodesByUserId(user.getId());
         String token = tokenService.create(user, roles);
+        long effectiveTokenTtlHours = tokenTtlHours > 0 ? tokenTtlHours : 12;
         return new LoginResponse(
             "Bearer",
             token,
-            tokenTtlHours * 3600,
+            effectiveTokenTtlHours * 3600,
             tenant.getId(),
             tenant.getTenantCode(),
             tenant.getTenantName(),
