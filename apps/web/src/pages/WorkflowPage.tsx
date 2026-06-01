@@ -1,4 +1,5 @@
 import {
+  Alert,
   Autocomplete,
   Badge,
   Box,
@@ -22,11 +23,23 @@ import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconCircleCheck, IconGitBranch, IconPlayerPlay, IconPlus, IconSettingsAutomation } from '@tabler/icons-react';
+import {
+  IconBolt,
+  IconCircleCheck,
+  IconClock,
+  IconCoins,
+  IconCopy,
+  IconFileText,
+  IconGitBranch,
+  IconPlayerPlay,
+  IconPlus,
+  IconSettingsAutomation,
+} from '@tabler/icons-react';
+import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { gatewayApi } from '../api/gateway';
-import { orchestrationApi, type WorkflowDefinition } from '../api/orchestration';
+import { orchestrationApi, type AgentExecuteLog, type WorkflowDefinition } from '../api/orchestration';
 import { tenantApi } from '../api/tenants';
 import { useAuthStore } from '../store/useAuthStore';
 import { resolvePrimaryRole, USER_ROLES } from '../utils/roles';
@@ -35,6 +48,18 @@ type TenantLite = {
   id: string;
   tenantCode: string;
   tenantName: string;
+};
+
+type WorkflowTemplateKey = 'documentQa' | 'documentSummary' | 'customerSupport' | 'ocrExtract';
+
+type WorkflowTemplate = {
+  key: WorkflowTemplateKey;
+  workflowCode: string;
+  systemCode: string;
+  dataDomain: string;
+  agentCode: string;
+  defaultModel: string;
+  schema: Record<string, unknown>;
 };
 
 const defaultWorkflowSchema = JSON.stringify(
@@ -58,12 +83,122 @@ const defaultWorkflowSchema = JSON.stringify(
   2,
 );
 
+const workflowTemplates: WorkflowTemplate[] = [
+  {
+    key: 'documentQa',
+    workflowCode: 'document_qa_basic',
+    systemCode: 'edms',
+    dataDomain: 'document_text',
+    agentCode: 'document_search',
+    defaultModel: 'qwen-plus',
+    schema: {
+      version: '1',
+      input: { query: 'string', userId: 'string' },
+      steps: [
+        { type: 'permission_filter', name: 'business_permission_filter', owner: 'business_system' },
+        { type: 'retrieve', name: 'local_vector_retrieve', owner: 'business_system' },
+        { type: 'context_build', name: 'build_citations', owner: 'business_system' },
+        { type: 'agent', name: 'model_answer', owner: 'yeho_gateway' },
+      ],
+      output: { answer: 'string', citations: 'array' },
+    },
+  },
+  {
+    key: 'documentSummary',
+    workflowCode: 'document_summary_basic',
+    systemCode: 'document',
+    dataDomain: 'document_text',
+    agentCode: 'document_summary',
+    defaultModel: 'qwen-plus',
+    schema: {
+      version: '1',
+      input: { documentId: 'string', userId: 'string' },
+      steps: [
+        { type: 'permission_filter', name: 'business_permission_filter', owner: 'business_system' },
+        { type: 'context_build', name: 'build_document_context', owner: 'business_system' },
+        { type: 'agent', name: 'summary', owner: 'yeho_gateway' },
+      ],
+      output: { summary: 'string', keyPoints: 'array', citations: 'array' },
+    },
+  },
+  {
+    key: 'customerSupport',
+    workflowCode: 'support_qa_basic',
+    systemCode: 'support',
+    dataDomain: 'knowledge_text',
+    agentCode: 'support_qa',
+    defaultModel: 'qwen-plus',
+    schema: {
+      version: '1',
+      input: { question: 'string', customerId: 'string' },
+      steps: [
+        { type: 'classify', name: 'intent_classify', owner: 'business_system' },
+        { type: 'retrieve', name: 'local_knowledge_retrieve', owner: 'business_system' },
+        { type: 'agent', name: 'support_answer', owner: 'yeho_gateway' },
+      ],
+      output: { answer: 'string', confidence: 'number', handoffRequired: 'boolean' },
+    },
+  },
+  {
+    key: 'ocrExtract',
+    workflowCode: 'ocr_extract_basic',
+    systemCode: 'ocr',
+    dataDomain: 'image_text',
+    agentCode: 'ocr_extract',
+    defaultModel: 'qwen-vl-plus',
+    schema: {
+      version: '1',
+      input: { fileId: 'string', userId: 'string' },
+      steps: [
+        { type: 'permission_filter', name: 'business_permission_filter', owner: 'business_system' },
+        { type: 'ocr', name: 'business_ocr_or_provider_ocr', owner: 'business_system' },
+        { type: 'agent', name: 'field_extract', owner: 'yeho_gateway' },
+      ],
+      output: { fields: 'object', confidence: 'number', reviewRequired: 'boolean' },
+    },
+  },
+];
+
 const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === 'object' && error && 'response' in error) {
     const response = (error as { response?: { data?: { message?: string } } }).response;
     return response?.data?.message || fallback;
   }
   return error instanceof Error ? error.message : fallback;
+};
+
+const formatLatency = (value?: number | null) => {
+  const latency = Number(value ?? 0);
+  if (!latency) {
+    return '-';
+  }
+  if (latency >= 1000) {
+    return `${(latency / 1000).toFixed(latency >= 10000 ? 1 : 2)} s`;
+  }
+  return `${latency} ms`;
+};
+
+const isConfigRead = (log: AgentExecuteLog) =>
+  log.success && Number(log.totalTokens ?? 0) === 0 && Number(log.chargeCredits ?? 0) === 0;
+
+const shortenId = (value?: string | null) => {
+  if (!value) {
+    return '-';
+  }
+  return value.length > 26 ? `${value.slice(0, 16)}...${value.slice(-8)}` : value;
+};
+
+const buildChatHeaderSnippet = (workflow?: WorkflowDefinition | null) => {
+  const systemCode = workflow?.systemCode || '<system_code>';
+  const dataDomain = workflow?.dataDomain || '<data_domain>';
+  const agentCode = workflow?.agentCode || '<agent_code>';
+  const workflowCode = workflow?.workflowCode || '<workflow_code>';
+  return [
+    `X-Yeho-System-Code: ${systemCode}`,
+    `X-Yeho-Data-Domain: ${dataDomain}`,
+    `X-Yeho-Agent-Code: ${agentCode}`,
+    `X-Yeho-Workflow-Code: ${workflowCode}`,
+  ].join('\n');
 };
 
 const prettyJson = (value?: string) => {
@@ -143,6 +278,15 @@ export default function WorkflowPage() {
     queryFn: () => orchestrationApi.workflowVersions(selectedWorkflow?.id as string),
     enabled: Boolean(selectedWorkflow?.id),
   });
+  const workflowLogs = useQuery({
+    queryKey: ['agent-execute-logs', 'workflow-page', selectedWorkflow?.tenantId ?? tenantId, selectedWorkflow?.workflowCode],
+    queryFn: () =>
+      orchestrationApi.agentExecuteLogs({
+        tenantId: selectedWorkflow?.tenantId ?? tenantId ?? undefined,
+        workflowCode: selectedWorkflow?.workflowCode,
+      }),
+    enabled: hasTenantScope && Boolean(selectedWorkflow?.workflowCode),
+  });
 
   const modelOptions = (models.data ?? []).map((model) => model.modelCode);
   const agentOptions = (agents.data ?? []).map((agent) => ({
@@ -150,6 +294,32 @@ export default function WorkflowPage() {
     label: `${agent.agentName || agent.agentCode} / ${agent.agentCode}`,
   }));
   const steps = useMemo(() => parseSteps(selectedWorkflow?.schemaJson), [selectedWorkflow?.schemaJson]);
+  const workflowModelLogs = useMemo(
+    () =>
+      (workflowLogs.data ?? [])
+        .filter((log) => !isConfigRead(log))
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
+    [workflowLogs.data],
+  );
+  const workflowStats = useMemo(() => {
+    const totalCalls = workflowModelLogs.length;
+    const successCalls = workflowModelLogs.filter((log) => log.success).length;
+    const totalCredits = workflowModelLogs.reduce((sum, log) => sum + Number(log.chargeCredits ?? 0), 0);
+    const totalTokens = workflowModelLogs.reduce((sum, log) => sum + Number(log.totalTokens ?? 0), 0);
+    const latencyValues = workflowModelLogs.map((log) => Number(log.latencyMs ?? 0)).filter((value) => value > 0);
+    const avgLatency = latencyValues.length
+      ? Math.round(latencyValues.reduce((sum, value) => sum + value, 0) / latencyValues.length)
+      : 0;
+
+    return {
+      totalCalls,
+      successRate: totalCalls ? `${Math.round((successCalls / totalCalls) * 100)}%` : '-',
+      totalCredits,
+      totalTokens,
+      avgLatency,
+    };
+  }, [workflowModelLogs]);
+  const chatHeaderSnippet = buildChatHeaderSnippet(selectedWorkflow);
 
   const form = useForm({
     initialValues: {
@@ -232,6 +402,25 @@ export default function WorkflowPage() {
     open();
   };
 
+  const applyTemplate = (template: WorkflowTemplate) => {
+    form.setValues({
+      ...form.values,
+      workflowCode: template.workflowCode,
+      workflowName: t(`workflowPage.templates.${template.key}.name`),
+      description: t(`workflowPage.templates.${template.key}.description`),
+      systemCode: template.systemCode,
+      dataDomain: template.dataDomain,
+      agentCode: template.agentCode,
+      defaultModel: form.values.defaultModel || template.defaultModel,
+      schemaJson: JSON.stringify(template.schema, null, 2),
+    });
+  };
+
+  const copyChatHeaders = async () => {
+    await navigator.clipboard.writeText(chatHeaderSnippet);
+    notifications.show({ color: 'teal', title: t('workflowPage.copiedTitle'), message: t('workflowPage.copiedMessage') });
+  };
+
   const runtimeConfigUrl = selectedWorkflow
     ? `/api/v1/workflow-runtime/configs/${selectedWorkflow.workflowCode}`
     : '/api/v1/workflow-runtime/configs/{workflow_code}';
@@ -282,6 +471,47 @@ export default function WorkflowPage() {
           </Card>
         ))}
       </SimpleGrid>
+
+      <Card className="surface-card" p="lg" withBorder>
+        <Group justify="space-between" align="flex-start" mb="md">
+          <Stack gap={2}>
+            <Text fw={750}>{t('workflowPage.templateTitle')}</Text>
+            <Text size="sm" c="dimmed">
+              {t('workflowPage.templateDescription')}
+            </Text>
+          </Stack>
+          <Badge color="blue" variant="light" radius="sm">
+            {t('workflowPage.noRuntimeBadge')}
+          </Badge>
+        </Group>
+        <SimpleGrid cols={{ base: 1, md: 2, xl: 4 }} spacing="sm">
+          {workflowTemplates.map((template) => (
+            <Card key={template.key} withBorder radius="sm" p="md" style={{ background: '#fbfcfe' }}>
+              <Stack gap="sm">
+                <Group gap="xs" align="flex-start">
+                  <ThemeIcon color="blue" variant="light" radius="sm">
+                    <IconFileText size={18} />
+                  </ThemeIcon>
+                  <Stack gap={2} style={{ flex: 1 }}>
+                    <Text fw={700}>{t(`workflowPage.templates.${template.key}.name`)}</Text>
+                    <Text size="xs" c="dimmed" lineClamp={2}>
+                      {t(`workflowPage.templates.${template.key}.description`)}
+                    </Text>
+                  </Stack>
+                </Group>
+                <Group gap={6}>
+                  <Badge color="gray" variant="light" radius="sm">
+                    {template.systemCode}
+                  </Badge>
+                  <Badge color="gray" variant="light" radius="sm">
+                    {template.agentCode}
+                  </Badge>
+                </Group>
+              </Stack>
+            </Card>
+          ))}
+        </SimpleGrid>
+      </Card>
 
       <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="md">
         <Card className="surface-card" p="lg" withBorder>
@@ -371,6 +601,35 @@ export default function WorkflowPage() {
                 <InfoBlock label={t('workflowPage.defaultModel')} value={selectedWorkflow.defaultModel || '-'} />
               </SimpleGrid>
 
+              <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                <MetricBlock
+                  label={t('workflowPage.metrics.calls')}
+                  value={workflowStats.totalCalls.toLocaleString()}
+                  icon={<IconBolt size={16} />}
+                />
+                <MetricBlock label={t('workflowPage.metrics.successRate')} value={workflowStats.successRate} icon={<IconCircleCheck size={16} />} />
+                <MetricBlock label={t('workflowPage.metrics.avgLatency')} value={formatLatency(workflowStats.avgLatency)} icon={<IconClock size={16} />} />
+                <MetricBlock
+                  label={t('workflowPage.metrics.credits')}
+                  value={workflowStats.totalCredits.toLocaleString()}
+                  icon={<IconCoins size={16} />}
+                />
+              </SimpleGrid>
+
+              <Alert color="blue" variant="light" radius="sm" icon={<IconGitBranch size={18} />}>
+                <Group justify="space-between" align="flex-start" gap="sm">
+                  <Stack gap={4} style={{ flex: 1 }}>
+                    <Text size="sm" fw={700}>
+                      {t('workflowPage.callHeadersTitle')}
+                    </Text>
+                    <Code block>{chatHeaderSnippet}</Code>
+                  </Stack>
+                  <Button variant="white" size="xs" leftSection={<IconCopy size={14} />} onClick={copyChatHeaders}>
+                    {t('workflowPage.copyHeaders')}
+                  </Button>
+                </Group>
+              </Alert>
+
               <Divider />
 
               <Stack gap="xs">
@@ -433,6 +692,55 @@ export default function WorkflowPage() {
                   </Table>
                 </Table.ScrollContainer>
               </Stack>
+
+              <Stack gap="xs">
+                <Text size="sm" fw={650}>
+                  {t('workflowPage.recentCalls')}
+                </Text>
+                <Table.ScrollContainer minWidth={620}>
+                  <Table verticalSpacing="xs">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>{t('workflowPage.requestId')}</Table.Th>
+                        <Table.Th>{t('workflowPage.model')}</Table.Th>
+                        <Table.Th>{t('workflowPage.latency')}</Table.Th>
+                        <Table.Th>{t('workflowPage.tokensCredits')}</Table.Th>
+                        <Table.Th>{t('status')}</Table.Th>
+                        <Table.Th>{t('workflowPage.createdAt')}</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {workflowModelLogs.slice(0, 5).map((log) => (
+                        <Table.Tr key={log.id}>
+                          <Table.Td>
+                            <Code>{shortenId(log.requestId)}</Code>
+                          </Table.Td>
+                          <Table.Td>{log.model || '-'}</Table.Td>
+                          <Table.Td>{formatLatency(log.latencyMs)}</Table.Td>
+                          <Table.Td>
+                            {Number(log.totalTokens ?? 0).toLocaleString()} / {Number(log.chargeCredits ?? 0).toLocaleString()}
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge color={log.success ? 'green' : 'red'} variant="light">
+                              {log.success ? t('common.success') : t('common.failed')}
+                            </Badge>
+                          </Table.Td>
+                          <Table.Td>{dayjs(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</Table.Td>
+                        </Table.Tr>
+                      ))}
+                      {workflowModelLogs.length === 0 && (
+                        <Table.Tr>
+                          <Table.Td colSpan={6}>
+                            <Text c="dimmed" ta="center" py="sm">
+                              {t('workflowPage.noRecentCalls')}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Stack>
             </Stack>
           ) : (
             <Box p="xl" ta="center">
@@ -446,6 +754,27 @@ export default function WorkflowPage() {
         <form onSubmit={form.onSubmit((values) => saveMutation.mutate(values))}>
           <Stack>
             <Select label={t('workflowPage.tenant')} data={tenantOptions} disabled={!canSelectTenant} required {...form.getInputProps('tenantId')} />
+            <Card withBorder radius="sm" p="md" style={{ background: '#fbfcfe' }}>
+              <Stack gap="xs">
+                <Text size="sm" fw={700}>
+                  {t('workflowPage.templateQuickStart')}
+                </Text>
+                <Group gap="xs">
+                  {workflowTemplates.map((template) => (
+                    <Button
+                      key={template.key}
+                      type="button"
+                      variant="light"
+                      size="xs"
+                      leftSection={<IconFileText size={14} />}
+                      onClick={() => applyTemplate(template)}
+                    >
+                      {t(`workflowPage.templates.${template.key}.name`)}
+                    </Button>
+                  ))}
+                </Group>
+              </Stack>
+            </Card>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <TextInput label={t('workflowPage.workflowCode')} required {...form.getInputProps('workflowCode')} />
               <TextInput label={t('workflowPage.workflowName')} required {...form.getInputProps('workflowName')} />
@@ -494,6 +823,26 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
       <Text size="sm" fw={650} mt={4}>
         {value}
       </Text>
+    </Card>
+  );
+}
+
+function MetricBlock({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <Card withBorder radius="sm" p="sm" style={{ backgroundColor: '#fbfcfe' }}>
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <Stack gap={2}>
+          <Text size="xs" c="dimmed" fw={700}>
+            {label}
+          </Text>
+          <Text size="sm" fw={800}>
+            {value}
+          </Text>
+        </Stack>
+        <ThemeIcon color="gray" variant="light" radius="sm" size={30}>
+          {icon}
+        </ThemeIcon>
+      </Group>
     </Card>
   );
 }
