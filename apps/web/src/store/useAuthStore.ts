@@ -12,16 +12,18 @@ export interface AuthUser {
 
 interface AuthState {
   accessToken?: string;
+  tokenExpiresAt?: number;
   user?: AuthUser;
-  login: (token: string, user: AuthUser) => void;
+  login: (token: string, user: AuthUser, expiresInSeconds?: number) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      login: (accessToken, user) => set({ accessToken, user }),
-      logout: () => set({ accessToken: undefined, user: undefined }),
+      login: (accessToken, user, expiresInSeconds = 12 * 60 * 60) =>
+        set({ accessToken, user, tokenExpiresAt: Date.now() + expiresInSeconds * 1000 }),
+      logout: () => set({ accessToken: undefined, tokenExpiresAt: undefined, user: undefined }),
     }),
     {
       name: 'yeho-ai-auth',

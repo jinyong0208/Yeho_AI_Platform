@@ -19,7 +19,7 @@ const enUS = {
   tokenStats: 'Token Stats',
   auditLogs: 'Audit Logs',
   agentDebug: 'Agent Debug',
-  workflow: 'Workflow (Preview)',
+  workflow: 'Workflow',
   create: 'Create',
   save: 'Save',
   status: 'Status',
@@ -84,7 +84,7 @@ const enUS = {
     playground: 'Playground',
     developerDocs: 'Developer Docs',
     apiDocs: 'API Docs',
-    workflowPreview: 'Workflow (Preview)',
+    workflowPreview: 'Workflow',
     profile: 'Profile',
   },
   auditPage: {
@@ -224,6 +224,10 @@ const enUS = {
       OUT: 'Out',
     },
   },
+  auth: {
+    sessionExpiredTitle: 'Session expired',
+    sessionExpiredMessage: 'Please sign in again to keep your account secure.',
+  },
   dashboardPage: {
     badge: 'MVP Hardening',
     title: 'AI Runtime Console',
@@ -269,8 +273,8 @@ const enUS = {
   },
   placeholder: {
     workflow: {
-      title: 'Workflow (Preview)',
-      badge: 'Preview',
+      title: 'Workflow',
+      badge: 'Config',
       description: 'Reserved entry only. Workflow Runtime is not enabled.',
       body:
         'This phase only keeps a page skeleton, JSON Schema reservation, and LogicFlow placeholder. Runtime Engine, Node Execution, Loop Node, Multi-Agent Graph, Tool Runtime, and DSL Engine are intentionally out of scope.',
@@ -361,7 +365,7 @@ const enUS = {
         item1: 'chat:completion is used for chat and RAG answers.',
         item2: 'embedding:create is used for semantic-search vectorization.',
         item3: 'agent:read is used to read Agent Runtime configuration.',
-        item4: 'workflow:read is used to read Workflow Preview configuration.',
+        item4: 'workflow:read is used to read Workflow configuration.',
         item5: 'models:read is used for model listing and health checks.',
       },
       runtime: {
@@ -372,7 +376,7 @@ const enUS = {
         item3: 'Agent config returns default model, temperature, max tokens, system prompt, and the published template.',
       },
       workflow: {
-        title: 'Workflow Preview',
+        title: 'Workflow Config',
         description: 'Workflow currently defines configuration contracts. Business systems execute the real process.',
         item1: 'Yeho stores workflow_code, schema_json, bound Agent, default model, system code, and data domain.',
         item2: 'Business systems can read the published workflow config and execute retrieval, OCR, review, or answer steps locally.',
@@ -435,7 +439,7 @@ const enUS = {
           'curl https://api.yehosoft.com/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       workflowRuntimeCurl: {
-        title: 'Read Workflow Preview config',
+        title: 'Read Workflow config',
         code:
           'curl https://api.yehosoft.com/api/v1/workflow-runtime/configs/<workflow_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
@@ -776,8 +780,7 @@ const enUS = {
     },
   },
   workflowPage: {
-    title: 'Workflow Preview',
-    previewBadge: 'Preview',
+    title: 'Workflow',
     description: 'Define workflow contracts for business systems. Yeho stores configuration, versions, and audit links; business systems execute their own process and data retrieval.',
     currentTenant: 'Current tenant',
     tenant: 'Tenant',
@@ -795,7 +798,7 @@ const enUS = {
     agentCode: 'Agent',
     agentHint: 'Reuse an agent_code from Agent Configs. If the list is empty, you can enter the code directly.',
     defaultModel: 'Default Model',
-    previewSteps: 'Preview Steps',
+    previewSteps: 'Workflow Steps',
     unnamedStep: 'Unnamed step',
     noSteps: 'No steps declared.',
     schema: 'JSON Schema',
@@ -808,7 +811,7 @@ const enUS = {
     workflowCode: 'Workflow Code',
     workflowName: 'Workflow Name',
     descriptionLabel: 'Description',
-    boundaryNote: 'Preview only: Yeho does not execute nodes, loops, tools, or multi-agent runtime in this phase.',
+    boundaryNote: 'Yeho only stores Workflow configuration and audit links in this phase; it does not execute nodes, loops, tools, or multi-agent runtime.',
     required: 'Required',
     invalidJson: 'JSON is invalid',
     savedTitle: 'Saved',

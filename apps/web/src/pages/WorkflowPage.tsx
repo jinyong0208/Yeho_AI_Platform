@@ -431,9 +431,6 @@ export default function WorkflowPage() {
         <Stack gap={4}>
           <Group gap="xs">
             <Title order={2}>{t('workflowPage.title')}</Title>
-            <Badge color="yellow" variant="light" radius="sm">
-              {t('workflowPage.previewBadge')}
-            </Badge>
           </Group>
           <Text c="dimmed" maw={840}>
             {t('workflowPage.description')}

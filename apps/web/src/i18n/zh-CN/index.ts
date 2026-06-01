@@ -19,7 +19,7 @@ const zhCN = {
   tokenStats: 'Token 统计',
   auditLogs: '全局审计',
   agentDebug: 'Agent 调试',
-  workflow: 'Workflow（预览）',
+  workflow: 'Workflow',
   create: '新建',
   save: '保存',
   status: '状态',
@@ -57,7 +57,7 @@ const zhCN = {
     observability: '可观测性',
     runtime: 'Runtime',
     developer: '开发者',
-    preview: '预览',
+    preview: '预留',
   },
   nav: {
     dashboard: '控制台',
@@ -84,7 +84,7 @@ const zhCN = {
     playground: 'Playground',
     developerDocs: '开发文档',
     apiDocs: 'API 文档',
-    workflowPreview: 'Workflow（预览）',
+    workflowPreview: 'Workflow',
     profile: '个人设置',
   },
   auditPage: {
@@ -224,6 +224,10 @@ const zhCN = {
       OUT: '支出',
     },
   },
+  auth: {
+    sessionExpiredTitle: '登录已过期',
+    sessionExpiredMessage: '为了保护账号安全，请重新登录。',
+  },
   dashboardPage: {
     badge: 'MVP 收口',
     title: 'AI Runtime 控制台',
@@ -269,8 +273,8 @@ const zhCN = {
   },
   placeholder: {
     workflow: {
-      title: 'Workflow（预览）',
-      badge: '预览',
+      title: 'Workflow',
+      badge: '配置',
       description: '当前仅预留入口，尚未启用 Workflow Runtime。',
       body:
         '本阶段只保留页面骨架、JSON Schema 预留和 LogicFlow 占位，不实现 Runtime Engine、Node Execution、Loop Node、Multi-Agent Graph、Tool Runtime 或 DSL Engine。',
@@ -361,7 +365,7 @@ const zhCN = {
         item1: 'chat:completion 用于对话和 RAG 回答。',
         item2: 'embedding:create 用于语义检索向量化。',
         item3: 'agent:read 用于读取 Agent Runtime 配置。',
-        item4: 'workflow:read 用于读取 Workflow 预览配置。',
+        item4: 'workflow:read 用于读取 Workflow 配置。',
         item5: 'models:read 用于模型列表和状态检查。',
       },
       runtime: {
@@ -372,7 +376,7 @@ const zhCN = {
         item3: 'Agent 配置返回默认模型、温度参数、最大 Token、系统 Prompt 和已发布模板。',
       },
       workflow: {
-        title: 'Workflow 预览',
+        title: 'Workflow 配置',
         description: 'Workflow 当前用于定义配置契约，真实流程由业务系统执行。',
         item1: 'Yeho 保存 workflow_code、schema_json、绑定 Agent、默认模型、业务系统和数据域。',
         item2: '业务系统可读取已发布 Workflow 配置，并在本地执行检索、OCR、审核或问答步骤。',
@@ -435,7 +439,7 @@ const zhCN = {
           'curl https://api.yehosoft.com/api/v1/agent-runtime/configs/<agent_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
       workflowRuntimeCurl: {
-        title: '读取 Workflow 预览配置',
+        title: '读取 Workflow 配置',
         code:
           'curl https://api.yehosoft.com/api/v1/workflow-runtime/configs/<workflow_code> \\\n  -H "Authorization: Bearer <YEHO_AI_API_KEY>" \\\n  -H "X-Yeho-System-Code: <system_code>" \\\n  -H "X-Yeho-Data-Domain: <data_domain>"',
       },
@@ -775,8 +779,7 @@ const zhCN = {
     },
   },
   workflowPage: {
-    title: 'Workflow 预览',
-    previewBadge: '预览',
+    title: 'Workflow',
     description: '定义业务系统调用 AI 能力的流程契约。Yeho 保存配置、版本和审计关联；业务系统负责真实流程执行和数据检索。',
     currentTenant: '当前租户',
     tenant: '租户',
@@ -794,7 +797,7 @@ const zhCN = {
     agentCode: 'Agent',
     agentHint: '复用 Agent 配置页面里的 agent_code；如果列表为空，也可以直接输入编码。',
     defaultModel: '默认模型',
-    previewSteps: '流程预览',
+    previewSteps: '流程步骤',
     unnamedStep: '未命名步骤',
     noSteps: '未声明步骤。',
     schema: 'JSON Schema',
@@ -807,7 +810,7 @@ const zhCN = {
     workflowCode: 'Workflow 编码',
     workflowName: 'Workflow 名称',
     descriptionLabel: '描述',
-    boundaryNote: '当前仅为预览配置：Yeho 不执行节点、循环、工具或多 Agent Runtime。',
+    boundaryNote: '当前仅保存 Workflow 配置和审计关联：Yeho 不执行节点、循环、工具或多 Agent Runtime。',
     required: '必填',
     invalidJson: 'JSON 格式无效',
     savedTitle: '已保存',

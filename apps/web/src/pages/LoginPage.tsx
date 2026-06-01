@@ -96,7 +96,7 @@ export default function LoginPage() {
                     userId: result.userId,
                     username: result.username,
                     roles: result.roles,
-                  });
+                  }, result.expiresInSeconds);
                   navigate('/');
                 } catch {
                   notifications.show({

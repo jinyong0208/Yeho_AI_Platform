@@ -247,12 +247,11 @@ const navItems: NavItem[] = [
     icon: IconBook2,
   },
   {
-    groupKey: 'navGroups.preview',
+    groupKey: 'navGroups.runtime',
     to: '/workflow',
     labelKey: 'nav.workflowPreview',
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.TENANT_ADMIN],
     icon: IconSettingsAutomation,
-    muted: true,
   },
 ];
 
@@ -393,6 +392,14 @@ function ConsoleLayout() {
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const tokenExpiresAt = useAuthStore((state) => state.tokenExpiresAt);
+  const logout = useAuthStore((state) => state.logout);
+
+  if (accessToken && tokenExpiresAt && Date.now() >= tokenExpiresAt) {
+    logout();
+    return <Navigate to="/login" replace />;
+  }
+
   return accessToken ? children : <Navigate to="/login" replace />;
 }
 
